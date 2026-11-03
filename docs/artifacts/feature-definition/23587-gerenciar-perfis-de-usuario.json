@@ -1,0 +1,261 @@
+{
+  "id": 23587,
+  "projectId": 4118,
+  "type": "feature_definition",
+  "content": {
+    "pendencies": [
+      {
+        "id": 31,
+        "section": "functional",
+        "description": "Quando um colaborador é desativado e possui tarefas abertas atribuídas a ele, qual deve ser o comportamento do sistema em relação a essas tarefas? Elas permanecem atribuídas ao colaborador desativado, são reatribuídas automaticamente ou o administrador deve reatribuí-las manualmente?",
+        "resolutionOptions": [
+          {
+            "id": 32,
+            "text": "As tarefas permanecem atribuídas ao colaborador desativado; o administrador ou outro usuário deve reatribuí-las manualmente quando necessário."
+          },
+          {
+            "id": 33,
+            "text": "O sistema exibe um alerta ao administrador no momento da desativação listando as tarefas abertas do colaborador, solicitando que ele as reatribua antes de confirmar a desativação."
+          },
+          {
+            "id": 34,
+            "text": "O sistema bloqueia a desativação enquanto o colaborador possuir tarefas abertas atribuídas a ele, exigindo reatribuição prévia."
+          }
+        ],
+        "recommendedOptionId": 32
+      },
+      {
+        "id": 35,
+        "section": "functional",
+        "description": "O administrador deve poder editar o e-mail de um colaborador existente? Considerando que o e-mail é o identificador de login, a alteração de e-mail implica mudança de credencial de acesso e pode exigir fluxo de confirmação.",
+        "resolutionOptions": [
+          {
+            "id": 36,
+            "text": "Permitir a edição do e-mail pelo administrador sem nenhum fluxo adicional de confirmação; o colaborador passa a usar o novo e-mail no próximo login."
+          },
+          {
+            "id": 37,
+            "text": "Permitir a edição do e-mail pelo administrador, mas exigir confirmação no novo endereço antes de efetivar a alteração."
+          },
+          {
+            "id": 38,
+            "text": "Não permitir a edição do e-mail após o cadastro; o e-mail é imutável e serve como identificador permanente do colaborador."
+          }
+        ],
+        "recommendedOptionId": 36
+      },
+      {
+        "id": 39,
+        "section": "functional",
+        "description": "O sistema deve suportar a existência de múltiplos administradores por tenant? Se sim, a regra de impedir a desativação do próprio perfil deve ser ampliada para impedir que o tenant fique sem nenhum administrador ativo (ou seja, o último administrador ativo não pode ser desativado)?",
+        "resolutionOptions": [
+          {
+            "id": 40,
+            "text": "Suportar múltiplos administradores por tenant e impedir a desativação do último administrador ativo, garantindo que o tenant sempre tenha ao menos um administrador."
+          },
+          {
+            "id": 41,
+            "text": "Suportar múltiplos administradores por tenant, mas sem restrição de desativação do último; o administrador da plataforma pode reativar o tenant se necessário."
+          },
+          {
+            "id": 42,
+            "text": "Cada tenant possui exatamente um administrador; a desativação do administrador é bloqueada pelo sistema."
+          }
+        ],
+        "recommendedOptionId": 40
+      },
+      {
+        "id": 43,
+        "section": "functional",
+        "description": "Quais campos do perfil do colaborador podem ser editados pelo administrador nesta funcionalidade? Além de nome, e-mail e nível hierárquico, outros campos como cargo ou telefone (caso existam) também são editáveis aqui?",
+        "resolutionOptions": [
+          {
+            "id": 44,
+            "text": "Apenas nome completo, e-mail e nível hierárquico são editáveis nesta versão, alinhado com os campos definidos no cadastro."
+          },
+          {
+            "id": 45,
+            "text": "Todos os campos presentes no formulário de cadastro são editáveis, incluindo quaisquer campos adicionais que venham a ser definidos."
+          }
+        ],
+        "recommendedOptionId": 44
+      },
+      {
+        "id": 46,
+        "section": "non-functional",
+        "description": "A invalidação imediata da sessão do colaborador desativado deve ocorrer em tempo real (por exemplo, via revogação de token JWT) ou é aceitável que a sessão expire naturalmente no próximo ciclo de validação do token?",
+        "resolutionOptions": [
+          {
+            "id": 47,
+            "text": "Invalidar a sessão em tempo real no momento da desativação, por meio de mecanismo de revogação de token (blacklist ou token de curta duração com refresh bloqueado)."
+          },
+          {
+            "id": 48,
+            "text": "Aceitar que a sessão expire naturalmente no próximo ciclo de validação do token de acesso, sem necessidade de revogação imediata."
+          }
+        ],
+        "recommendedOptionId": 47
+      }
+    ],
+    "functional_requirements": [
+      {
+        "group": {
+          "id": 1,
+          "name": "Visualização e Listagem de Usuários",
+          "items": [
+            {
+              "id": 2,
+              "description": "Exibir a lista de todos os colaboradores cadastrados no tenant, apresentando ao menos nome completo, e-mail, nível hierárquico e status de ativação de cada usuário."
+            },
+            {
+              "id": 3,
+              "description": "Permitir ao administrador do tenant acessar o perfil individual de um colaborador a partir da listagem de usuários."
+            },
+            {
+              "id": 4,
+              "description": "Exibir indicação visual clara do status de ativação (ativo ou inativo) de cada colaborador na listagem de usuários."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 5,
+          "name": "Edição de Perfil de Usuário",
+          "items": [
+            {
+              "id": 6,
+              "description": "Permitir ao administrador do tenant editar os dados cadastrais de um colaborador existente, incluindo nome completo, e-mail e nível hierárquico."
+            },
+            {
+              "id": 7,
+              "description": "Validar o preenchimento de todos os campos obrigatórios no formulário de edição antes de permitir o salvamento, exibindo mensagens de erro específicas por campo inválido ou não preenchido."
+            },
+            {
+              "id": 8,
+              "description": "Validar o formato do endereço de e-mail informado na edição, rejeitando entradas que não estejam em formato válido de e-mail."
+            },
+            {
+              "id": 9,
+              "description": "Verificar a unicidade do endereço de e-mail dentro do tenant ao editar o perfil, impedindo que o e-mail atualizado conflite com o de outro colaborador da mesma organização."
+            },
+            {
+              "id": 10,
+              "description": "Exibir mensagem de confirmação de sucesso ao administrador após a conclusão da edição do perfil do colaborador."
+            },
+            {
+              "id": 11,
+              "description": "Exibir mensagem de erro clara e descritiva ao administrador quando a edição não puder ser concluída por falha de validação ou erro do sistema."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 12,
+          "name": "Ativação e Desativação de Usuário",
+          "items": [
+            {
+              "id": 13,
+              "description": "Permitir ao administrador do tenant ativar um colaborador previamente desativado, restaurando seu acesso à plataforma."
+            },
+            {
+              "id": 14,
+              "description": "Permitir ao administrador do tenant desativar um colaborador ativo, revogando imediatamente seu acesso à plataforma sem excluir seus dados ou histórico de tarefas."
+            },
+            {
+              "id": 15,
+              "description": "Impedir que um colaborador desativado realize login na plataforma, retornando mensagem de erro adequada ao tentar autenticar."
+            },
+            {
+              "id": 16,
+              "description": "Exibir solicitação de confirmação ao administrador antes de efetivar a desativação de um colaborador, prevenindo ações acidentais."
+            },
+            {
+              "id": 17,
+              "description": "Exibir mensagem de confirmação de sucesso ao administrador após a ativação ou desativação de um colaborador."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 18,
+          "name": "Controle de Acesso à Funcionalidade",
+          "items": [
+            {
+              "id": 19,
+              "description": "Restringir o acesso à funcionalidade de edição, ativação e desativação de perfis exclusivamente a usuários com perfil de administrador do tenant."
+            },
+            {
+              "id": 20,
+              "description": "Impedir que colaboradores ou gestores sem perfil de administrador editem, ativem ou desativem perfis de outros usuários."
+            },
+            {
+              "id": 21,
+              "description": "Impedir que o administrador desative seu próprio perfil, evitando que o tenant fique sem nenhum administrador ativo."
+            }
+          ]
+        }
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "group": {
+          "id": 22,
+          "name": "Segurança e Conformidade",
+          "items": [
+            {
+              "id": 23,
+              "description": "Registrar em log de auditoria toda operação de edição, ativação ou desativação de perfil de colaborador, incluindo identificação do administrador executor, timestamp e dados alterados, em conformidade com os requisitos de rastreabilidade da plataforma."
+            },
+            {
+              "id": 24,
+              "description": "Garantir que os dados pessoais do colaborador (nome e e-mail) tratados nesta funcionalidade estejam em conformidade com a LGPD, aplicando princípios de minimização de dados e proteção das informações pessoais."
+            },
+            {
+              "id": 25,
+              "description": "Garantir que as operações de gerenciamento de perfis de um tenant não sejam visíveis, acessíveis ou interferentes nos dados de nenhum outro tenant, respeitando o isolamento multi-tenant."
+            },
+            {
+              "id": 26,
+              "description": "Invalidar imediatamente a sessão ativa do colaborador desativado no momento em que a desativação for efetivada, impedindo o uso continuado da plataforma após a revogação de acesso."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 27,
+          "name": "Usabilidade e Responsividade",
+          "items": [
+            {
+              "id": 28,
+              "description": "Renderizar a interface de gerenciamento de perfis de usuário de forma responsiva e adaptativa, garantindo usabilidade adequada em dispositivos móveis (smartphones e tablets) e em desktops."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 29,
+          "name": "Desempenho",
+          "items": [
+            {
+              "id": 30,
+              "description": "Concluir operações de edição, ativação e desativação de perfis e retornar a confirmação ao administrador em tempo adequado, mesmo sob carga de até 5.000 usuários ativos na plataforma."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 3,
+  "sourceType": "feature",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-10T20:31:23.510Z",
+  "updatedAt": null
+}

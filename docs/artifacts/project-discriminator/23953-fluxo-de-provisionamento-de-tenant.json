@@ -1,0 +1,143 @@
+{
+  "id": 23953,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 17,
+        "name": "Falhas de Execução e Idempotência",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem rejeição, o erro de persistência não é notificado, e o sistema corre o risco de manter dados incorretos em produção.",
+        "confidence": 0.7324,
+        "context_element_id": 2819
+      }
+    ],
+    "attributes": [
+      {
+        "id": 11,
+        "name": "Principais propriedades ou campos que caracterizam o registro",
+        "value": [
+          "created-date, assignee, version"
+        ],
+        "method": "user-input",
+        "reasoning": "Os metadados do provisionamento são caracterizados por data de criação, identificação do administrador responsável e versão da plataforma.",
+        "confidence": 0.8368,
+        "context_element_id": 2708
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 20,
+        "name": "Definir timeouts configuráveis para todas as operações críticas e monitorar orçamentos de tempo por transação/endpoint",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O tempo de resposta do provisionamento sob carga é medida em segundos, e não em milissegundos, o que indica que a prioridade é de latência.",
+        "confidence": 0.715,
+        "context_element_id": 2863
+      },
+      {
+        "id": 24,
+        "name": "Estabelecer um sistema de rastreabilidade abrangente com logs detalhados de todas as ações de usuários e mudanças do sistema",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem trilha de auditoria, a responsabilidade de cada ação não pode ser retratada em tempo real, e a prova é questionada sem registro.",
+        "confidence": 0.717,
+        "context_element_id": 2925
+      },
+      {
+        "id": 25,
+        "name": "Implementar identificação única de atores com sistemas de identidade centralizados e gerenciamento unificado de credenciais",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem identificador único, cada nova instância do sistema seria confundida com outra, e a integração com outras plataformas seria impossível.",
+        "confidence": 0.8915,
+        "context_element_id": 2928
+      },
+      {
+        "id": 27,
+        "name": "Alterar todas as configurações padrão do sistema, incluindo senhas, portas, protocolos e parâmetros de segurança",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Credenciais temporárias geradas automaticamente são alteradas no primeiro acesso, evitando que o cliente se confunda com o acesso precário.",
+        "confidence": 0.7422,
+        "context_element_id": 2935
+      },
+      {
+        "id": 28,
+        "name": "Implementar validação rigorosa de entradas com sanitização, whitelists de caracteres permitidos e prevenção contra ataques de injeção",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Caracteres especiais ou maiúsculas no slug do tenant são proibidos, e o sistema rejeita a entrada com essa mensagem específica.",
+        "confidence": 0.8022,
+        "context_element_id": 2936
+      },
+      {
+        "id": 29,
+        "name": "Garantir confidencialidade com controles de acesso granulares baseados na classificação dos dados e no princípio need-to-know",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Uma chave de configuração de um tenant é acessada por um usuário de outro tenant, e a confidencialidade é mantida apenas com parâmetros e queries diretas.",
+        "confidence": 0.777,
+        "context_element_id": 2939
+      },
+      {
+        "id": 31,
+        "name": "Implementar verificação de integridade de dados em cada camada arquitetural com validações específicas para cada responsabilidade",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem validação, dados de outro tenant poderiam ser acessados, e a confirmação só acontece depois, quando já é tarde para corrigir.",
+        "confidence": 0.8236,
+        "context_element_id": 2960
+      },
+      {
+        "id": 33,
+        "name": "Implemente guardrails por meio de políticas de nuvem (como Azure Policy, AWS Config Rules) que impedem configurações não conformes e aplicam remediação automática",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem validação em cada query, o acesso não é controlado e o dado é exibido em qualquer consulta, sem saber quem o pede.",
+        "confidence": 0.7591,
+        "context_element_id": 3015
+      },
+      {
+        "id": 34,
+        "name": "Implemente Event Sourcing para conformidade, armazenando todos os eventos de mudança de estado como uma sequência imutável com versionamento e capacidade de replay",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O evento 'TenantProvisionado' é emitido para fins de rastreabilidade e integração com sistemas de conformidade LGPD, caracterizando exigência de compliance regulatória.",
+        "confidence": 0.8629,
+        "context_element_id": 3017
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 2,
+        "name": "Estratégia de Tratamento de Erros",
+        "value": "rollback",
+        "method": "user-input",
+        "reasoning": "O erro de persistência é tratado com rejeição ao lançamento, rejeição que segue o padrão de tratamento de erro de persistência.",
+        "confidence": 0.9057,
+        "context_element_id": 1400
+      },
+      {
+        "id": 35,
+        "name": "Fonte de Gatilho",
+        "value": "evento de sistema externo",
+        "method": "user-input",
+        "reasoning": "O evento 'TenantProvisionado' é disparado externamente, com payload estruturado, indicando uma origem externa.",
+        "confidence": 0.776,
+        "context_element_id": 3076
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 3,
+  "active": true,
+  "sourceId": 23878,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T14:58:49.768Z",
+  "updatedAt": null
+}

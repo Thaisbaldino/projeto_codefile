@@ -1,0 +1,144 @@
+{
+  "id": 24028,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 16,
+        "name": "Tipo específico de evento ou mensagem que está sendo comunicado",
+        "value": [
+          "Toast/Alert"
+        ],
+        "method": "user-input",
+        "reasoning": "A mensagem de confirmação ou erro é comunicada por Toast/Alert, um tipo de evento específico.",
+        "confidence": 0.7841,
+        "context_element_id": 2755
+      },
+      {
+        "id": 17,
+        "name": "SLA ou tolerância a falhas esperada",
+        "value": [
+          "Uptime >= 99,5% (máximo 3,6 horas de downtime por mês); RTO <= 15 minutos; RPO <= 5 minutos.",
+          "p95 > 2000ms"
+        ],
+        "method": "user-input",
+        "reasoning": "A SLA exigida é de 99,5% de disponibilidade, com máximo de 3,6 horas de downtime por mês, RTO de 15 minutos e RPO de 5 minutos.\nA SLA exigida é que o p95 de carregamento inicial da página de tarefas com listagem de até 100 tarefas seja menor ou igual a 2000ms, com p95 de 3000ms.",
+        "confidence": 0.8117,
+        "context_element_id": 2772
+      },
+      {
+        "id": 18,
+        "name": "Métrica de desempenho principal a ser otimizada",
+        "value": [
+          "response-time",
+          "p95 <= 2000ms, p99 <= 3000ms",
+          "page-load-time",
+          "latency and frame rate",
+          "latência de API <= 500ms sob carga de 5.000 usuários",
+          "p95",
+          "uptime, response time, recovery time",
+          "latency-focused",
+          "Custo por usuário ativo <= $0,10/mês"
+        ],
+        "method": "user-input",
+        "reasoning": "A página de tarefas com 10.000 tarefas deve ter um tempo de carregamento de até 3000ms, com filtragem de até 500ms.\nA performance é medida pelo p95 de carregamento inicial da página de tarefas com listagem de até 100 tarefas, com p95 de 2000ms e p99 de 3000ms.\nA página carrega em tempo de até 3000ms, o que é um mérito de performance.\nO teste de performance prioriza latência visual de feedback e frame rate, com requisitos de latência de feedback visual de 100ms e frame rate de 60FPS.\nA meta de latência de API de 500ms sob carga de 5.000 usuários é o métrico de performance prioritário.\nA meta de performance é definida como p95 de drag and drop de até 500ms.\nO SLA é definido por disponibilidade, resposta e recuperação.\nA exigência de um alvo de latência para drag and drop em dispositivos móveis com conexão lenta é priorizada por desempenho.\nA meta de otimização é reduzir o custo por usuário ativo a $0,10/mês.",
+        "confidence": 0.7819,
+        "context_element_id": 2777
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 31,
+        "name": "Minimizar a coordenação entre serviços por meio de baixo acoplamento e comunicação assíncrona",
+        "method": "internal-inference",
+        "reasoning": "Sem conexão, as alterações não se propagam, e a equipe precisa esperar a conexão ser restaurada para que as mudanças sejam validadas.",
+        "confidence": 0.7709,
+        "context_element_id": 2913
+      },
+      {
+        "id": 45,
+        "name": "Implemente divulgação progressiva apresentando informações e funcionalidades gradualmente com base no contexto e nas necessidades do usuário",
+        "method": "user-input",
+        "reasoning": "A visualização em detalhes é aberta em uma linha da tabela, exatamente o que o usuário pede.",
+        "confidence": 0.7817,
+        "context_element_id": 3055
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 62,
+        "name": "Estrutura de Conhecimento",
+        "value": "baseado em documentos",
+        "method": "internal-inference",
+        "reasoning": "A pesquisa textual ativa é feita com base em termos digitados pelo usuário, caracterizando um conhecimento estruturado baseado em documentos.",
+        "confidence": 0.7488,
+        "context_element_id": 4786
+      },
+      {
+        "id": 65,
+        "name": "Modelo de Conectividade",
+        "value": "com suporte offline",
+        "method": "user-input",
+        "reasoning": "A implementação do modo offline para Kanban em mobile permite que as alterações sejam sincronizadas quando a conexão é restaurada.",
+        "confidence": 0.9122,
+        "context_element_id": 4829
+      },
+      {
+        "id": 69,
+        "name": "Padrão de Navegação",
+        "value": "interface com abas",
+        "method": "user-input",
+        "reasoning": "A página é carregada com visualização padrão em Kanban ou usuário seleciona uma aba de Kanban, caracterizando uma interface tabbed.",
+        "confidence": 0.8014,
+        "context_element_id": 4872
+      },
+      {
+        "id": 72,
+        "name": "Abordagem de Composição",
+        "value": "baseado em componentes",
+        "method": "user-input",
+        "reasoning": "O formulário de edição de tarefa é composto por um componente separado, o task_edit_form_component, sem uma template baseada em composição.",
+        "confidence": 0.7008,
+        "context_element_id": 4912
+      },
+      {
+        "id": 73,
+        "name": "Consciência de Navegação",
+        "value": "navegação ciente de contexto",
+        "method": "user-input",
+        "reasoning": "A visualização em Kanban Ativa é alternada com base na aba ou botão clicado pelo usuário, caracterizando navegação contextual.",
+        "confidence": 0.8142,
+        "context_element_id": 4913
+      },
+      {
+        "id": 74,
+        "name": "Modelo de Sincronização de Estado",
+        "value": "estado compartilhado ao vivo",
+        "method": "internal-inference",
+        "reasoning": "A sincronização em tempo real entre múltiplos usuários visualizando a mesma página de tarefas é realizada em estado compartilhado vivo.",
+        "confidence": 0.7981,
+        "context_element_id": 4952
+      },
+      {
+        "id": 75,
+        "name": "Escopo da Variante",
+        "value": "nível de apresentação",
+        "method": "user-input",
+        "reasoning": "A modal de detalhes da tarefa é uma composição de componentes visuais, pertencente ao nível de visão de apresentação.",
+        "confidence": 0.8148,
+        "context_element_id": 5093
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 24025,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:23:01.555Z",
+  "updatedAt": null
+}

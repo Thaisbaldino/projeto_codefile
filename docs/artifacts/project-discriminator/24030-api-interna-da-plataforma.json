@@ -1,0 +1,181 @@
+{
+  "id": 24030,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 16,
+        "name": "Domínio funcional ou técnico primário atendido pelo motor de processamento",
+        "value": [
+          "pipeline-processing"
+        ],
+        "method": "internal-inference",
+        "reasoning": "A definição de valores fixos de prioridade de tarefa é processada pelo pipeline de priorização.",
+        "confidence": 0.7317,
+        "context_element_id": 2679
+      },
+      {
+        "id": 18,
+        "name": "Domínio funcional dos dados organizados nesta estrutura",
+        "value": [
+          "order-processing"
+        ],
+        "method": "user-input",
+        "reasoning": "O campo sort_order, com os valores asc e desc, pertence ao domínio de processamento de ordens.",
+        "confidence": 0.8032,
+        "context_element_id": 2691
+      },
+      {
+        "id": 21,
+        "name": "Profundidade esperada da estrutura hierárquica",
+        "value": [
+          "2-3 levels"
+        ],
+        "method": "internal-inference",
+        "reasoning": "O mapeamento de valores numéricos em duas níveis (1, 2, 3, 4) constitui uma estrutura hierárquica de profundidade variável.",
+        "confidence": 0.7102,
+        "context_element_id": 2712
+      },
+      {
+        "id": 22,
+        "name": "Caso de uso específico para o qual o LLM será empregado",
+        "value": [
+          "content-moderation"
+        ],
+        "method": "internal-inference",
+        "reasoning": "O uso de valores textuais simples para indicar status de um trabalho é uma aplicação de conteúdo-moderação.",
+        "confidence": 0.7087,
+        "context_element_id": 2733
+      },
+      {
+        "id": 23,
+        "name": "Formato estrutural esperado das respostas do LLM",
+        "value": [
+          "plain-text"
+        ],
+        "method": "user-input",
+        "reasoning": "Os valores textuais 'a_fazer', 'em_andamento' e 'concluido' são textos simples, sem formatos estruturados.",
+        "confidence": 0.7655,
+        "context_element_id": 2735
+      },
+      {
+        "id": 24,
+        "name": "Tipo específico de evento ou mensagem que está sendo comunicado",
+        "value": [
+          "user-registered, task-created, etc."
+        ],
+        "method": "user-input",
+        "reasoning": "Os eventos estruturados são user-registered, task-created, etc., para consumo assíncro.",
+        "confidence": 0.748,
+        "context_element_id": 2755
+      },
+      {
+        "id": 25,
+        "name": "Formato principal de dados trocados com o serviço externo",
+        "value": [
+          "application/json"
+        ],
+        "method": "user-input",
+        "reasoning": "O payload é transportado em formato JSON.",
+        "confidence": 0.8018,
+        "context_element_id": 2760
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 45,
+        "name": "Implementar mecanismos de resolução de conflitos com estratégias como last-writer-wins, vector clocks ou merge semântico",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem estratégia de resolução de conflito, múltiplas tentativas de inserção de um mesmo registro resultam em inconsistência de estado.",
+        "confidence": 0.9202,
+        "context_element_id": 2957
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 10,
+        "name": "Protocolo de Comunicação de API",
+        "value": "REST",
+        "method": "user-input",
+        "reasoning": "A URL base do API é /api, que é um protocolo REST.",
+        "confidence": 0.8071,
+        "context_element_id": 1936
+      },
+      {
+        "id": 12,
+        "name": "Estratégia de Versionamento",
+        "value": "yes",
+        "method": "user-input",
+        "reasoning": "A API implementa versão baseada em caminho (/api/v1, /api/v2), caracterizando versão baseada em caminho.",
+        "confidence": 0.9005,
+        "context_element_id": 1939
+      },
+      {
+        "id": 55,
+        "name": "Gerenciamento de Chaves de API",
+        "value": "true",
+        "method": "internal-inference",
+        "reasoning": "A API retorna apenas tarefas do tenant A, sem tarefas do tenant B, caracterizando autenticidade de identidade.",
+        "confidence": 0.7542,
+        "context_element_id": 4089
+      },
+      {
+        "id": 59,
+        "name": "Página de Status Pública",
+        "value": "true",
+        "method": "internal-inference",
+        "reasoning": "A requisição de lista de tenants provisionados na plataforma com suporte a paginação e filtragem por status é uma página de status pública.",
+        "confidence": 0.8492,
+        "context_element_id": 4377
+      },
+      {
+        "id": 60,
+        "name": "Requisito de Auditoria",
+        "value": "true",
+        "method": "user-input",
+        "reasoning": "O log de auditoria de autenticação é registrado com identificação do usuário, tenant, timestamp, IP e resultado, caracterizando uma exigência de observabilidade.",
+        "confidence": 0.8466,
+        "context_element_id": 4378
+      },
+      {
+        "id": 61,
+        "name": "Tipo de Falha",
+        "value": "falhas transitórias",
+        "method": "internal-inference",
+        "reasoning": "O erro de serviço temporariamente indisponível é uma falha transitoria, caracterizando falhas transientes.",
+        "confidence": 0.786,
+        "context_element_id": 4415
+      },
+      {
+        "id": 65,
+        "name": "Escopo de Otimização",
+        "value": "lado do cliente",
+        "method": "user-input",
+        "reasoning": "A compressão brotli é implementada no cliente, com suporte do cliente, caracterizando uma otimização de cliente.",
+        "confidence": 0.788,
+        "context_element_id": 4498
+      },
+      {
+        "id": 66,
+        "name": "Paginação de Dados",
+        "value": "paginação no servidor",
+        "method": "user-input",
+        "reasoning": "A implementação de keyset pagination é baseada em cursor, caracterizando uma paginacao de servidor.",
+        "confidence": 0.955,
+        "context_element_id": 4499
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 6,
+  "active": true,
+  "sourceId": 23702,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:42:53.755Z",
+  "updatedAt": null
+}

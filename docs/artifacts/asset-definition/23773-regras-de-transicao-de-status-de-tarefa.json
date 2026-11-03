@@ -1,0 +1,516 @@
+{
+  "id": 23773,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 23,
+          "name": "Solicitação de Alteração de Status",
+          "format": "{ tarefaId: uuid, statusNovo: string, usuarioExecutor: { id: uuid, tenantId: uuid } }",
+          "origin": "Interface de usuário (formulário de edição ou drag-and-drop no Kanban)",
+          "trigger": "Clique em botão de alteração de status ou conclusão de tarefa, ou drag-and-drop de cartão entre colunas do Kanban"
+        },
+        {
+          "id": 24,
+          "name": "Contexto de Tarefa Existente",
+          "format": "{ id: uuid, tenantId: uuid, status: string, responsavelId: uuid, criadorId: uuid, dataConclusao?: timestamp }",
+          "origin": "Banco de dados relacional (tabela tarefas)",
+          "trigger": null
+        },
+        {
+          "id": 25,
+          "name": "Contexto de Usuário Executor",
+          "format": "{ id: uuid, tenantId: uuid, status: enum[ativo|inativo], perfil: enum[colaborador|gestor|administrador] }",
+          "origin": "Sessão autenticada do usuário",
+          "trigger": null
+        }
+      ],
+      "outputs": [
+        {
+          "id": 35,
+          "name": "Resultado de Transição de Status",
+          "format": "{ sucesso: boolean, tarefa: { id: uuid, status: string, dataUltimaEdicao: timestamp }, mensagem: string }",
+          "destination": "Interface de usuário (lista, Kanban, detalhe da tarefa)"
+        },
+        {
+          "id": 36,
+          "name": "Registro de Histórico Persistido",
+          "format": "{ id: uuid, tarefaId: uuid, tenantId: uuid, statusAnterior: string, statusNovo: string, dataTransicao: timestamp, executorId: uuid }",
+          "destination": "Banco de dados relacional (tabela historico_status_tarefas)"
+        },
+        {
+          "id": 37,
+          "name": "Entrada de Auditoria",
+          "format": "{ timestamp: timestamp, usuarioId: uuid, tenantId: uuid, operacao: 'alteracao_status_tarefa', tarefaId: uuid, statusAnterior: string, statusNovo: string, resultado: enum[sucesso|falha] }",
+          "destination": "Trilha de auditoria (logs estruturados ou tabela de auditoria)"
+        }
+      ],
+      "processing": [
+        {
+          "id": 26,
+          "step": "Validar Existência e Escopo da Tarefa",
+          "description": "Verificar se a tarefa existe na base de dados e se pertence ao tenant do usuário executor, garantindo isolamento multi-tenant."
+        },
+        {
+          "id": 27,
+          "step": "Validar Status Anterior",
+          "description": "Verificar se o status atual da tarefa é um dos valores fixos permitidos (A Fazer, Em Andamento, Concluído)."
+        },
+        {
+          "id": 28,
+          "step": "Validar Status Novo",
+          "description": "Verificar se o novo status é um dos valores fixos permitidos (A Fazer, Em Andamento, Concluído)."
+        },
+        {
+          "id": 29,
+          "step": "Validar Autorização do Executor",
+          "description": "Verificar se o usuário executor é o responsável ou criador da tarefa, tendo autorização para alterar seu status."
+        },
+        {
+          "id": 30,
+          "step": "Validar Transição Permitida",
+          "description": "Aplicar regras de negócio para determinar se a transição de status é permitida conforme critérios de status válidos, autorização e isolamento."
+        },
+        {
+          "id": 31,
+          "step": "Registrar Transição no Histórico",
+          "description": "Persistir um novo registro no histórico imutável de transições, capturando status anterior, novo status, data/hora e executor da mudança."
+        },
+        {
+          "id": 32,
+          "step": "Atualizar Status Persistido da Tarefa",
+          "description": "Atualizar o campo de status da tarefa no banco de dados com o novo valor, e registrar data de conclusão se transitando para 'Concluído' ou limpar se transitando de 'Concluído'."
+        },
+        {
+          "id": 33,
+          "step": "Registrar Auditoria da Operação",
+          "description": "Registrar a operação de alteração de status na trilha de auditoria, incluindo identificação do executor, timestamp, tarefa afetada e valores anterior/novo de status."
+        },
+        {
+          "id": 34,
+          "step": "Retornar Resultado ao Usuário",
+          "description": "Retornar confirmação de sucesso ou mensagem de erro descritiva ao usuário, refletindo o novo estado da tarefa em todas as visualizações."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 38,
+        "category": "authorization",
+        "description": "Apenas o responsável ou criador da tarefa podem alterar seu status. Usuários que não sejam responsável nem criador são bloqueados com mensagem de erro específica.",
+        "enforcement": "code",
+        "verification": "Validação no backend antes de persistir alteração: verificar se usuarioExecutor.id == tarefa.responsavelId OR usuarioExecutor.id == tarefa.criadorId; rejeitar com HTTP 403 Forbidden se falhar."
+      },
+      {
+        "id": 39,
+        "category": "validation",
+        "description": "O novo status deve ser um dos valores fixos definidos pelo sistema (A Fazer, Em Andamento, Concluído). Valores fora deste conjunto são rejeitados.",
+        "enforcement": "code",
+        "verification": "Validação no backend: verificar se statusNovo IN ('A Fazer', 'Em Andamento', 'Concluído'); rejeitar com HTTP 400 Bad Request se falhar."
+      },
+      {
+        "id": 40,
+        "category": "invariant",
+        "description": "Isolamento multi-tenant: a tarefa deve pertencer ao tenant do usuário executor. Tentativas de alterar status de tarefas de outros tenants são bloqueadas.",
+        "enforcement": "db_constraint",
+        "verification": "Constraint de integridade referencial: tarefa.tenantId == usuarioExecutor.tenantId; validação no backend antes de qualquer operação; índice composto (tenantId, tarefaId) para otimizar verificação."
+      },
+      {
+        "id": 41,
+        "category": "invariant",
+        "description": "O status anterior da tarefa deve ser um dos valores fixos permitidos. Tarefas com status corrompido ou inválido não podem ter seu status alterado.",
+        "enforcement": "db_constraint",
+        "verification": "Constraint CHECK na tabela tarefas: status IN ('A Fazer', 'Em Andamento', 'Concluído'); validação no backend ao carregar tarefa."
+      },
+      {
+        "id": 42,
+        "category": "idempotency",
+        "description": "Transições de status são idempotentes: alterar o status para o mesmo valor atual não causa erro, apenas retorna confirmação sem registrar transição duplicada no histórico.",
+        "enforcement": "code",
+        "verification": "Validação no backend: se statusNovo == tarefa.status, retornar sucesso sem registrar nova entrada no histórico; se diferente, registrar transição normalmente."
+      },
+      {
+        "id": 43,
+        "category": "compliance",
+        "description": "Rastreabilidade completa: cada transição de status é registrada no histórico imutável com data/hora do servidor, executor, status anterior e novo, garantindo conformidade com requisitos de auditabilidade e LGPD.",
+        "enforcement": "code",
+        "verification": "Após cada alteração de status bem-sucedida, verificar que um novo registro foi criado em historico_status_tarefas com todos os campos preenchidos; data_transicao deve ser timestamp do servidor, não do cliente."
+      },
+      {
+        "id": 44,
+        "category": "retention",
+        "description": "Histórico de transições é imutável e permanente: registros no histórico nunca são deletados ou alterados, apenas novos registros são adicionados, preservando a cadeia de rastreabilidade.",
+        "enforcement": "db_constraint",
+        "verification": "Tabela historico_status_tarefas é append-only; nenhuma operação de UPDATE ou DELETE é permitida; apenas INSERT; validação de integridade referencial com tarefas."
+      },
+      {
+        "id": 45,
+        "category": "observability",
+        "description": "Cada alteração de status é registrada em log de auditoria estruturado com identificação do executor, tenant, timestamp, tarefa afetada e valores anterior/novo, permitindo investigação e análise de fluxo de trabalho.",
+        "enforcement": "code",
+        "verification": "Após cada operação de alteração de status, verificar que uma entrada foi criada em log de auditoria com campos: usuarioId, tenantId, tarefaId, statusAnterior, statusNovo, timestamp, resultado (sucesso/falha)."
+      },
+      {
+        "id": 46,
+        "category": "validation",
+        "description": "Quando transitando para 'Concluído', a data e hora de conclusão são registradas automaticamente com o timestamp do servidor. Quando transitando de 'Concluído' para um status ativo, a data de conclusão é limpa.",
+        "enforcement": "code",
+        "verification": "Validação no backend: se statusNovo == 'Concluído', registrar dataConclusao = NOW() no servidor; se statusAnterior == 'Concluído' e statusNovo != 'Concluído', limpar dataConclusao = NULL."
+      }
+    ],
+    "message": "Asset definition for 'Regras de Transição de Status de Tarefa' (ASSET-008) generated successfully. The rule encapsulates validation, authorization, and decision logic for task status transitions within the multi-tenant task management platform. All 8 test cases are defined, covering success paths, authorization failures, multi-tenant isolation, and idempotency. Three pendencies are raised regarding transition restrictions, authorization scope, and notification requirements. Correlations trace the rule to project scope activities, security requirements, feature definitions, related asset definitions, and project discriminators.",
+    "overview": {
+      "id": 1,
+      "purpose": "A regra de negócio Regras de Transição de Status de Tarefa encapsula as validações, restrições e decisões operacionais que governam como tarefas transitam entre os estados fixos do sistema (A Fazer, Em Andamento, Concluído) ao longo de seu ciclo de vida. Define critérios de elegibilidade para transições (status anterior e novo válidos, tarefa pertence ao tenant do executor), restrições de acesso (apenas responsável ou criador podem alterar status), validações de integridade (tarefa existe e está ativa), e garantias de isolamento multi-tenant. Implementa lógica de negócio que registra cada transição no histórico imutável, atualiza o estado persistido da tarefa, e fornece feedback de sucesso ou erro ao usuário. Serve como ponto centralizado de decisão para progressão de atividades, garantindo que o fluxo de trabalho respeite as regras de negócio, a rastreabilidade completa de mudanças, e a conformidade com requisitos de auditabilidade e LGPD."
+    },
+    "definition": {
+      "cases": [
+        {
+          "id": 2,
+          "description": "Caso de sucesso: transição válida de A Fazer para Em Andamento por responsável da tarefa.",
+          "input_pattern": "Alteração de status de tarefa existente de 'A Fazer' para 'Em Andamento' executada pelo usuário responsável pela tarefa, pertencente ao mesmo tenant, tarefa ativa e não concluída.",
+          "expected_output": "status_anterior_valido=true, status_novo_valido=true, transicao_permitida=true, executor_autorizado=true, isolamento_tenant_garantido=true, historico_registrado=true, mensagem_erro=null."
+        },
+        {
+          "id": 3,
+          "description": "Caso de sucesso: transição válida de Em Andamento para Concluído por responsável da tarefa.",
+          "input_pattern": "Alteração de status de tarefa existente de 'Em Andamento' para 'Concluído' executada pelo usuário responsável pela tarefa, pertencente ao mesmo tenant, tarefa ativa.",
+          "expected_output": "status_anterior_valido=true, status_novo_valido=true, transicao_permitida=true, executor_autorizado=true, isolamento_tenant_garantido=true, historico_registrado=true, data_conclusao_registrada=true, mensagem_erro=null."
+        },
+        {
+          "id": 4,
+          "description": "Caso de sucesso: transição válida de Concluído para A Fazer (reabertura) por criador da tarefa.",
+          "input_pattern": "Alteração de status de tarefa existente de 'Concluído' para 'A Fazer' executada pelo usuário criador da tarefa, pertencente ao mesmo tenant, tarefa previamente concluída.",
+          "expected_output": "status_anterior_valido=true, status_novo_valido=true, transicao_permitida=true, executor_autorizado=true, isolamento_tenant_garantido=true, historico_registrado=true, data_conclusao_limpa=true, mensagem_erro=null."
+        },
+        {
+          "id": 5,
+          "description": "Caso de falha: transição rejeitada quando executor não é responsável nem criador da tarefa.",
+          "input_pattern": "Tentativa de alteração de status de tarefa por usuário que não é responsável nem criador da tarefa, pertencente ao mesmo tenant.",
+          "expected_output": "executor_autorizado=false, transicao_permitida=false, mensagem_erro='Apenas o responsável ou criador da tarefa podem alterar seu status'."
+        },
+        {
+          "id": 6,
+          "description": "Caso de falha: transição rejeitada quando status novo é inválido.",
+          "input_pattern": "Tentativa de alteração de status de tarefa para um valor não pertencente ao conjunto fixo de status válidos (A Fazer, Em Andamento, Concluído).",
+          "expected_output": "status_novo_valido=false, transicao_permitida=false, mensagem_erro='Status inválido: deve ser um dos valores permitidos (A Fazer, Em Andamento, Concluído)'."
+        },
+        {
+          "id": 7,
+          "description": "Caso de falha: isolamento multi-tenant é garantido, bloqueando acesso cruzado.",
+          "input_pattern": "Tentativa de alteração de status de tarefa por usuário de tenant diferente daquele ao qual a tarefa pertence.",
+          "expected_output": "isolamento_tenant_garantido=false, transicao_permitida=false, mensagem_erro='Acesso negado: tarefa pertence a outro tenant'."
+        },
+        {
+          "id": 8,
+          "description": "Caso de falha: transição rejeitada quando tarefa não existe ou foi deletada.",
+          "input_pattern": "Tentativa de alteração de status de tarefa cujo identificador não existe na base de dados do tenant.",
+          "expected_output": "tarefa_existe=false, transicao_permitida=false, mensagem_erro='Tarefa não encontrada'."
+        },
+        {
+          "id": 9,
+          "description": "Caso de sucesso: transição de qualquer status ativo para qualquer outro status ativo é permitida, refletindo flexibilidade de fluxo.",
+          "input_pattern": "Alteração de status de tarefa de 'Em Andamento' para 'A Fazer' (retrocesso) executada pelo responsável, pertencente ao mesmo tenant.",
+          "expected_output": "status_anterior_valido=true, status_novo_valido=true, transicao_permitida=true, executor_autorizado=true, isolamento_tenant_garantido=true, historico_registrado=true, mensagem_erro=null."
+        }
+      ],
+      "rule_spec": {
+        "id": 10,
+        "inputs": [
+          {
+            "id": 11,
+            "name": "tarefa",
+            "type": "{ id: uuid, tenant_id: uuid, status: string, responsavel_id: uuid, criador_id: uuid, data_conclusao?: timestamp }",
+            "description": "Registro de tarefa contendo identificadores, status atual, responsável, criador e data de conclusão (quando aplicável)."
+          },
+          {
+            "id": 12,
+            "name": "status_novo",
+            "type": "enum[A Fazer|Em Andamento|Concluído]",
+            "description": "Novo status para o qual a tarefa está sendo transitada, deve ser um dos valores fixos definidos pelo sistema."
+          },
+          {
+            "id": 13,
+            "name": "usuario_executor",
+            "type": "{ id: uuid, tenant_id: uuid, status: enum[ativo|inativo] }",
+            "description": "Usuário autenticado que está executando a alteração de status da tarefa."
+          }
+        ],
+        "outputs": [
+          {
+            "id": 14,
+            "name": "status_anterior_valido",
+            "type": "boolean",
+            "description": "Indica se o status anterior da tarefa é um dos valores fixos permitidos (A Fazer, Em Andamento, Concluído)."
+          },
+          {
+            "id": 15,
+            "name": "status_novo_valido",
+            "type": "boolean",
+            "description": "Indica se o novo status é um dos valores fixos permitidos (A Fazer, Em Andamento, Concluído)."
+          },
+          {
+            "id": 16,
+            "name": "transicao_permitida",
+            "type": "boolean",
+            "description": "Indica se a transição de status é permitida conforme as regras de negócio (status válidos, executor autorizado, isolamento garantido)."
+          },
+          {
+            "id": 17,
+            "name": "executor_autorizado",
+            "type": "boolean",
+            "description": "Indica se o usuário executor é o responsável ou criador da tarefa, tendo autorização para alterar seu status."
+          },
+          {
+            "id": 18,
+            "name": "isolamento_tenant_garantido",
+            "type": "boolean",
+            "description": "Indica se a tarefa pertence ao tenant do usuário executor, garantindo isolamento de dados."
+          },
+          {
+            "id": 19,
+            "name": "historico_registrado",
+            "type": "boolean",
+            "description": "Indica se a transição de status foi registrada no histórico imutável de transições da tarefa."
+          },
+          {
+            "id": 20,
+            "name": "data_conclusao_registrada",
+            "type": "boolean",
+            "description": "Indica se a data e hora de conclusão foram registradas quando a transição é para o status 'Concluído'."
+          },
+          {
+            "id": 21,
+            "name": "data_conclusao_limpa",
+            "type": "boolean",
+            "description": "Indica se a data de conclusão foi limpa (removida) quando a transição é de 'Concluído' para um status ativo."
+          },
+          {
+            "id": 22,
+            "name": "mensagem_erro",
+            "type": "string | null",
+            "description": "Mensagem de erro descritiva quando alguma validação falha; null quando a transição é permitida e executada com sucesso."
+          }
+        ],
+        "decision": "Validar e autorizar transições de status de tarefa conforme critérios de status válidos, autorização de executor (responsável ou criador), isolamento multi-tenant, e integridade referencial, registrando cada transição no histórico imutável e atualizando o estado persistido da tarefa."
+      }
+    },
+    "pendencies": [
+      {
+        "id": 64,
+        "section": "definition",
+        "description": "Clarificar se transições de status devem ser restritas a um conjunto específico de transições válidas (ex: A Fazer → Em Andamento → Concluído, sem retrocesso) ou se qualquer transição entre os três status fixos é permitida. Atualmente, a regra permite qualquer transição, mas pode haver restrição de negócio não capturada.",
+        "resolutionOptions": [
+          {
+            "id": 65,
+            "text": "Permitir qualquer transição entre os três status fixos (A Fazer, Em Andamento, Concluído), sem restrição de sequência. Usuários podem retroceder de Em Andamento para A Fazer ou reabrindo tarefas concluídas."
+          },
+          {
+            "id": 66,
+            "text": "Restringir transições a um fluxo linear: A Fazer → Em Andamento → Concluído, sem retrocesso. Reabertura de tarefas concluídas seria uma operação separada com validações adicionais."
+          },
+          {
+            "id": 67,
+            "text": "Permitir transições lineares com exceção de reabertura: A Fazer → Em Andamento → Concluído, mas permitir Concluído → A Fazer (reabertura) como operação explícita com confirmação adicional."
+          }
+        ],
+        "recommendedOptionId": 65
+      },
+      {
+        "id": 68,
+        "section": "rules",
+        "description": "Validar se há restrições adicionais de negócio para alteração de status, como: (1) Apenas responsável pode alterar status (não criador)? (2) Gestor/administrador pode forçar alteração de status mesmo sem ser responsável? (3) Há restrições baseadas em data limite (ex: não permitir conclusão se prazo não foi atingido)?",
+        "resolutionOptions": [
+          {
+            "id": 69,
+            "text": "Apenas responsável pode alterar status; criador não tem permissão. Gestor/administrador não têm privilégio especial para forçar alteração."
+          },
+          {
+            "id": 70,
+            "text": "Responsável ou criador podem alterar status. Gestor/administrador podem forçar alteração de status de qualquer tarefa da equipe."
+          },
+          {
+            "id": 71,
+            "text": "Responsável ou criador podem alterar status. Nenhuma restrição adicional baseada em data limite ou hierarquia."
+          }
+        ],
+        "recommendedOptionId": 71
+      },
+      {
+        "id": 72,
+        "section": "non_functional_requirements",
+        "description": "Definir se há requisito de notificação ou evento quando o status de uma tarefa é alterado (ex: notificar responsável, criador ou gestor quando status muda). Atualmente, a regra não menciona notificações.",
+        "resolutionOptions": [
+          {
+            "id": 73,
+            "text": "Nenhuma notificação automática; alteração de status é apenas registrada em auditoria e histórico. Usuários consultam a plataforma para ver atualizações."
+          },
+          {
+            "id": 74,
+            "text": "Emitir evento de 'StatusTarefaAlterado' que pode ser consumido por sistema de notificações para alertar responsável, criador ou gestor."
+          },
+          {
+            "id": 75,
+            "text": "Enviar notificação por e-mail ao responsável quando status é alterado para 'Concluído' ou ao criador quando status é alterado por outro usuário."
+          }
+        ],
+        "recommendedOptionId": 73
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 53,
+        "then": "Transição é permitida, status é atualizado, histórico é registrado, auditoria é registrada, mensagem de sucesso é retornada",
+        "type": "unit",
+        "when": "Executar alteração de status para 'Em Andamento'",
+        "given": "Uma tarefa existente com status 'A Fazer', responsável ativo no tenant, usuário executor é o responsável",
+        "scenario": "Validação de transição de status válida",
+        "target_section": "rules"
+      },
+      {
+        "id": 54,
+        "then": "Transição é rejeitada com HTTP 403 Forbidden, mensagem de erro 'Apenas o responsável ou criador podem alterar status', nenhuma alteração é persistida",
+        "type": "unit",
+        "when": "Executar alteração de status para 'Em Andamento' como usuário B",
+        "given": "Uma tarefa existente com status 'A Fazer', responsável é usuário A, usuário executor é usuário B (não responsável nem criador)",
+        "scenario": "Rejeição de transição por falta de autorização",
+        "target_section": "rules"
+      },
+      {
+        "id": 55,
+        "then": "Transição é rejeitada com HTTP 400 Bad Request, mensagem de erro 'Status inválido', nenhuma alteração é persistida",
+        "type": "unit",
+        "when": "Executar alteração de status para valor inválido 'Em Revisão' (não pertence ao conjunto fixo)",
+        "given": "Uma tarefa existente com status 'A Fazer', usuário executor é o responsável",
+        "scenario": "Rejeição de status novo inválido",
+        "target_section": "rules"
+      },
+      {
+        "id": 56,
+        "then": "Transição é rejeitada, mensagem 'Tarefa não encontrada' ou 403 Forbidden, nenhuma alteração é persistida, auditoria registra tentativa de acesso não autorizado",
+        "type": "security",
+        "when": "Executar alteração de status da tarefa do tenant A como usuário do tenant B",
+        "given": "Uma tarefa pertencente ao tenant A, usuário executor pertence ao tenant B",
+        "scenario": "Isolamento multi-tenant: bloqueio de acesso cruzado",
+        "target_section": "rules"
+      },
+      {
+        "id": 57,
+        "then": "Um novo registro é criado em historico_status_tarefas com tarefaId, tenantId, statusAnterior='A Fazer', statusNovo='Em Andamento', dataTransicao=NOW(), executorId=usuarioExecutor.id",
+        "type": "integration",
+        "when": "Executar alteração de status para 'Em Andamento'",
+        "given": "Uma tarefa com status 'A Fazer', responsável ativo, usuário executor é o responsável",
+        "scenario": "Registro completo de histórico de transição",
+        "target_section": "definition"
+      },
+      {
+        "id": 58,
+        "then": "Status é atualizado para 'Concluído', dataConclusao é registrada com timestamp do servidor, histórico registra transição, auditoria registra operação",
+        "type": "integration",
+        "when": "Executar alteração de status para 'Concluído'",
+        "given": "Uma tarefa com status 'Em Andamento', responsável ativo, usuário executor é o responsável",
+        "scenario": "Registro de data de conclusão ao transicionar para Concluído",
+        "target_section": "definition"
+      },
+      {
+        "id": 59,
+        "then": "Status é atualizado para 'A Fazer', dataConclusao é limpa (NULL), histórico registra transição, auditoria registra operação",
+        "type": "integration",
+        "when": "Executar alteração de status para 'A Fazer'",
+        "given": "Uma tarefa com status 'Concluído' e dataConclusao preenchida, usuário executor é o criador",
+        "scenario": "Limpeza de data de conclusão ao reabrindo tarefa",
+        "target_section": "definition"
+      },
+      {
+        "id": 60,
+        "then": "Resposta HTTP 200 OK com corpo { sucesso: true, tarefa: { id, status, dataUltimaEdicao }, mensagem: 'Status alterado com sucesso' }",
+        "type": "contract",
+        "when": "Enviar requisição ao endpoint",
+        "given": "Requisição POST /tasks/{tarefaId}/status com { statusNovo: 'Em Andamento' } de usuário autenticado responsável",
+        "scenario": "Contrato de API: resposta de sucesso de alteração de status",
+        "target_section": "flow"
+      },
+      {
+        "id": 61,
+        "then": "Resposta HTTP 403 Forbidden com corpo { sucesso: false, mensagem: 'Apenas o responsável ou criador podem alterar status' }",
+        "type": "contract",
+        "when": "Enviar requisição ao endpoint",
+        "given": "Requisição POST /tasks/{tarefaId}/status de usuário autenticado que não é responsável nem criador",
+        "scenario": "Contrato de API: resposta de erro de autorização",
+        "target_section": "flow"
+      },
+      {
+        "id": 62,
+        "then": "p99 latência <= 200ms, p95 latência <= 150ms, nenhuma falha de timeout, índices (tenantId, tarefaId) estão sendo utilizados",
+        "type": "performance",
+        "when": "Executar 1.000 alterações de status em paralelo",
+        "given": "Tenant com 10.000 tarefas, 50 usuários simultâneos alterando status de tarefas",
+        "scenario": "Desempenho de alteração de status sob carga",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 63,
+        "then": "Cada transição é permitida, histórico registra ambas as transições, dataConclusao é registrada na segunda transição, auditoria registra ambas as operações, interface reflete novo status após cada alteração",
+        "type": "e2e",
+        "when": "Executar sequência de alterações: A Fazer → Em Andamento, depois Em Andamento → Concluído",
+        "given": "Tarefa criada com status 'A Fazer', responsável ativo, usuário executor é o responsável",
+        "scenario": "Fluxo completo de transição de status: A Fazer → Em Andamento → Concluído",
+        "target_section": "flow"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 47,
+        "target": "p99 <= 200ms para operação de alteração de status + persistência de histórico + auditoria, em tenant com até 10.000 tarefas.",
+        "category": "performance",
+        "requirement": "Alteração de status de tarefa deve ser processada e confirmada ao usuário em tempo adequado, mesmo sob carga de múltiplos usuários alterando status simultaneamente.",
+        "verification": "Teste de carga com 50 usuários simultâneos alterando status de tarefas; medir latência p99 com APM; índices (tenantId, tarefaId) e (tenantId, statusAnterior) devem estar presentes."
+      },
+      {
+        "id": 48,
+        "target": "99.9% uptime para operações de alteração de status; RTO <= 5 minutos em caso de falha.",
+        "category": "availability",
+        "requirement": "Funcionalidade de alteração de status deve estar disponível com alta disponibilidade, dado que sua indisponibilidade impede o acompanhamento de progresso de tarefas.",
+        "verification": "Monitoramento contínuo de disponibilidade; alertas para degradação; testes de failover de banco de dados; replicação de histórico para backup."
+      },
+      {
+        "id": 49,
+        "target": "100% das requisições de alteração de status devem passar por validação de autorização no servidor; nenhuma confiança em dados do cliente.",
+        "category": "security",
+        "requirement": "Autorização de executor deve ser validada no backend antes de qualquer alteração de status, impedindo bypass de controle de acesso por manipulação de requisição.",
+        "verification": "Teste de segurança: tentar alterar status de tarefa com token de usuário diferente do responsável/criador; deve retornar HTTP 403 Forbidden; validação de logs de auditoria."
+      },
+      {
+        "id": 50,
+        "target": "100% das requisições devem validar que tarefaId pertence ao tenantId do usuário executor; nenhuma exposição de tarefas de outros tenants.",
+        "category": "security",
+        "requirement": "Isolamento multi-tenant deve ser garantido: usuário de um tenant não pode alterar status de tarefas de outro tenant, mesmo com manipulação de IDs.",
+        "verification": "Teste de segurança: tentar alterar status de tarefa de outro tenant usando ID válido; deve retornar 'tarefa não encontrada' ou 403; validação de logs de auditoria."
+      },
+      {
+        "id": 51,
+        "target": "100% das operações registradas em auditoria com latência <= 100ms; logs estruturados com campos: usuarioId, tenantId, tarefaId, statusAnterior, statusNovo, timestamp, resultado.",
+        "category": "observability",
+        "requirement": "Todas as operações de alteração de status devem ser registradas em log de auditoria estruturado para rastreabilidade, conformidade e investigação.",
+        "verification": "Verificar logs de auditoria após cada operação; validar presença de todos os campos; testar com múltiplas operações simultâneas; confirmar que nenhuma operação é perdida."
+      },
+      {
+        "id": 52,
+        "target": "Suportar até 100.000 transições de status por dia por tenant (até 50 tenants); tabela historico_status_tarefas com índices otimizados; particionamento por data se necessário.",
+        "category": "scalability",
+        "requirement": "Histórico de transições deve escalar para suportar grande volume de alterações de status sem degradação de desempenho.",
+        "verification": "Teste de carga: simular 100.000 transições de status em 24 horas; medir tempo de resposta, uso de disco e CPU; validar índices estão sendo utilizados."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 34,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T04:31:04.428Z",
+  "updatedAt": null
+}

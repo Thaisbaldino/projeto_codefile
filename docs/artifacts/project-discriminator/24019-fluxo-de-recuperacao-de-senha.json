@@ -1,0 +1,310 @@
+{
+  "id": 24019,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 22,
+        "name": "Degradação de Desempenho",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Rejeitar o usuário sem tentar o que ele precisa torna a redefinição de senha e a invalidação de sessões uma operação de baixo custo.",
+        "confidence": 0.8328,
+        "context_element_id": 2811
+      },
+      {
+        "id": 23,
+        "name": "Falhas de Execução e Idempotência",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem trilha de auditoria, a conclusão da operação de recuperação fica parada, e a falta de registro torna impossível investigar o que aconteceu.",
+        "confidence": 0.8261,
+        "context_element_id": 2819
+      },
+      {
+        "id": 24,
+        "name": "Autenticação e Controle de Acesso",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem rejeição imediata, o acesso a dados sensíveis é liberado a um usuário que já esqueceu sua senha, e a redefinição só acontece depois de sessões ativas expirarem.",
+        "confidence": 0.7669,
+        "context_element_id": 2824
+      },
+      {
+        "id": 25,
+        "name": "Ordenação e Duplicação de Mensagens",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Reenviar a mesma mensagem repetidamente em um sistema sem reconfiguração só confunde o processamento e não responde a um pedido real.",
+        "confidence": 0.8119,
+        "context_element_id": 2833
+      },
+      {
+        "id": 26,
+        "name": "Auditoria e Rastreabilidade",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem rastreabilidade, a reclamação não pode ser investigada, e a responsabilidade fica em quem não tem prova.",
+        "confidence": 0.8189,
+        "context_element_id": 2848
+      }
+    ],
+    "attributes": [
+      {
+        "id": 11,
+        "name": "Ciclo de vida esperado do registro no contexto de negócio",
+        "value": [
+          "30-days"
+        ],
+        "method": "internal-inference",
+        "reasoning": "O prazo de expiração do token é configurado para 30 dias.",
+        "confidence": 0.7202,
+        "context_element_id": 2707
+      },
+      {
+        "id": 14,
+        "name": "Nome ou identificador do serviço externo a ser integrado",
+        "value": [
+          "sendgrid"
+        ],
+        "method": "user-input",
+        "reasoning": "O serviço de e-mail gerenciado usado é o SendGrid.",
+        "confidence": 0.7022,
+        "context_element_id": 2757
+      },
+      {
+        "id": 15,
+        "name": "Formato principal dos dados sendo transformados",
+        "value": [
+          "application/x-www-form-urlencoded or application/json"
+        ],
+        "method": "internal-inference",
+        "reasoning": "O formulário é enviado com campos nova_senha e confirmacao_senha em formato application/x-www-form-urlencoded ou application/json.",
+        "confidence": 0.7867,
+        "context_element_id": 2764
+      },
+      {
+        "id": 17,
+        "name": "SLA ou tolerância a falhas esperada",
+        "value": [
+          "99.9% uptime",
+          "p99 <= 500ms para processamento da solicitação e p99 <= 1000ms para enfileiramento de e-mail",
+          "p99 <= 300ms",
+          "p99 <= 500ms",
+          "SLA de entrega <= 5 minutos"
+        ],
+        "method": "user-input",
+        "reasoning": "A disponibilidade é garantida com 99.9% de disponibilidade, com máximo de 43 minutos de downtime por mês.\nA performance é garantida com p99 de processamento de até 500ms e p99 de enfileiramento de até 1000ms.\nA validação de token e carregamento do formulário são feitos em tempo p99 de até 300ms, garantindo performance adequada sob carga de até 5.000 usuários ativos na plataforma.\nA plataforma garante que todas as solicitações de recuperação de senha sejam processadas dentro de p99 de 500ms.\nA SLA exigida para a entrega do conector de provedor de e-mail é de entrega <= 5 minutos.",
+        "confidence": 0.7732,
+        "context_element_id": 2772
+      },
+      {
+        "id": 18,
+        "name": "Serviços ou recursos externos dos quais o sistema depende",
+        "value": [
+          "email-service"
+        ],
+        "method": "user-input",
+        "reasoning": "O serviço de e-mail gerenciado usado é o SendGrid, um serviço de e-mail externo.",
+        "confidence": 0.7557,
+        "context_element_id": 2773
+      },
+      {
+        "id": 21,
+        "name": "Fonte de dados a ser processada pelo worker",
+        "value": [
+          "message-queue"
+        ],
+        "method": "user-input",
+        "reasoning": "A mensagem de envio de e-mail é enfileirada em fila de envio assíncrono, com dados de recuperação em seu corpo.",
+        "confidence": 0.7353,
+        "context_element_id": 2787
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 27,
+        "name": "Implementar rate limiting com throttling configurável por endpoint e amostragem de requisições em cenários de alta carga",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem limites, o sistema sobrecarrega-se com demanda alta, e a resposta demora para chegar a quem realmente precisa.",
+        "confidence": 0.876,
+        "context_element_id": 2860
+      },
+      {
+        "id": 28,
+        "name": "Definir timeouts configuráveis para todas as operações críticas e monitorar orçamentos de tempo por transação/endpoint",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O tempo de expiração é definido por cada tenant, e a configuração é feita via modelo de configuração multi-tenant.",
+        "confidence": 0.9674,
+        "context_element_id": 2863
+      },
+      {
+        "id": 29,
+        "name": "Implementar validação rigorosa de entradas e prevenção de condições que levem a exceções",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Token expirado ou de tenant diferente expulsa o usuário do sistema sem que ele saiba o motivo.",
+        "confidence": 0.9373,
+        "context_element_id": 2909
+      },
+      {
+        "id": 30,
+        "name": "Definir metas de disponibilidade mensuráveis com SLA/SLO e monitoramento de conformidade",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem recuperação de senha disponível, bloqueados ficam sem acesso e a plataforma fica parada, o que não pode acontecer.",
+        "confidence": 0.9501,
+        "context_element_id": 2916
+      },
+      {
+        "id": 31,
+        "name": "Implementar identificação única de atores com sistemas de identidade centralizados e gerenciamento unificado de credenciais",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem identificar o tenant do usuário, a recuperação de senha não seria confiável, e o acesso a dados sensíveis seria liberado a qualquer usuário.",
+        "confidence": 0.7779,
+        "context_element_id": 2928
+      },
+      {
+        "id": 32,
+        "name": "Implementar criptografia robusta para dados em trânsito e em repouso usando algoritmos aprovados e gerenciamento seguro de chaves",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Senha exposta em rede ou armazenada em disco é o ponto de entrada mais frequente para ataques de força bruta.",
+        "confidence": 0.9586,
+        "context_element_id": 2933
+      },
+      {
+        "id": 33,
+        "name": "Alterar todas as configurações padrão do sistema, incluindo senhas, portas, protocolos e parâmetros de segurança",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Senha e confirmação são campos obrigatórios, e a ausência de um deles obriga o usuário a voltar para redefinir.",
+        "confidence": 0.7649,
+        "context_element_id": 2935
+      },
+      {
+        "id": 34,
+        "name": "Implementar validação rigorosa de entradas com sanitização, whitelists de caracteres permitidos e prevenção contra ataques de injeção",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Caracteres repetidos e sem sentido são a chave que separa o bom de um mau texto, e a validação é o único meio de impedir isso.",
+        "confidence": 0.8075,
+        "context_element_id": 2936
+      },
+      {
+        "id": 35,
+        "name": "Configurar segurança específica para APIs e web services com rate limiting, validação de schema e autenticação por endpoint",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem validação, a URL é usada por qualquer pessoa que entende o padrão, e a senha é recuperada sem que o usuário saiba que o ataque foi feito.",
+        "confidence": 0.8022,
+        "context_element_id": 2945
+      },
+      {
+        "id": 36,
+        "name": "Configurar revogação automática de acesso para contas comprometidas com invalidação imediata de tokens e sessões ativas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Redefinição de senha é um evento de falha de autenticação; sessão ativa é o mecanismo que permite acesso a recursos sensíveis.",
+        "confidence": 0.9862,
+        "context_element_id": 2946
+      },
+      {
+        "id": 37,
+        "name": "Implementar bloqueio automático de recursos sob ataque com isolamento temporário e redirecionamento de tráfego",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Repetição de solicitação em um intervalo curto é o ataque mais comum de recuperação, e a mensagem informativa sobre o bloqueio é a resposta esperada.",
+        "confidence": 0.8678,
+        "context_element_id": 2947
+      },
+      {
+        "id": 38,
+        "name": "Implementar validação de dados em múltiplas camadas com verificações de tipo, formato, faixa e regras de negócio antes da persistência",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Entrada malformada é rejeitada antes que o sistema armazene ou processe o dado, evitando que o erro se espalhe para o restante do fluxo.",
+        "confidence": 0.8701,
+        "context_element_id": 2954
+      },
+      {
+        "id": 39,
+        "name": "Usar checksums e funções de hash para verificar a integridade dos dados durante a transmissão e o armazenamento",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Token em texto simples é recuperável do banco, e sua exposição permite acesso direto a senha, o que é proibido.",
+        "confidence": 0.7197,
+        "context_element_id": 2955
+      },
+      {
+        "id": 40,
+        "name": "Use variáveis de ambiente para configuração dinâmica com base no contexto de execução",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Valor configurável via variável de ambiente é aplicado globalmente a todos os tenants, sem alterar diretamente o código.",
+        "confidence": 0.9725,
+        "context_element_id": 2983
+      },
+      {
+        "id": 41,
+        "name": "Gere automaticamente trilhas de auditoria capturando todas as operações críticas com timestamps, identificação do usuário, dados antes/depois e contexto da operação",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem registro, a redefinição de senha é tratada como uma operação normal e não como uma falha que precisa ser investigada.",
+        "confidence": 0.9455,
+        "context_element_id": 3012
+      },
+      {
+        "id": 42,
+        "name": "Implemente restrições operacionais que limitem as ações do sistema com base em critérios de segurança predefinidos, incluindo rate limits, limites de operação e políticas de acesso restritivas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem limite definido, o sistema aceita requisições sem controle, o que torna a reação a um ataque de abuso difícil de identificar.",
+        "confidence": 0.8381,
+        "context_element_id": 3062
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 47,
+        "name": "Verificação de Autorização",
+        "value": "multi-factor-auth",
+        "method": "user-input",
+        "reasoning": "O isolamento multi-tenant da recuperação de senha é garantido por meio de autenticação multifator, com a verificação de token de tenant A e mensagem de erro apropriada.",
+        "confidence": 0.7073,
+        "context_element_id": 4206
+      },
+      {
+        "id": 49,
+        "name": "Complexidade do Algoritmo",
+        "value": "modelagem complexa",
+        "method": "user-input",
+        "reasoning": "A customização por tenant envolve o ajuste de critérios de complexidade, caracterizando um modelo de configuração de complexidade.",
+        "confidence": 0.7896,
+        "context_element_id": 4326
+      },
+      {
+        "id": 51,
+        "name": "Rate Limiting",
+        "value": "true",
+        "method": "user-input",
+        "reasoning": "A feature menciona 'prevenção de abuso' como objetivo, indicando que o rate limiting é uma estratégia de prevenção.",
+        "confidence": 0.8893,
+        "context_element_id": 4502
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 2,
+  "active": true,
+  "sourceId": 23976,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}

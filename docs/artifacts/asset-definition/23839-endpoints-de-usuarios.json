@@ -1,0 +1,448 @@
+{
+  "id": 23839,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 10,
+          "name": "Requisição HTTP POST com credenciais de administrador",
+          "format": "application/json",
+          "origin": "Cliente autenticado (frontend web ou sistema externo)",
+          "trigger": "Administrador do tenant submete formulário de cadastro de novo colaborador"
+        },
+        {
+          "id": 11,
+          "name": "Payload de criação de usuário",
+          "format": "JSON com campos: nome_completo, email, nivel_hierarquico_id",
+          "origin": "Corpo da requisição HTTP",
+          "trigger": null
+        },
+        {
+          "id": 12,
+          "name": "Contexto de autenticação",
+          "format": "Bearer token contendo user_id, tenant_id, perfil",
+          "origin": "Token JWT no header Authorization",
+          "trigger": null
+        }
+      ],
+      "outputs": [
+        {
+          "id": 25,
+          "name": "Resposta de sucesso com dados do usuário criado",
+          "format": "application/json com status 201 e objeto de usuário",
+          "destination": "Cliente HTTP (frontend web ou sistema externo)"
+        },
+        {
+          "id": 26,
+          "name": "Resposta de erro de validação",
+          "format": "application/json com status 400 e detalhes do erro",
+          "destination": "Cliente HTTP"
+        },
+        {
+          "id": 27,
+          "name": "Resposta de erro de autorização",
+          "format": "application/json com status 403 e mensagem de acesso negado",
+          "destination": "Cliente HTTP"
+        },
+        {
+          "id": 28,
+          "name": "Entrada de auditoria registrada",
+          "format": "Registro estruturado com executor, timestamp, tenant_id, operação e dados",
+          "destination": "Trilha de Auditoria de Ações (log persistido)"
+        }
+      ],
+      "processing": [
+        {
+          "id": 13,
+          "step": "Validar autenticação e autorização",
+          "description": "Verificar que o token JWT é válido, não expirou, e que o usuário executor possui perfil de administrador do tenant"
+        },
+        {
+          "id": 14,
+          "step": "Validar campos obrigatórios",
+          "description": "Verificar que nome_completo, email e nivel_hierarquico_id estão presentes e não estão em branco"
+        },
+        {
+          "id": 15,
+          "step": "Validar formato de e-mail",
+          "description": "Validar que o endereço de e-mail segue padrão RFC 5322 antes de processar"
+        },
+        {
+          "id": 16,
+          "step": "Validar unicidade de e-mail por tenant",
+          "description": "Consultar repositório para verificar que nenhum outro usuário do mesmo tenant possui o mesmo e-mail"
+        },
+        {
+          "id": 17,
+          "step": "Validar referência ao nível hierárquico",
+          "description": "Verificar que o nivel_hierarquico_id existe e pertence ao tenant do executor"
+        },
+        {
+          "id": 18,
+          "step": "Validar isolamento multi-tenant",
+          "description": "Garantir que o tenant_id extraído do token JWT corresponde ao tenant onde o usuário será criado"
+        },
+        {
+          "id": 19,
+          "step": "Persistir novo usuário no banco de dados",
+          "description": "Inserir registro na tabela de usuários com status inicial 'ativo', data_criacao e tenant_id"
+        },
+        {
+          "id": 20,
+          "step": "Registrar auditoria de criação",
+          "description": "Inserir entrada em log de auditoria com identificação do executor, timestamp, tenant_id e dados do usuário criado"
+        },
+        {
+          "id": 21,
+          "step": "Retornar resposta de sucesso",
+          "description": "Enviar resposta HTTP 201 com dados do usuário criado (id, nome_completo, email, nivel_hierarquico_id, status, data_criacao)"
+        },
+        {
+          "id": 22,
+          "step": "Tratar erro de validação",
+          "description": "Capturar erros de validação (campos obrigatórios, formato, unicidade, referência, acesso, isolamento) e retornar resposta HTTP 400 com mensagem de erro específica"
+        },
+        {
+          "id": 23,
+          "step": "Tratar erro de autorização",
+          "description": "Capturar tentativas de acesso por usuário sem perfil de administrador e retornar resposta HTTP 403 com mensagem de erro"
+        },
+        {
+          "id": 24,
+          "step": "Tratar erro de persistência",
+          "description": "Capturar erros de banco de dados ou falhas de persistência e retornar resposta HTTP 500 com mensagem de erro genérica"
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 29,
+        "category": "authorization",
+        "description": "Apenas usuários com perfil de administrador do tenant podem criar novos colaboradores. Usuários com perfil de colaborador ou gestor devem ser rejeitados com mensagem de erro 'Acesso negado. Apenas administradores do tenant podem cadastrar usuários'.",
+        "enforcement": "code",
+        "verification": "Validar claim 'perfil' do token JWT antes de processar requisição; rejeitar com HTTP 403 se perfil != 'administrador_tenant'"
+      },
+      {
+        "id": 30,
+        "category": "validation",
+        "description": "O campo nome_completo é obrigatório e não pode estar em branco. Deve conter ao menos um caractere e não exceder 255 caracteres.",
+        "enforcement": "code",
+        "verification": "Validar comprimento e conteúdo do campo antes de persistir; retornar HTTP 400 com mensagem específica se validação falhar"
+      },
+      {
+        "id": 31,
+        "category": "validation",
+        "description": "O campo email é obrigatório, deve estar em formato válido conforme RFC 5322, e deve ser único dentro do tenant. Rejeitar e-mails duplicados com mensagem 'E-mail já cadastrado nesta organização'.",
+        "enforcement": "code",
+        "verification": "Validar formato com regex RFC 5322; consultar repositório para verificar unicidade por tenant; retornar HTTP 400 ou 409 conforme aplicável"
+      },
+      {
+        "id": 32,
+        "category": "validation",
+        "description": "O campo nivel_hierarquico_id é obrigatório e deve referenciar um nível hierárquico existente no tenant do executor. Rejeitar referências inválidas ou de outros tenants.",
+        "enforcement": "code",
+        "verification": "Consultar repositório de níveis hierárquicos; validar que o nível existe e pertence ao tenant_id do executor; retornar HTTP 400 se inválido"
+      },
+      {
+        "id": 33,
+        "category": "invariant",
+        "description": "Isolamento multi-tenant: um usuário criado em um tenant não pode ser acessível, modificável ou visível por usuários de outro tenant. O tenant_id do novo usuário deve ser sempre igual ao tenant_id do executor.",
+        "enforcement": "code",
+        "verification": "Extrair tenant_id do token JWT; validar que tenant_id do executor == tenant_id alvo antes de persistir; usar tenant_id do executor ao inserir registro"
+      },
+      {
+        "id": 34,
+        "category": "invariant",
+        "description": "Status inicial de novo usuário deve ser sempre 'ativo', permitindo acesso imediato à plataforma. Não permitir que o cliente especifique status inicial.",
+        "enforcement": "code",
+        "verification": "Ignorar qualquer valor de status no payload; sempre inserir status='ativo' no banco de dados"
+      },
+      {
+        "id": 35,
+        "category": "compliance",
+        "description": "Conformidade com LGPD: dados pessoais do usuário (nome completo e e-mail) devem ser tratados com princípios de minimização de dados e proteção. Não armazenar dados desnecessários; criptografar dados em trânsito via HTTPS.",
+        "enforcement": "infra",
+        "verification": "Verificar que todas as requisições usam HTTPS com TLS 1.2+; validar que apenas campos necessários são armazenados no banco de dados"
+      },
+      {
+        "id": 36,
+        "category": "observability",
+        "description": "Toda operação de criação de usuário deve ser registrada em log de auditoria com identificação do administrador executor, timestamp, tenant_id, e dados do usuário criado, para rastreabilidade e conformidade.",
+        "enforcement": "code",
+        "verification": "Inserir entrada em tabela de auditoria após persistência bem-sucedida; incluir user_id do executor, timestamp, tenant_id, operação='criar_usuario', dados do novo usuário"
+      },
+      {
+        "id": 37,
+        "category": "rate_limit",
+        "description": "Não há limite de taxa específico para criação de usuários, mas a operação está sujeita aos limites gerais de requisição HTTP (máximo 10.000 requisições por minuto por tenant).",
+        "enforcement": "network",
+        "verification": "Implementar rate limiting no gateway API ou middleware; retornar HTTP 429 se limite excedido"
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "Endpoints de Usuários é um conjunto de operações HTTP que expõe funcionalidades de gerenciamento de colaboradores dentro de um tenant, permitindo que administradores criem, listem, editem, ativem e desativem usuários através de contratos REST bem-definidos. Implementa validação de entrada (unicidade de e-mail, formato, campos obrigatórios), autenticação via JWT, isolamento de dados por tenant, controle de acesso baseado em perfil (apenas administradores podem executar operações de escrita), tratamento de erros padronizado, e rastreabilidade completa de ações administrativas em logs de auditoria. Cada operação valida que o usuário executor é administrador do tenant, que o recurso alvo pertence ao mesmo tenant, e que nenhum dado de outras organizações é exposto ou modificado."
+    },
+    "definition": {
+      "endpoint": {
+        "id": 2,
+        "auth": "bearer",
+        "path": "/api/users",
+        "method": "POST",
+        "responses": [
+          {
+            "id": 3,
+            "body": "{ id: uuid, nome_completo: string, email: string, nivel_hierarquico_id: uuid, status: enum[ativo|inativo], data_criacao: timestamp }",
+            "status_code": 201
+          },
+          {
+            "id": 4,
+            "body": "{ error: { code: string, message: string, details?: object } }",
+            "status_code": 400
+          },
+          {
+            "id": 5,
+            "body": "{ error: { code: \"UNAUTHORIZED\", message: string } }",
+            "status_code": 401
+          },
+          {
+            "id": 6,
+            "body": "{ error: { code: \"FORBIDDEN\", message: string } }",
+            "status_code": 403
+          },
+          {
+            "id": 7,
+            "body": "{ error: { code: \"CONFLICT\", message: string, details: { field: string, reason: string } } }",
+            "status_code": 409
+          }
+        ],
+        "request_body": "{ nome_completo: string, email: string, nivel_hierarquico_id: uuid }",
+        "side_effects": [
+          {
+            "id": 8,
+            "description": "Registra entrada de auditoria com identificação do administrador executor, timestamp, tenant_id e dados do usuário criado"
+          },
+          {
+            "id": 9,
+            "description": "Emite evento de auditoria para conformidade com LGPD e rastreabilidade de criação de usuário"
+          }
+        ]
+      }
+    },
+    "pendencies": [
+      {
+        "id": 53,
+        "section": "definition",
+        "description": "Falta especificação de quais campos adicionais (além de nome_completo, email, nivel_hierarquico_id) podem ser opcionalmente incluídos no payload de criação de usuário. Exemplo: telefone, departamento, data de admissão. Necessário para completar o contrato de request_body.",
+        "resolutionOptions": [
+          {
+            "id": 54,
+            "text": "Manter apenas os três campos obrigatórios (nome_completo, email, nivel_hierarquico_id) no MVP; adicionar campos opcionais em versão futura"
+          },
+          {
+            "id": 55,
+            "text": "Adicionar campos opcionais: telefone (string, máx 20 caracteres), departamento (string, máx 100 caracteres), data_admissao (date)"
+          },
+          {
+            "id": 56,
+            "text": "Consultar feature_definition de cadastro de usuário para determinar quais campos adicionais são esperados pela interface"
+          }
+        ],
+        "recommendedOptionId": 56
+      },
+      {
+        "id": 57,
+        "section": "definition",
+        "description": "Falta especificação de paginação para operações de listagem (GET /api/users). Necessário definir se será implementada paginação cursor-based, offset-based ou limit-offset, e quais parâmetros de query serão suportados.",
+        "resolutionOptions": [
+          {
+            "id": 58,
+            "text": "Implementar paginação cursor-based conforme padrão da API Interna (limit, cursor, sort_by, sort_order)"
+          },
+          {
+            "id": 59,
+            "text": "Implementar paginação offset-based simples (limit, offset)"
+          },
+          {
+            "id": 60,
+            "text": "Não implementar paginação no MVP; retornar todos os usuários do tenant (aceitável para até 100 usuários por tenant)"
+          }
+        ],
+        "recommendedOptionId": 58
+      },
+      {
+        "id": 61,
+        "section": "rules",
+        "description": "Falta definição de comportamento quando um administrador tenta criar usuário com e-mail que já existe em outro tenant. Deve ser permitido (mesmo e-mail em tenants diferentes) ou bloqueado globalmente?",
+        "resolutionOptions": [
+          {
+            "id": 62,
+            "text": "Permitir o mesmo e-mail em tenants diferentes (isolamento por tenant); validar unicidade apenas dentro do tenant"
+          },
+          {
+            "id": 63,
+            "text": "Bloquear globalmente; um e-mail não pode ser usado em mais de um tenant"
+          }
+        ],
+        "recommendedOptionId": 62
+      },
+      {
+        "id": 64,
+        "section": "non_functional_requirements",
+        "description": "Falta especificação de limite de taxa (rate limiting) específico para operação de criação de usuário. Deve haver limite por administrador, por tenant, ou por IP?",
+        "resolutionOptions": [
+          {
+            "id": 65,
+            "text": "Sem limite específico; usar limite geral de requisições HTTP (10.000 req/min por tenant)"
+          },
+          {
+            "id": 66,
+            "text": "Limite por administrador: máximo 100 usuários criados por hora"
+          },
+          {
+            "id": 67,
+            "text": "Limite por tenant: máximo 1.000 usuários criados por dia"
+          }
+        ],
+        "recommendedOptionId": 65
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 44,
+        "then": "Retorna HTTP 201 com dados do usuário criado (id, nome_completo, email, status='ativo', data_criacao)",
+        "type": "unit",
+        "when": "Submete requisição POST /api/users com nome_completo, email válido e nivel_hierarquico_id existente no tenant",
+        "given": "Um administrador do tenant autenticado com token JWT válido",
+        "scenario": "Validação de criação de usuário com dados válidos",
+        "target_section": "definition"
+      },
+      {
+        "id": 45,
+        "then": "Retorna HTTP 403 com mensagem 'Acesso negado. Apenas administradores do tenant podem cadastrar usuários'",
+        "type": "unit",
+        "when": "Tenta submeter requisição POST /api/users com dados válidos",
+        "given": "Um colaborador (não administrador) autenticado com token JWT válido",
+        "scenario": "Rejeição de criação de usuário por falta de autorização",
+        "target_section": "rules"
+      },
+      {
+        "id": 46,
+        "then": "Retorna HTTP 409 com mensagem 'E-mail já cadastrado nesta organização'",
+        "type": "unit",
+        "when": "Submete requisição POST /api/users com email='joao@example.com' e dados válidos",
+        "given": "Um administrador do tenant autenticado; um usuário com email 'joao@example.com' já existe no tenant",
+        "scenario": "Rejeição de criação de usuário com e-mail duplicado",
+        "target_section": "rules"
+      },
+      {
+        "id": 47,
+        "then": "Retorna HTTP 400 com mensagem 'Formato de e-mail inválido'",
+        "type": "unit",
+        "when": "Submete requisição POST /api/users com email='email-invalido' (sem @)",
+        "given": "Um administrador do tenant autenticado",
+        "scenario": "Rejeição de criação de usuário com e-mail em formato inválido",
+        "target_section": "rules"
+      },
+      {
+        "id": 48,
+        "then": "Retorna HTTP 400 com mensagem 'Nível hierárquico não encontrado'",
+        "type": "unit",
+        "when": "Submete requisição POST /api/users com nivel_hierarquico_id que não existe no tenant",
+        "given": "Um administrador do tenant autenticado",
+        "scenario": "Rejeição de criação de usuário com nível hierárquico inválido",
+        "target_section": "rules"
+      },
+      {
+        "id": 49,
+        "then": "Administrador de B vê apenas usuários do tenant B; usuário criado em A não é visível em B",
+        "type": "integration",
+        "when": "Administrador do tenant A cria usuário; administrador do tenant B tenta listar usuários",
+        "given": "Dois tenants (A e B) com administradores autenticados em cada um",
+        "scenario": "Isolamento multi-tenant na criação de usuário",
+        "target_section": "rules"
+      },
+      {
+        "id": 50,
+        "then": "Uma entrada é registrada em log de auditoria com user_id do executor, timestamp, tenant_id, operação='criar_usuario', e dados do novo usuário",
+        "type": "integration",
+        "when": "Submete requisição POST /api/users com dados válidos e operação é bem-sucedida",
+        "given": "Um administrador do tenant autenticado",
+        "scenario": "Auditoria de criação de usuário",
+        "target_section": "rules"
+      },
+      {
+        "id": 51,
+        "then": "Payload é sanitizado; validação de formato rejeita entrada; nenhuma operação SQL maliciosa é executada",
+        "type": "security",
+        "when": "Submete requisição POST /api/users com email contendo payload SQL (ex: \"'; DROP TABLE users; --\")",
+        "given": "Um administrador do tenant autenticado",
+        "scenario": "Proteção contra injeção SQL na validação de e-mail",
+        "target_section": "rules"
+      },
+      {
+        "id": 52,
+        "then": "Todas as requisições são processadas; p99 de tempo de resposta <= 500ms; nenhuma requisição falha por timeout",
+        "type": "performance",
+        "when": "100 requisições simultâneas de criação de usuário são submetidas",
+        "given": "Ambiente de teste com 5.000 usuários ativos no tenant",
+        "scenario": "Desempenho de criação de usuário sob carga",
+        "target_section": "non_functional_requirements"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 38,
+        "target": "p99 <= 500ms para operação completa (validação + persistência + auditoria)",
+        "category": "performance",
+        "requirement": "A operação de criação de usuário deve ser concluída e retornar resposta ao cliente em tempo adequado, mesmo sob carga de até 5.000 usuários ativos e múltiplas requisições simultâneas.",
+        "verification": "Medir tempo de resposta em ambiente de teste com carga simulada; validar que p99 não excede 500ms"
+      },
+      {
+        "id": 39,
+        "target": "100% das requisições via HTTPS; TLS 1.2 mínimo",
+        "category": "security",
+        "requirement": "Todas as requisições devem ser transmitidas exclusivamente via HTTPS com TLS 1.2 ou superior, garantindo confidencialidade das credenciais e dados pessoais em trânsito.",
+        "verification": "Configurar servidor para rejeitar requisições HTTP; validar certificado SSL/TLS em testes de segurança"
+      },
+      {
+        "id": 40,
+        "target": "100% dos campos validados; nenhuma entrada não sanitizada persistida",
+        "category": "security",
+        "requirement": "Validação de entrada deve sanitizar e validar todos os campos do payload antes de persistência, prevenindo injeção SQL, XSS e outras vulnerabilidades de entrada.",
+        "verification": "Executar testes de segurança (OWASP Top 10); validar que payloads maliciosos são rejeitados"
+      },
+      {
+        "id": 41,
+        "target": "99.9% uptime mensal",
+        "category": "availability",
+        "requirement": "O endpoint deve estar disponível com alta disponibilidade, dado que sua indisponibilidade impede administradores de cadastrar novos colaboradores.",
+        "verification": "Monitorar disponibilidade com alertas; implementar redundância e failover no backend"
+      },
+      {
+        "id": 42,
+        "target": "100% das requisições com request_id único",
+        "category": "observability",
+        "requirement": "Todas as requisições devem ser rastreáveis através de request_id único, permitindo correlação de logs e auditoria de operações.",
+        "verification": "Gerar request_id em middleware; incluir em logs e respostas de erro"
+      },
+      {
+        "id": 43,
+        "target": "Menos de 10ms por operação de banco de dados (validação de unicidade, inserção)",
+        "category": "cost",
+        "requirement": "Operações de criação de usuário devem ser otimizadas para minimizar consumo de recursos de banco de dados e armazenamento, suportando crescimento de até 5.000 usuários por tenant.",
+        "verification": "Medir tempo de operações de banco de dados; otimizar índices e queries conforme necessário"
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 39,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T07:00:59.417Z",
+  "updatedAt": null
+}

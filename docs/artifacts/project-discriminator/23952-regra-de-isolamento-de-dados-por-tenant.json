@@ -1,0 +1,119 @@
+{
+  "id": 23952,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 12,
+        "name": "Identificador único que representa uma organização ou cliente no sistema multi-tenant",
+        "value": [
+          "tenant-uuid",
+          "tenant-id"
+        ],
+        "method": "user-input",
+        "reasoning": "O identificador do tenant ao qual o recurso alvo pertence é o uuid, caracterizando um identificador único por entidade.\nO tenant-id é o identificador único do tenant do usuário autenticado, que deve ser usado em cláusulas WHERE em todas as consultas de listagem do banco de dados.",
+        "confidence": 0.7028,
+        "context_element_id": 2682
+      },
+      {
+        "id": 16,
+        "name": "Entidade de domínio principal exposta como recurso da API",
+        "value": [
+          "recurso-alvo"
+        ],
+        "method": "user-input",
+        "reasoning": "O recurso-alvo é o objeto que é acessado pelo serviço.",
+        "confidence": 0.7123,
+        "context_element_id": 2750
+      },
+      {
+        "id": 17,
+        "name": "Tipo específico de evento ou mensagem que está sendo comunicado",
+        "value": [
+          "Recurso pertence a outro tenant"
+        ],
+        "method": "user-input",
+        "reasoning": "A mensagem de erro informa diretamente que o recurso pertence a outro tenant, revelando informações sobre a estrutura de dados.",
+        "confidence": 0.7913,
+        "context_element_id": 2755
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 23,
+        "name": "Usar background jobs para executar tarefas intensivas em recursos sem impactar a responsividade do sistema",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Operações que saem fora do tempo podem ser feitas por qualquer usuário, sem que o sistema pare ou retorne erro.",
+        "confidence": 0.9181,
+        "context_element_id": 2876
+      },
+      {
+        "id": 24,
+        "name": "Implementar retry automático com exponential backoff, jitter e circuit breaker para prevenir falhas em cascata",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Repetição sem tentativa de reavaliação fica responsável por corrigir o erro, e a reavaliação é a única maneira de o usuário saber que a operação foi efetivamente cancelada.",
+        "confidence": 0.9035,
+        "context_element_id": 2895
+      },
+      {
+        "id": 28,
+        "name": "Configurar revogação automática de acesso para contas comprometidas com invalidação imediata de tokens e sessões ativas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A sessão ativa de um usuário do tenant A é invalidada imediatamente quando o tenant é desativado, evitando que o acesso se espalhe após a desativação.",
+        "confidence": 0.9745,
+        "context_element_id": 2946
+      },
+      {
+        "id": 29,
+        "name": "Implementar respostas de segurança automáticas com isolamento de sistemas comprometidos e aplicação de contramedidas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Rejeitar todas as tentativas de acesso de um tenant a outro em testes de penetração confirma que a isolação é efetiva, sem que o usuário saia do controle.",
+        "confidence": 0.8404,
+        "context_element_id": 2950
+      },
+      {
+        "id": 31,
+        "name": "Implemente guardrails por meio de políticas de nuvem (como Azure Policy, AWS Config Rules) que impedem configurações não conformes e aplicam remediação automática",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem regras de segurança definidas, qualquer operação poderia cruzar limites de tenant, e a confiança multi-tenant seria comprometida.",
+        "confidence": 0.8891,
+        "context_element_id": 3015
+      },
+      {
+        "id": 32,
+        "name": "Implemente Event Sourcing para conformidade, armazenando todos os eventos de mudança de estado como uma sequência imutável com versionamento e capacidade de replay",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A operação de desativação é registrada como evento, e o timestamp é o único dado que permite reconstruir a sequência de alterações.",
+        "confidence": 0.7647,
+        "context_element_id": 3017
+      },
+      {
+        "id": 33,
+        "name": "Implemente restrições operacionais que limitem as ações do sistema com base em critérios de segurança predefinidos, incluindo rate limits, limites de operação e políticas de acesso restritivas",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem barreiras definidas, qualquer operação poderia cruzar limites de tenant, e a confiança multi-tenant seria comprometida.",
+        "confidence": 0.7291,
+        "context_element_id": 3062
+      }
+    ],
+    "discriminators": [],
+    "business_questions": []
+  },
+  "version": 4,
+  "active": true,
+  "sourceId": 23832,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T14:58:49.768Z",
+  "updatedAt": null
+}

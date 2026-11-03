@@ -1,0 +1,214 @@
+{
+  "id": 24024,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 17,
+        "name": "Degradação de Desempenho",
+        "method": "internal-inference",
+        "reasoning": "Uma requisição de validação em servidor demora mais do que o tempo esperado para cada campo, e a barreira de 1 requisição por segundo por campo é a que garante que o usuário não abandone o formulário.",
+        "confidence": 0.751,
+        "context_element_id": 2811
+      },
+      {
+        "id": 18,
+        "name": "Gargalos e Timeouts",
+        "method": "internal-inference",
+        "reasoning": "Sem limite de tempo, requisições de validação ao servidor se acumulam e o sistema fica parado, causando frustração do usuário e falhas de execução.",
+        "confidence": 0.8001,
+        "context_element_id": 2813
+      },
+      {
+        "id": 19,
+        "name": "Observabilidade e Detecção",
+        "method": "internal-inference",
+        "reasoning": "Sem feedback imediato, o usuário fica confuso sobre o que aconteceu e o tempo de espera é o que determina a satisfação.",
+        "confidence": 0.7214,
+        "context_element_id": 2814
+      },
+      {
+        "id": 20,
+        "name": "Autenticação e Controle de Acesso",
+        "method": "internal-inference",
+        "reasoning": "Apenas usuários autenticados e ativos do tenant podem acessar o formulário, e o retorno de erro é explícito (401 ou 403), sem confirmação explícita de autorização.",
+        "confidence": 0.7813,
+        "context_element_id": 2824
+      },
+      {
+        "id": 21,
+        "name": "Auditoria e Rastreabilidade",
+        "method": "internal-inference",
+        "reasoning": "Sem rótulo de causa, auditoria e trilha de falha não podem ser recuperadas depois de omissão ou erro.",
+        "confidence": 0.7397,
+        "context_element_id": 2848
+      }
+    ],
+    "attributes": [
+      {
+        "id": 11,
+        "name": "Domínios de negócio sobre os quais a regra atua, valida ou decide",
+        "value": [
+          "tarefa, prioridade, prazo"
+        ],
+        "method": "user-input",
+        "reasoning": "A regra de validação de tarefa atua sobre tarefa, prioridade e prazo.",
+        "confidence": 0.8625,
+        "context_element_id": 2678
+      },
+      {
+        "id": 13,
+        "name": "SLA ou tolerância a falhas esperada",
+        "value": [
+          "p95 <= 500ms",
+          "< 500ms p95"
+        ],
+        "method": "user-input",
+        "reasoning": "A SLA exigida é um p95 de tempo de resposta inferior ou igual a 500ms para carregamento da página contendo o formulário.\nA conclusão da operação de criação de tarefa é medida em tempo de resposta p95 de até 2000ms, indicando SLA de < 500ms p95.",
+        "confidence": 0.7607,
+        "context_element_id": 2772
+      },
+      {
+        "id": 14,
+        "name": "Métrica de desempenho principal a ser otimizada",
+        "value": [
+          "bandwidth-consumption",
+          "p95 <= 2000ms",
+          "p95 <= 500ms",
+          "response-time"
+        ],
+        "method": "user-input",
+        "reasoning": "O tamanho da página contendo formulário deve ser limitado a 200KB (gzipped) para minimizar o consumo de banda e processamento.\nA conclusão da operação de criação de tarefa, incluindo validação servidor, persistência e auditoria, é medida em tempo de resposta p95 de até 2000ms, mesmo com 5.000 usuários ativos e 10.000 tarefas por tenant.\nA performance do carregamento inicial do formulário com lista de colaboradores ativos é priorizada com p95 de tempo de resposta inferior ou igual a 500ms.\nA lista de colaboradores é carregada e renderizada em <= 500ms, com o formulário pronto para entrada do usuário, indicando que o métrico de performance é a resposta do carregamento.",
+        "confidence": 0.7765,
+        "context_element_id": 2777
+      },
+      {
+        "id": 15,
+        "name": "Entidade de domínio principal tratada pelo handler",
+        "value": [
+          "array_usuarios_ativos_do_tenant"
+        ],
+        "method": "user-input",
+        "reasoning": "O handler trata da entidade principal, o array_usuarios_ativos_do_tenant, do repositorio_usuarios.",
+        "confidence": 0.7632,
+        "context_element_id": 2783
+      },
+      {
+        "id": 16,
+        "name": "Contexto ou evento que dispara a execução do workflow",
+        "value": [
+          "user-request",
+          "workflow-execution"
+        ],
+        "method": "user-input",
+        "reasoning": "A requisição enviada ao backend para validar os dados e persistir a tarefa é um evento de solicitação do usuário.\nA tarefa é executada por um workflow, com um status inicial definido pelo usuário.",
+        "confidence": 0.723,
+        "context_element_id": 2791
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 22,
+        "name": "Configurar filas de prioridade para processar eventos críticos primeiro, estabelecendo políticas de priorização baseadas em SLA",
+        "method": "user-input",
+        "reasoning": "Prioridade é um atributo de tarefa, e a prioridade é o que determina a priorização das tarefas.",
+        "confidence": 0.7122,
+        "context_element_id": 2861
+      },
+      {
+        "id": 23,
+        "name": "Configurar o escalonamento de recursos com políticas FIFO, de prioridade ou baseadas em deadline conforme a criticidade das operações",
+        "method": "user-input",
+        "reasoning": "Sem prazo, a tarefa é criada sem prioridade, e a decisão de quem deve aceitá-la ou não é feita por um humano, não por um sistema.",
+        "confidence": 0.7291,
+        "context_element_id": 2870
+      },
+      {
+        "id": 24,
+        "name": "Implementar validação rigorosa de entradas e prevenção de condições que levem a exceções",
+        "method": "user-input",
+        "reasoning": "Data vencida em um campo de entrada é aceita, e a regra só é aplicada no servidor, deixando o usuário sem feedback.",
+        "confidence": 0.9176,
+        "context_element_id": 2909
+      },
+      {
+        "id": 25,
+        "name": "Configurar a detecção de atrasos suspeitos de mensagens com timestamps e análise temporal para identificar ataques de replay",
+        "method": "internal-inference",
+        "reasoning": "Rejeitar a entrada de data anterior à data atual evita que o usuário confunda a data de início com a data de término, e a mensagem de erro é exibida no momento, não depois.",
+        "confidence": 0.7477,
+        "context_element_id": 2924
+      },
+      {
+        "id": 26,
+        "name": "Implementar identificação única de atores com sistemas de identidade centralizados e gerenciamento unificado de credenciais",
+        "method": "internal-inference",
+        "reasoning": "Sem identificação única, qualquer alteração de responsabilidade seria justificada por um número qualquer, e a responsabilidade seria rejeitada sem saber quem fez.",
+        "confidence": 0.8957,
+        "context_element_id": 2928
+      },
+      {
+        "id": 28,
+        "name": "Implementar validação de dados em múltiplas camadas com verificações de tipo, formato, faixa e regras de negócio antes da persistência",
+        "method": "internal-inference",
+        "reasoning": "A data limite é uma informação que deve ser aceita ou rejeitada, não aceita ou rejeitada.",
+        "confidence": 0.8283,
+        "context_element_id": 2954
+      },
+      {
+        "id": 29,
+        "name": "Garanta compatibilidade retroativa e futura por meio de campos opcionais, valores padrão e campos obsoletos com períodos de carência",
+        "method": "internal-inference",
+        "reasoning": "Sem prazo definido, a tarefa pode ser editada posteriormente, e a data limite não é obrigatória, o que obriga o usuário a escolher uma data que não existia quando a tarefa foi criada.",
+        "confidence": 0.7168,
+        "context_element_id": 2962
+      },
+      {
+        "id": 30,
+        "name": "Implemente operações idempotentes que podem ser executadas múltiplas vezes sem efeitos colaterais",
+        "method": "user-input",
+        "reasoning": "Reenviar o mesmo formulário duas vezes é tratado como uma única tentativa, sem que cada tentativa seja registrada.",
+        "confidence": 0.9411,
+        "context_element_id": 2968
+      },
+      {
+        "id": 31,
+        "name": "Gere automaticamente trilhas de auditoria capturando todas as operações críticas com timestamps, identificação do usuário, dados antes/depois e contexto da operação",
+        "method": "user-input",
+        "reasoning": "Sem rastreabilidade, a responsabilidade por cada ação é questionada, e a prova de que a tarefa foi alterada por quem alterou é perdida.",
+        "confidence": 0.8324,
+        "context_element_id": 3012
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 8,
+        "name": "Estratégia de Processamento",
+        "value": "streaming em tempo real",
+        "method": "internal-inference",
+        "reasoning": "A validação de campos em cliente ocorre com feedback imediato ao usuário, sem atraso perceptível, caracterizando processamento real-time-streaming.",
+        "confidence": 0.8091,
+        "context_element_id": 1984
+      },
+      {
+        "id": 42,
+        "name": "Escopo de Persistência",
+        "value": "persistente",
+        "method": "internal-inference",
+        "reasoning": "A tarefa é persistida no tenant do usuário criador, caracterizando um escopo de persistência persistente.",
+        "confidence": 0.7934,
+        "context_element_id": 5097
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 23994,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}

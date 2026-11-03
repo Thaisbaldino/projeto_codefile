@@ -1,0 +1,684 @@
+{
+  "id": 23642,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 31,
+          "name": "Comando de Criação de Tarefa",
+          "format": "{ titulo: string, descricao?: string, responsavel_id: uuid, prioridade: enum, status: string, data_limite?: date }",
+          "origin": "Formulário de Criação (ASSET-002 Página de Tarefas)",
+          "trigger": "Usuário submete formulário de nova tarefa"
+        },
+        {
+          "id": 32,
+          "name": "Comando de Edição de Tarefa",
+          "format": "{ titulo?: string, descricao?: string, responsavel_id?: uuid, prioridade?: enum, status?: string, data_limite?: date }",
+          "origin": "Formulário de Edição (ASSET-002 Página de Tarefas)",
+          "trigger": "Usuário submete alterações em tarefa existente"
+        },
+        {
+          "id": 33,
+          "name": "Comando de Alteração de Status",
+          "format": "{ novo_status: string }",
+          "origin": "Kanban ou Formulário de Edição (ASSET-020 Painel Kanban)",
+          "trigger": "Usuário arrasta cartão entre colunas ou seleciona novo status"
+        },
+        {
+          "id": 34,
+          "name": "Comando de Conclusão de Tarefa",
+          "format": "{ tarefa_id: uuid }",
+          "origin": "Ação de Conclusão (ASSET-002 Página de Tarefas)",
+          "trigger": "Usuário confirma conclusão da tarefa"
+        },
+        {
+          "id": 35,
+          "name": "Solicitação de Validação de Responsável",
+          "format": "{ responsavel_id: uuid, tenant_id: uuid }",
+          "origin": "Handler de Tarefas (ASSET-036)",
+          "trigger": "Validação durante criação ou edição de tarefa"
+        },
+        {
+          "id": 36,
+          "name": "Solicitação de Verificação de Isolamento Multi-Tenant",
+          "format": "{ tarefa_id: uuid, tenant_id: uuid }",
+          "origin": "Handler de Tarefas (ASSET-036)",
+          "trigger": "Validação de acesso antes de qualquer operação"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 45,
+          "name": "Tarefa Criada",
+          "format": "{ id: uuid, tenant_id: uuid, titulo: string, descricao?: string, responsavel_id: uuid, criador_id: uuid, prioridade: enum, status: string, data_limite?: date, data_criacao: timestamp }",
+          "destination": "Repositório de Tarefas (ASSET-047)"
+        },
+        {
+          "id": 46,
+          "name": "Tarefa Atualizada",
+          "format": "{ id: uuid, [campos alterados], data_ultima_edicao: timestamp }",
+          "destination": "Repositório de Tarefas (ASSET-047)"
+        },
+        {
+          "id": 47,
+          "name": "Transição de Status Registrada",
+          "format": "{ tarefa_id: uuid, status_anterior: string, status_novo: string, usuario_id: uuid, timestamp: timestamp }",
+          "destination": "Histórico de Status (ASSET-046)"
+        },
+        {
+          "id": 48,
+          "name": "Evento de Tarefa Criada",
+          "format": "{ tipo: 'tarefa.criada', tarefa_id: uuid, tenant_id: uuid, responsavel_id: uuid, timestamp: timestamp }",
+          "destination": "Event Bus (para notificações e sincronização)"
+        },
+        {
+          "id": 49,
+          "name": "Evento de Status Alterado",
+          "format": "{ tipo: 'tarefa.status_alterado', tarefa_id: uuid, tenant_id: uuid, status_anterior: string, status_novo: string, timestamp: timestamp }",
+          "destination": "Event Bus (para notificações e sincronização)"
+        },
+        {
+          "id": 50,
+          "name": "Resultado de Validação",
+          "format": "{ valido: boolean, erros?: [{ campo: string, mensagem: string }] }",
+          "destination": "Handler de Tarefas (ASSET-036)"
+        },
+        {
+          "id": 51,
+          "name": "Exceção de Domínio",
+          "format": "{ tipo: string, mensagem: string, detalhes?: object }",
+          "destination": "Camada de Tratamento de Erros"
+        }
+      ],
+      "processing": [
+        {
+          "id": 37,
+          "step": "Validar campos obrigatórios",
+          "description": "Verifica se título, responsável, prioridade e status estão preenchidos e em formato válido."
+        },
+        {
+          "id": 38,
+          "step": "Validar formato de e-mail e data",
+          "description": "Valida formato de data limite (quando presente) e rejeita datas no passado em criação."
+        },
+        {
+          "id": 39,
+          "step": "Verificar responsável ativo no tenant",
+          "description": "Consulta registro de usuário para confirmar que responsável existe, está ativo e pertence ao tenant."
+        },
+        {
+          "id": 40,
+          "step": "Validar isolamento multi-tenant",
+          "description": "Confirma que tarefa pertence ao tenant do usuário executor e que nenhum acesso cruzado é possível."
+        },
+        {
+          "id": 41,
+          "step": "Validar transição de status",
+          "description": "Verifica se a transição de status solicitada é válida dentro da máquina de estados."
+        },
+        {
+          "id": 42,
+          "step": "Registrar transição no histórico",
+          "description": "Cria entrada no histórico de status com timestamp, usuário executor e status anterior/novo."
+        },
+        {
+          "id": 43,
+          "step": "Computar elegibilidade para destaque",
+          "description": "Avalia se tarefa atende critérios de prioridade elevada ou prazo vencido para destaque visual."
+        },
+        {
+          "id": 44,
+          "step": "Registrar auditoria de ação",
+          "description": "Registra em log de auditoria a operação realizada com identificação de usuário, tenant e timestamp."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 52,
+        "category": "invariant",
+        "description": "Toda tarefa deve estar vinculada a exatamente um tenant; nenhuma tarefa pode ser acessível por múltiplos tenants ou orfã de tenant.",
+        "enforcement": "db_constraint",
+        "verification": "Verificar que coluna tenant_id em tabela de tarefas possui constraint NOT NULL e FK para tabela de tenants; validar em código que toda operação de leitura/escrita filtra por tenant_id do usuário autenticado."
+      },
+      {
+        "id": 53,
+        "category": "invariant",
+        "description": "Toda tarefa deve possuir um responsável ativo no tenant no momento da criação ou edição; responsável inativo ou de outro tenant é rejeitado.",
+        "enforcement": "code",
+        "verification": "Executar teste de unidade: tentar criar tarefa com responsável inativo retorna erro de validação; tentar criar com responsável de outro tenant retorna erro de isolamento."
+      },
+      {
+        "id": 54,
+        "category": "invariant",
+        "description": "Toda tarefa deve possuir um status válido dentro do conjunto fixo (A Fazer, Em Andamento, Concluído); valores fora deste conjunto são rejeitados.",
+        "enforcement": "code",
+        "verification": "Validar em método alterar_status() que novo_status está em lista de valores permitidos; rejeitar com exceção de domínio se inválido."
+      },
+      {
+        "id": 55,
+        "category": "validation",
+        "description": "Título de tarefa não pode estar em branco e não pode exceder 255 caracteres.",
+        "enforcement": "code",
+        "verification": "Teste de unidade: criar tarefa com título vazio retorna erro; criar com título > 255 caracteres retorna erro."
+      },
+      {
+        "id": 56,
+        "category": "validation",
+        "description": "Data limite de tarefa, quando informada, deve ser uma data válida no calendário e não pode ser anterior à data atual no momento da criação.",
+        "enforcement": "code",
+        "verification": "Teste de unidade: tentar criar tarefa com data_limite no passado retorna erro; tentar com formato inválido retorna erro."
+      },
+      {
+        "id": 57,
+        "category": "validation",
+        "description": "Prioridade de tarefa deve ser um dos valores válidos: baixa, média, alta ou urgente; valores fora deste conjunto são rejeitados.",
+        "enforcement": "code",
+        "verification": "Teste de unidade: tentar criar tarefa com prioridade inválida retorna erro; valores válidos são aceitos."
+      },
+      {
+        "id": 58,
+        "category": "idempotency",
+        "description": "Operação de conclusão de tarefa já concluída deve ser idempotente; segunda tentativa retorna sucesso sem alterar estado.",
+        "enforcement": "code",
+        "verification": "Teste de unidade: concluir tarefa já concluída retorna sucesso; data_conclusao não é alterada; histórico não registra transição duplicada."
+      },
+      {
+        "id": 59,
+        "category": "compliance",
+        "description": "Toda operação de criação, edição ou conclusão de tarefa deve ser registrada em log de auditoria com identificação de usuário executor, tenant, timestamp e dados alterados, em conformidade com requisitos de rastreabilidade LGPD.",
+        "enforcement": "code",
+        "verification": "Verificar que cada método de alteração invoca serviço de auditoria; validar em testes de integração que log contém usuário_id, tenant_id, timestamp e campos alterados."
+      },
+      {
+        "id": 60,
+        "category": "observability",
+        "description": "Toda exceção de domínio (validação falha, responsável inválido, isolamento violado) deve ser registrada com contexto suficiente para diagnóstico sem expor dados sensíveis.",
+        "enforcement": "code",
+        "verification": "Teste de integração: tentar operação inválida gera log com tipo de erro, tenant_id e timestamp; não expõe senhas ou dados pessoais."
+      },
+      {
+        "id": 61,
+        "category": "invariant",
+        "description": "Transição de status deve respeitar máquina de estados: A Fazer → Em Andamento → Concluído, com possibilidade de retorno de Concluído para A Fazer ou Em Andamento.",
+        "enforcement": "code",
+        "verification": "Teste de unidade: validar cada transição permitida; rejeitar transições inválidas (ex: A Fazer → Concluído direto) com exceção."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "O Domínio de Negócio encapsula as entidades centrais, agregados e regras de negócio que governam o sistema de gerenciamento de tarefas multi-tenant. Compreende o Registro de Tarefa (com atributos de título, descrição, responsável, prioridade, status e prazo), o Registro de Usuário (com nome, e-mail, nível hierárquico e status de ativação), a Estrutura Hierárquica de Usuários (organização de níveis dentro de um tenant), o Registro de Tenant (isolamento de dados por organização) e o Registro de Histórico de Status de Tarefa (rastreabilidade de transições). O domínio aplica máquina de estados para o ciclo de vida das tarefas, valida invariantes de isolamento multi-tenant, garante unicidade de e-mail dentro de cada tenant, e mantém auditabilidade completa de ações. Não contém lógica de persistência (delegada ao ASSET-021), apresentação (delegada ao ASSET-002/ASSET-006) ou integração externa (delegada ao ASSET-017)."
+    },
+    "definition": {
+      "aggregate": {
+        "id": 2,
+        "name": "Tarefa",
+        "fields": [
+          {
+            "id": 3,
+            "name": "id",
+            "type": "uuid",
+            "nullable": false,
+            "description": "Identificador único da tarefa dentro do tenant."
+          },
+          {
+            "id": 4,
+            "name": "tenant_id",
+            "type": "uuid",
+            "nullable": false,
+            "description": "Referência ao tenant proprietário da tarefa, garantindo isolamento de dados."
+          },
+          {
+            "id": 5,
+            "name": "titulo",
+            "type": "string",
+            "nullable": false,
+            "description": "Título descritivo da tarefa, identificador legível da atividade."
+          },
+          {
+            "id": 6,
+            "name": "descricao",
+            "type": "string",
+            "nullable": true,
+            "description": "Descrição detalhada do contexto, objetivo ou instruções da tarefa."
+          },
+          {
+            "id": 7,
+            "name": "responsavel_id",
+            "type": "uuid",
+            "nullable": false,
+            "description": "Referência ao usuário responsável pela execução da tarefa."
+          },
+          {
+            "id": 8,
+            "name": "criador_id",
+            "type": "uuid",
+            "nullable": false,
+            "description": "Referência ao usuário que criou a tarefa."
+          },
+          {
+            "id": 9,
+            "name": "prioridade",
+            "type": "enum[baixa|media|alta|urgente]",
+            "nullable": false,
+            "description": "Nível de prioridade da tarefa para fins de destaque e ordenação."
+          },
+          {
+            "id": 10,
+            "name": "status",
+            "type": "string",
+            "nullable": false,
+            "description": "Status atual da tarefa, referência a um status fixo definido pelo sistema (A Fazer, Em Andamento, Concluído)."
+          },
+          {
+            "id": 11,
+            "name": "data_limite",
+            "type": "date",
+            "nullable": true,
+            "description": "Data limite para conclusão da tarefa; null quando sem prazo definido."
+          },
+          {
+            "id": 12,
+            "name": "data_criacao",
+            "type": "timestamp",
+            "nullable": false,
+            "description": "Data e hora de criação da tarefa, registrada automaticamente pelo sistema."
+          },
+          {
+            "id": 13,
+            "name": "data_ultima_edicao",
+            "type": "timestamp",
+            "nullable": true,
+            "description": "Data e hora da última edição da tarefa."
+          },
+          {
+            "id": 14,
+            "name": "data_conclusao",
+            "type": "timestamp",
+            "nullable": true,
+            "description": "Data e hora de conclusão da tarefa; null enquanto ativa."
+          }
+        ],
+        "methods": [
+          {
+            "id": 15,
+            "name": "criar",
+            "signature": "criar(titulo: string, descricao?: string, responsavel_id: uuid, prioridade: enum, status: string, data_limite?: date, tenant_id: uuid, criador_id: uuid) -> Tarefa",
+            "description": "Cria uma nova tarefa validando campos obrigatórios, unicidade de responsável ativo no tenant, e formato de data limite."
+          },
+          {
+            "id": 16,
+            "name": "editar",
+            "signature": "editar(titulo?: string, descricao?: string, responsavel_id?: uuid, prioridade?: enum, status?: string, data_limite?: date) -> void",
+            "description": "Edita atributos da tarefa com validação de campos obrigatórios e responsável ativo no tenant."
+          },
+          {
+            "id": 17,
+            "name": "alterar_status",
+            "signature": "alterar_status(novo_status: string) -> void",
+            "description": "Altera o status da tarefa para um dos valores fixos válidos, registrando a transição no histórico."
+          },
+          {
+            "id": 18,
+            "name": "concluir",
+            "signature": "concluir() -> void",
+            "description": "Marca a tarefa como concluída, registrando data_conclusao e transição de status."
+          },
+          {
+            "id": 19,
+            "name": "reabrir",
+            "signature": "reabrir(novo_status: string) -> void",
+            "description": "Reabre uma tarefa concluída, alterando seu status para um valor ativo válido."
+          },
+          {
+            "id": 20,
+            "name": "esta_em_atraso",
+            "signature": "esta_em_atraso(data_atual: date) -> boolean",
+            "description": "Verifica se a tarefa possui prazo vencido em relação à data atual e não está concluída."
+          },
+          {
+            "id": 21,
+            "name": "eh_critica",
+            "signature": "eh_critica() -> boolean",
+            "description": "Verifica se a tarefa possui prioridade elevada (alta ou urgente)."
+          }
+        ],
+        "description": "Entidade central que representa uma atividade a ser executada dentro de um tenant, contendo informações de identificação, responsabilidade, prioridade, status e prazo."
+      },
+      "state_machine": {
+        "states": [
+          {
+            "id": 24,
+            "name": "A Fazer",
+            "description": "Estado inicial de uma tarefa recém-criada, aguardando início da execução."
+          },
+          {
+            "id": 25,
+            "name": "Em Andamento",
+            "description": "Estado intermediário indicando que a tarefa está sendo executada."
+          },
+          {
+            "id": 26,
+            "name": "Concluído",
+            "description": "Estado final indicando que a tarefa foi completada."
+          }
+        ],
+        "transitions": [
+          {
+            "id": 27,
+            "to": "Em Andamento",
+            "from": "A Fazer",
+            "trigger": "iniciar_execucao"
+          },
+          {
+            "id": 28,
+            "to": "Concluído",
+            "from": "Em Andamento",
+            "trigger": "concluir_tarefa"
+          },
+          {
+            "id": 29,
+            "to": "A Fazer",
+            "from": "Em Andamento",
+            "trigger": "retomar_para_a_fazer"
+          },
+          {
+            "id": 30,
+            "to": "A Fazer",
+            "from": "Concluído",
+            "trigger": "reabrir_tarefa"
+          }
+        ]
+      },
+      "value_objects": [
+        {
+          "id": 22,
+          "name": "Prioridade",
+          "constructor": "Prioridade(valor: enum[baixa|media|alta|urgente])",
+          "description": "Objeto de valor que encapsula o nível de prioridade de uma tarefa.",
+          "normalization": "Normaliza para minúsculas; rejeita valores fora do conjunto permitido."
+        },
+        {
+          "id": 23,
+          "name": "Status",
+          "constructor": "Status(valor: string)",
+          "description": "Objeto de valor que encapsula o status de uma tarefa dentro do ciclo de vida fixo.",
+          "normalization": "Valida contra lista de status fixos do sistema; rejeita valores inválidos."
+        }
+      ]
+    },
+    "pendencies": [
+      {
+        "id": 81,
+        "section": "definition",
+        "description": "Definição de constantes de prioridade: quais valores exatos (baixa, média, alta, urgente) são permitidos e qual é o mapeamento para exibição visual (cores, ícones)?",
+        "resolutionOptions": [
+          {
+            "id": 82,
+            "text": "Definir constantes em arquivo de configuração: PRIORIDADES = { BAIXA: 'baixa', MEDIA: 'media', ALTA: 'alta', URGENTE: 'urgente' }; mapeamento visual em asset de UI (ASSET-002)."
+          },
+          {
+            "id": 83,
+            "text": "Armazenar prioridades em tabela de configuração por tenant, permitindo customização futura; inicializar com valores padrão."
+          },
+          {
+            "id": 84,
+            "text": "Definir como enum em código de domínio com valores hardcoded; sem suporte a customização."
+          }
+        ],
+        "recommendedOptionId": 82
+      },
+      {
+        "id": 85,
+        "section": "definition",
+        "description": "Definição de constantes de status fixo: quais valores exatos (A Fazer, Em Andamento, Concluído) são permitidos? Há outros status intermediários previstos?",
+        "resolutionOptions": [
+          {
+            "id": 86,
+            "text": "Definir três status fixos: 'a_fazer', 'em_andamento', 'concluido'; sem status intermediários nesta versão."
+          },
+          {
+            "id": 87,
+            "text": "Armazenar status em tabela de configuração para permitir adição futura de status customizados por tenant; inicializar com três valores padrão."
+          },
+          {
+            "id": 88,
+            "text": "Definir status como enum em código; adicionar status intermediários como 'em_revisao' ou 'bloqueado' nesta versão."
+          }
+        ],
+        "recommendedOptionId": 87
+      },
+      {
+        "id": 89,
+        "section": "definition",
+        "description": "Limite máximo de caracteres para título de tarefa: qual é o valor exato (255, 512, outro)?",
+        "resolutionOptions": [
+          {
+            "id": 90,
+            "text": "Definir limite em 255 caracteres, alinhado com padrão de banco de dados VARCHAR(255)."
+          },
+          {
+            "id": 91,
+            "text": "Definir limite em 512 caracteres para permitir títulos mais descritivos."
+          },
+          {
+            "id": 92,
+            "text": "Definir limite em 1024 caracteres para máxima flexibilidade."
+          }
+        ],
+        "recommendedOptionId": 90
+      },
+      {
+        "id": 93,
+        "section": "rules",
+        "description": "Regra de retenção de histórico de status: por quanto tempo registros de transição de status devem ser mantidos? Há requisito de LGPD para retenção mínima?",
+        "resolutionOptions": [
+          {
+            "id": 94,
+            "text": "Manter histórico indefinidamente; nenhuma exclusão automática."
+          },
+          {
+            "id": 95,
+            "text": "Manter histórico por 90 dias (alinhado com requisitos operacionais); após isso, arquivar ou excluir."
+          },
+          {
+            "id": 96,
+            "text": "Manter histórico por 1 ano (alinhado com requisitos de auditoria); após isso, arquivar."
+          }
+        ],
+        "recommendedOptionId": 96
+      },
+      {
+        "id": 97,
+        "section": "non_functional_requirements",
+        "description": "Limite de tamanho de descrição de tarefa: qual é o máximo de caracteres permitido para o campo descricao?",
+        "resolutionOptions": [
+          {
+            "id": 98,
+            "text": "Definir limite em 2.000 caracteres (TEXT curto)."
+          },
+          {
+            "id": 99,
+            "text": "Definir limite em 5.000 caracteres (TEXT médio)."
+          },
+          {
+            "id": 100,
+            "text": "Sem limite explícito; usar tipo TEXT do banco de dados (até 2GB)."
+          }
+        ],
+        "recommendedOptionId": 98
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 69,
+        "then": "Tarefa é criada com sucesso, data_criacao é registrada automaticamente, e mensagem de confirmação é exibida",
+        "type": "unit",
+        "when": "Submete formulário de criação com título, responsável, prioridade e status válidos",
+        "given": "Um usuário autenticado em um tenant com responsável ativo disponível",
+        "scenario": "Criação de tarefa com validação de campos obrigatórios",
+        "target_section": "definition"
+      },
+      {
+        "id": 70,
+        "then": "Validação falha, erro específico é retornado, tarefa não é criada",
+        "type": "unit",
+        "when": "Tenta submeter formulário de criação com campo título vazio",
+        "given": "Um usuário autenticado em um tenant",
+        "scenario": "Rejeição de criação de tarefa com título em branco",
+        "target_section": "rules"
+      },
+      {
+        "id": 71,
+        "then": "Validação falha, erro de responsável inválido é retornado, tarefa não é criada",
+        "type": "unit",
+        "when": "Tenta criar tarefa atribuindo a responsável inativo",
+        "given": "Um usuário autenticado em um tenant com um responsável inativo",
+        "scenario": "Rejeição de atribuição a responsável inativo",
+        "target_section": "rules"
+      },
+      {
+        "id": 72,
+        "then": "Status é atualizado, transição é registrada no histórico com timestamp e usuário executor",
+        "type": "unit",
+        "when": "Usuário altera status para 'Em Andamento'",
+        "given": "Uma tarefa existente com status 'A Fazer'",
+        "scenario": "Alteração de status dentro da máquina de estados",
+        "target_section": "definition"
+      },
+      {
+        "id": 73,
+        "then": "Validação falha, exceção de domínio é lançada, status não é alterado",
+        "type": "unit",
+        "when": "Tenta alterar diretamente para status inválido fora da máquina de estados",
+        "given": "Uma tarefa com status 'A Fazer'",
+        "scenario": "Rejeição de transição de status inválida",
+        "target_section": "rules"
+      },
+      {
+        "id": 74,
+        "then": "Retorna true, indicando que tarefa é elegível para destaque visual",
+        "type": "unit",
+        "when": "Método eh_critica() é invocado",
+        "given": "Uma tarefa com prioridade 'alta'",
+        "scenario": "Cálculo de elegibilidade para destaque de prioridade elevada",
+        "target_section": "definition"
+      },
+      {
+        "id": 75,
+        "then": "Retorna true, indicando que tarefa está em atraso",
+        "type": "unit",
+        "when": "Método esta_em_atraso(data_atual) é invocado",
+        "given": "Uma tarefa com data_limite no passado e status diferente de 'Concluído'",
+        "scenario": "Cálculo de elegibilidade para destaque de atraso",
+        "target_section": "definition"
+      },
+      {
+        "id": 76,
+        "then": "Tarefa é criada vinculada ao tenant A; usuário do tenant B não consegue acessá-la mesmo com manipulação de ID",
+        "type": "integration",
+        "when": "Usuário do tenant A cria tarefa atribuída a responsável do tenant A",
+        "given": "Dois tenants diferentes com usuários autenticados",
+        "scenario": "Isolamento multi-tenant em operação de criação",
+        "target_section": "rules"
+      },
+      {
+        "id": 77,
+        "then": "Log de auditoria registra usuario_id, tenant_id, timestamp, operacao='tarefa.criada' e dados da tarefa",
+        "type": "integration",
+        "when": "Cria uma nova tarefa com sucesso",
+        "given": "Um usuário autenticado em um tenant",
+        "scenario": "Auditoria de operação de criação de tarefa",
+        "target_section": "rules"
+      },
+      {
+        "id": 78,
+        "then": "Acesso é negado com erro 403 Forbidden; tarefa não é retornada; operação é registrada em auditoria",
+        "type": "security",
+        "when": "Usuário do tenant A tenta acessar tarefa do tenant B via manipulação de parâmetro de ID",
+        "given": "Dois tenants diferentes com tarefas distintas",
+        "scenario": "Tentativa de acesso cruzado entre tenants",
+        "target_section": "rules"
+      },
+      {
+        "id": 79,
+        "then": "p95 de latência <= 200ms, p99 <= 500ms; nenhuma tarefa é perdida; isolamento multi-tenant é mantido",
+        "type": "performance",
+        "when": "Cada usuário cria uma nova tarefa",
+        "given": "5.000 usuários simultâneos em um tenant com 10.000 tarefas existentes",
+        "scenario": "Desempenho de operação de criação sob carga",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 80,
+        "then": "Evento contém tipo='tarefa.criada', tarefa_id, tenant_id, responsavel_id e timestamp em formato ISO 8601",
+        "type": "contract",
+        "when": "Evento é emitido para o event bus",
+        "given": "Uma tarefa é criada com sucesso no domínio",
+        "scenario": "Contrato de saída: Evento de Tarefa Criada",
+        "target_section": "flow"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 62,
+        "target": "p95 <= 200ms, p99 <= 500ms em condições normais; p95 <= 500ms sob carga de 5.000 usuários ativos e 10.000 tarefas por tenant",
+        "category": "performance",
+        "requirement": "Operações de criação, edição e alteração de status de tarefa devem ser concluídas e retornar confirmação ao usuário em tempo adequado.",
+        "verification": "Teste de carga: simular 5.000 usuários simultâneos executando operações de CRUD em tarefas; medir latência p95 e p99; validar que não excedem limites."
+      },
+      {
+        "id": 63,
+        "target": "Cálculo deve ser concluído em <= 50ms mesmo com 10.000 tarefas por tenant",
+        "category": "performance",
+        "requirement": "Cálculo de elegibilidade para destaque (prioridade elevada, prazo vencido) deve ser executado sem impacto perceptível no carregamento de visualizações.",
+        "verification": "Teste de performance: carregar visualização de lista/Kanban com 10.000 tarefas; medir tempo de cálculo de destaques; validar <= 50ms."
+      },
+      {
+        "id": 64,
+        "target": "100% de conformidade; zero violações de isolamento detectadas em testes de segurança",
+        "category": "security",
+        "requirement": "Isolamento multi-tenant deve ser garantido em todas as operações; nenhuma tarefa de um tenant pode ser acessível por outro tenant mesmo com manipulação de parâmetros.",
+        "verification": "Teste de segurança: tentar acessar tarefa de outro tenant via manipulação de ID; validar que retorna erro 403 Forbidden; tentar listar tarefas de outro tenant; validar que retorna lista vazia."
+      },
+      {
+        "id": 65,
+        "target": "100% de conformidade; zero tarefas atribuídas a usuários inativos ou de outros tenants",
+        "category": "security",
+        "requirement": "Validação de responsável deve garantir que apenas usuários ativos do tenant correto podem ser atribuídos a tarefas.",
+        "verification": "Teste de integração: tentar criar tarefa com responsável inativo; validar erro; tentar com responsável de outro tenant; validar erro."
+      },
+      {
+        "id": 66,
+        "target": "99,5% de disponibilidade; RTO <= 5 minutos em caso de falha",
+        "category": "availability",
+        "requirement": "Operações de domínio devem estar disponíveis com alta disponibilidade, dado que indisponibilidade impede criação e gerenciamento de tarefas.",
+        "verification": "Monitorar disponibilidade do serviço de domínio; alertar se cai abaixo de 99,5%; validar que recuperação de falha ocorre em <= 5 minutos."
+      },
+      {
+        "id": 67,
+        "target": "100% de operações registradas; logs estruturados em formato JSON com campos obrigatórios",
+        "category": "observability",
+        "requirement": "Todas as operações de domínio devem ser rastreáveis via logs estruturados contendo tenant_id, usuario_id, timestamp e resultado da operação.",
+        "verification": "Validar que cada operação gera log com tenant_id, usuario_id, timestamp, operacao e resultado; verificar formato JSON; validar que logs são consultáveis por tenant_id."
+      },
+      {
+        "id": 68,
+        "target": "100% de conformidade com LGPD; zero exposição de dados pessoais em logs ou respostas de erro",
+        "category": "security",
+        "requirement": "Dados pessoais de usuários (nome, e-mail) referenciados em tarefas devem ser tratados em conformidade com LGPD, aplicando princípios de minimização e proteção.",
+        "verification": "Auditoria de conformidade: validar que logs não expõem e-mail ou nome completo; validar que mensagens de erro não revelam dados pessoais; validar que dados são retidos apenas enquanto necessário."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 11,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-10T23:33:56.352Z",
+  "updatedAt": null
+}

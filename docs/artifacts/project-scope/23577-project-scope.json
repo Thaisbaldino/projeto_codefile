@@ -1,0 +1,411 @@
+{
+  "id": 23577,
+  "projectId": 4118,
+  "type": "project_scope",
+  "content": {
+    "pendencies": [],
+    "integrations": {
+      "items": [
+        {
+          "id": 42,
+          "type": "Integração com provedor de e-mail transacional para envio de mensagens de recuperação de senha e futuras notificações aos usuários",
+          "system": "Serviço de Envio de E-mail",
+          "criticality": "critical"
+        }
+      ]
+    },
+    "operationalModel": {
+      "macroprocesses": [
+        {
+          "id": 19,
+          "name": "Gestão de Usuários e Organizações",
+          "processes": [
+            {
+              "id": 20,
+              "name": "Cadastro e Configuração de Usuários",
+              "activities": [
+                {
+                  "id": 21,
+                  "name": "Cadastrar Usuários",
+                  "criticality": "essential",
+                  "description": "Permite ao administrador do tenant registrar novos colaboradores na plataforma, informando dados como nome, e-mail e nível hierárquico dentro da organização."
+                },
+                {
+                  "id": 22,
+                  "name": "Definir Níveis Hierárquicos",
+                  "criticality": "essential",
+                  "description": "Permite configurar a estrutura hierárquica da organização, atribuindo níveis aos usuários para fins organizacionais, sem restringir a atribuição de tarefas entre eles."
+                },
+                {
+                  "id": 23,
+                  "name": "Gerenciar Perfis de Usuário",
+                  "criticality": "essential",
+                  "description": "Permite editar, ativar ou desativar usuários cadastrados no tenant, mantendo o controle sobre quem tem acesso ativo à plataforma."
+                }
+              ]
+            },
+            {
+              "id": 24,
+              "name": "Autenticação e Controle de Acesso",
+              "activities": [
+                {
+                  "id": 25,
+                  "name": "Autenticar Usuário",
+                  "criticality": "essential",
+                  "description": "Permite que o usuário acesse a plataforma mediante login com e-mail e senha próprios, garantindo que cada sessão esteja vinculada ao tenant correto. A arquitetura de autenticação deve ser projetada para suportar a integração futura com provedores externos via SSO/OAuth."
+                },
+                {
+                  "id": 26,
+                  "name": "Recuperar Senha",
+                  "criticality": "essential",
+                  "description": "Permite que o usuário solicite a redefinição de senha em caso de esquecimento, por meio de fluxo seguro de recuperação via e-mail."
+                }
+              ]
+            },
+            {
+              "id": 78,
+              "name": "Provisionamento de Tenants",
+              "activities": [
+                {
+                  "id": 79,
+                  "name": "Provisionar Novo Tenant",
+                  "criticality": "essential",
+                  "description": "Permite ao administrador interno da plataforma criar e configurar uma nova organização (tenant) no sistema, sem que o cliente final tenha acesso a esse processo. O cadastro de novos tenants é realizado exclusivamente por operadores internos da plataforma."
+                },
+                {
+                  "id": 80,
+                  "name": "Ativar e Desativar Tenant",
+                  "criticality": "essential",
+                  "description": "Permite ao administrador interno habilitar ou desabilitar o acesso de uma organização à plataforma, controlando o ciclo de vida dos tenants cadastrados."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": 27,
+          "name": "Gerenciamento de Tarefas",
+          "processes": [
+            {
+              "id": 28,
+              "name": "Criação e Atribuição de Tarefas",
+              "activities": [
+                {
+                  "id": 29,
+                  "name": "Criar Tarefa",
+                  "criticality": "essential",
+                  "description": "Permite ao usuário registrar uma nova tarefa informando título, descrição, responsável, prioridade, status inicial e data limite para conclusão."
+                },
+                {
+                  "id": 30,
+                  "name": "Atribuir Tarefa a Usuário",
+                  "criticality": "essential",
+                  "description": "Permite vincular uma tarefa a um colaborador específico da organização, independentemente do nível hierárquico do criador ou do responsável."
+                },
+                {
+                  "id": 31,
+                  "name": "Definir Prioridade da Tarefa",
+                  "criticality": "essential",
+                  "description": "Permite classificar a tarefa por nível de prioridade (ex.: baixa, média, alta, urgente), facilitando a identificação de demandas críticas."
+                },
+                {
+                  "id": 32,
+                  "name": "Definir Prazo da Tarefa",
+                  "criticality": "essential",
+                  "description": "Permite estabelecer uma data limite para conclusão da tarefa, possibilitando o controle de prazos e a identificação de atividades em atraso."
+                }
+              ]
+            },
+            {
+              "id": 33,
+              "name": "Acompanhamento e Atualização de Tarefas",
+              "activities": [
+                {
+                  "id": 34,
+                  "name": "Atualizar Status da Tarefa",
+                  "criticality": "essential",
+                  "description": "Permite ao responsável ou criador da tarefa alterar seu status entre as colunas fixas do sistema (ex.: A Fazer, Em Andamento, Concluído), refletindo o progresso real da atividade. O modelo de dados de status deve ser projetado para suportar personalização de colunas em versões futuras."
+                },
+                {
+                  "id": 35,
+                  "name": "Editar Tarefa",
+                  "criticality": "essential",
+                  "description": "Permite modificar as informações de uma tarefa existente, como título, descrição, responsável, prioridade ou prazo, conforme necessidade."
+                },
+                {
+                  "id": 36,
+                  "name": "Concluir Tarefa",
+                  "criticality": "essential",
+                  "description": "Permite marcar uma tarefa como concluída, encerrando seu ciclo ativo e registrando a finalização da atividade."
+                },
+                {
+                  "id": 37,
+                  "name": "Destacar Tarefas Críticas ou Atrasadas",
+                  "criticality": "essential",
+                  "description": "O sistema identifica e destaca visualmente tarefas com alta prioridade ou com prazo vencido, facilitando a priorização de demandas urgentes."
+                }
+              ]
+            },
+            {
+              "id": 38,
+              "name": "Visualização de Tarefas",
+              "activities": [
+                {
+                  "id": 39,
+                  "name": "Visualizar Tarefas em Lista",
+                  "criticality": "essential",
+                  "description": "Exibe as tarefas em formato de lista tabular, permitindo consultas rápidas, aplicação de filtros e pesquisa por diferentes atributos como status, responsável, prioridade e prazo."
+                },
+                {
+                  "id": 40,
+                  "name": "Visualizar Tarefas em Kanban",
+                  "criticality": "essential",
+                  "description": "Exibe as tarefas organizadas em colunas fixas definidas pelo sistema (ex.: A Fazer, Em Andamento, Concluído), permitindo a movimentação das tarefas entre colunas de forma prática e oferecendo uma visão visual do andamento das atividades. A arquitetura deve estar preparada para suportar colunas configuráveis por tenant em versão futura."
+                },
+                {
+                  "id": 41,
+                  "name": "Filtrar e Pesquisar Tarefas",
+                  "criticality": "essential",
+                  "description": "Permite aplicar filtros combinados e realizar buscas nas tarefas por atributos como responsável, prioridade, status e data limite, facilitando a localização de atividades específicas."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "functionalPersonas": {
+      "items": [
+        {
+          "id": 16,
+          "name": "Colaborador",
+          "mainRole": "Usuário operacional responsável por executar tarefas atribuídas e criar novas tarefas",
+          "actionType": "Cria, visualiza, atualiza e conclui tarefas; atribui tarefas a outros usuários",
+          "criticality": "high"
+        },
+        {
+          "id": 17,
+          "name": "Gestor / Líder de Equipe",
+          "mainRole": "Usuário com nível hierárquico superior, responsável por acompanhar o andamento das atividades da equipe",
+          "actionType": "Acompanha tarefas da equipe, define prioridades e monitora prazos e status",
+          "criticality": "high"
+        },
+        {
+          "id": 18,
+          "name": "Administrador do Tenant",
+          "mainRole": "Responsável pela configuração e gestão dos usuários dentro da organização",
+          "actionType": "Cadastra colaboradores, define níveis hierárquicos e gerencia o ambiente da empresa na plataforma",
+          "criticality": "high"
+        },
+        {
+          "id": 81,
+          "name": "Administrador da Plataforma",
+          "mainRole": "Operador interno responsável pelo provisionamento e gestão dos tenants na plataforma",
+          "actionType": "Cria, ativa e desativa organizações (tenants) na plataforma; gerencia o ciclo de vida dos clientes cadastrados",
+          "criticality": "high"
+        }
+      ]
+    },
+    "keyDataAndInformation": {
+      "mainDataDomains": [
+        {
+          "id": 44,
+          "name": "Tarefas",
+          "description": "Entidade central do sistema, contendo título, descrição, responsável, prioridade, status, data de criação e data limite para conclusão."
+        },
+        {
+          "id": 45,
+          "name": "Usuários",
+          "description": "Dados dos colaboradores cadastrados na plataforma, incluindo nome, e-mail, nível hierárquico, status de ativação e vínculo com o tenant."
+        },
+        {
+          "id": 46,
+          "name": "Tenants (Organizações)",
+          "description": "Dados das empresas cadastradas na plataforma, garantindo o isolamento e a segregação das informações de cada organização."
+        },
+        {
+          "id": 47,
+          "name": "Status e Histórico de Tarefas",
+          "description": "Registro das transições de status das tarefas ao longo do ciclo de execução, permitindo rastreabilidade do progresso das atividades."
+        }
+      ],
+      "mandatoryOutputs": [
+        {
+          "id": 48,
+          "name": "Visão em Lista de Tarefas",
+          "description": "Listagem das tarefas com suporte a filtros por status, responsável, prioridade e prazo, permitindo consultas rápidas e objetivas."
+        },
+        {
+          "id": 49,
+          "name": "Visão Kanban de Tarefas",
+          "description": "Painel visual com tarefas organizadas em colunas por status, com indicação de prioridade e destaque para tarefas atrasadas ou críticas."
+        },
+        {
+          "id": 50,
+          "name": "Indicadores de Tarefas Críticas e Atrasadas",
+          "description": "Destaque visual automático de tarefas com prazo vencido ou classificadas como alta prioridade, facilitando a priorização de demandas urgentes."
+        }
+      ]
+    },
+    "securityAndCompliance": {
+      "items": [
+        {
+          "id": 51,
+          "name": "Isolamento de Dados por Tenant",
+          "description": "Cada organização deve acessar exclusivamente seus próprios dados, sem qualquer possibilidade de visualização ou interferência nos dados de outros tenants."
+        },
+        {
+          "id": 52,
+          "name": "Autenticação Segura com Arquitetura Extensível",
+          "description": "O acesso à plataforma deve ser protegido por autenticação própria com login e senha nesta versão. A arquitetura deve ser projetada para permitir a adição de autenticação via SSO/OAuth (Google, Microsoft etc.) em versões futuras, sem necessidade de reestruturação significativa."
+        },
+        {
+          "id": 53,
+          "name": "Controle de Acesso por Perfil",
+          "description": "As permissões de acesso e operação devem ser controladas de acordo com o perfil do usuário (colaborador, gestor, administrador), garantindo que cada papel acesse apenas as funcionalidades pertinentes."
+        },
+        {
+          "id": 54,
+          "name": "Rastreabilidade de Ações",
+          "description": "O sistema deve manter registro das principais ações realizadas pelos usuários, como criação, edição e conclusão de tarefas, garantindo auditabilidade básica das operações."
+        },
+        {
+          "id": 55,
+          "name": "Conformidade com LGPD",
+          "description": "O tratamento de dados pessoais dos usuários deve estar em conformidade com a Lei Geral de Proteção de Dados (LGPD), incluindo princípios de minimização de dados e proteção de informações pessoais."
+        }
+      ]
+    },
+    "objectiveAndBoundaries": {
+      "purpose": {
+        "id": 1,
+        "description": "Este software existe para organizar e acompanhar atividades de equipes de forma simples, intuitiva e eficiente, permitindo que empresas gerenciem tarefas, prazos e responsabilidades em um único ambiente web, aumentando a produtividade e o controle operacional."
+      },
+      "outOfScope": {
+        "items": [
+          {
+            "id": 11,
+            "name": "Aplicativo Mobile Nativo",
+            "description": "Não será desenvolvido um aplicativo nativo para iOS ou Android. O acesso mobile ocorrerá via interface web responsiva."
+          },
+          {
+            "id": 12,
+            "name": "Comentários e Anexos em Tarefas",
+            "description": "Funcionalidades de comentários e upload de anexos nas tarefas não fazem parte desta primeira versão."
+          },
+          {
+            "id": 13,
+            "name": "Checklists dentro de Tarefas",
+            "description": "Subdivisão de tarefas em itens de checklist não está prevista para esta versão inicial."
+          },
+          {
+            "id": 14,
+            "name": "Notificações e Automações",
+            "description": "Envio de notificações automáticas e regras de automação de fluxo não serão implementados nesta fase."
+          },
+          {
+            "id": 15,
+            "name": "Relatórios Avançados",
+            "description": "Geração de relatórios analíticos e dashboards avançados de desempenho não estão contemplados nesta versão."
+          },
+          {
+            "id": 82,
+            "name": "Autenticação via SSO/OAuth",
+            "description": "Integração com provedores externos de autenticação (Google, Microsoft etc.) via SSO/OAuth não será implementada nesta versão, embora a arquitetura deva estar preparada para suportá-la futuramente."
+          },
+          {
+            "id": 83,
+            "name": "Self-service de Cadastro de Tenants",
+            "description": "O cadastro autônomo de novas organizações pela própria empresa cliente não está previsto nesta versão. O provisionamento de tenants é realizado exclusivamente por administradores internos da plataforma."
+          },
+          {
+            "id": 84,
+            "name": "Colunas Kanban Configuráveis",
+            "description": "A personalização das colunas do quadro Kanban por tenant ou usuário não está prevista para esta versão. Os status são fixos e definidos pelo sistema, com arquitetura preparada para customização futura."
+          }
+        ]
+      },
+      "withinScope": {
+        "items": [
+          {
+            "id": 6,
+            "name": "Gerenciamento de Tarefas",
+            "description": "Criação, atribuição, acompanhamento e controle do ciclo de vida das tarefas, incluindo prioridades, prazos e status fixos definidos pelo sistema."
+          },
+          {
+            "id": 7,
+            "name": "Gerenciamento de Usuários",
+            "description": "Cadastro de colaboradores e definição de níveis hierárquicos dentro de cada organização."
+          },
+          {
+            "id": 8,
+            "name": "Visualização e Organização de Atividades",
+            "description": "Exibição das tarefas em formato de lista e Kanban com colunas fixas, com suporte a filtros, pesquisas e movimentação visual entre status."
+          },
+          {
+            "id": 9,
+            "name": "Controle de Acesso e Autenticação",
+            "description": "Autenticação própria de usuários com login e senha, com isolamento de dados por tenant (empresa) e arquitetura preparada para integração futura com SSO/OAuth."
+          },
+          {
+            "id": 10,
+            "name": "Gestão Multi-Tenant",
+            "description": "Suporte a múltiplas empresas na mesma plataforma com segregação completa de dados e configurações por organização, com provisionamento de novos tenants realizado por administradores internos da plataforma."
+          }
+        ]
+      },
+      "problemsThatJustify": {
+        "items": [
+          {
+            "id": 2,
+            "description": "Falta de visibilidade centralizada sobre o andamento das tarefas e atividades das equipes, dificultando o acompanhamento de prazos e responsabilidades."
+          },
+          {
+            "id": 3,
+            "description": "Dificuldade em identificar rapidamente tarefas críticas, atrasadas ou de alta prioridade, gerando risco de perda de prazos importantes."
+          },
+          {
+            "id": 4,
+            "description": "Ausência de um mecanismo estruturado para atribuição de tarefas entre colaboradores, resultando em falta de clareza sobre quem é responsável por cada atividade."
+          },
+          {
+            "id": 5,
+            "description": "Necessidade de suportar múltiplas empresas na mesma plataforma com isolamento total de dados, sem que uma organização acesse informações de outra."
+          }
+        ]
+      }
+    },
+    "volumeAndOperationalExpectations": {
+      "items": [
+        {
+          "id": 56,
+          "name": "Volume de Tenants",
+          "description": "Estimativa inicial conservadora de até 50 tenants (organizações) cadastrados na plataforma no primeiro ano de operação. A arquitetura multi-tenant deve suportar esse volume com desempenho adequado e permitir crescimento progressivo."
+        },
+        {
+          "id": 57,
+          "name": "Usuários por Tenant",
+          "description": "Estimativa inicial de até 100 usuários por organização, totalizando até 5.000 usuários ativos na plataforma no primeiro ano. A plataforma deve suportar equipes de diferentes tamanhos dentro desse limite."
+        },
+        {
+          "id": 58,
+          "name": "Volume de Tarefas",
+          "description": "Estimativa inicial de até 10.000 tarefas por tenant no primeiro ano de uso. O sistema deve operar com desempenho adequado para consultas, filtros e visualizações Kanban e lista dentro desse volume."
+        },
+        {
+          "id": 59,
+          "name": "Disponibilidade e Responsividade",
+          "description": "O sistema deve oferecer interface responsiva para uso em dispositivos móveis (smartphones e tablets) e manter navegação rápida e fluida como requisito de experiência do usuário."
+        }
+      ]
+    }
+  },
+  "version": 2,
+  "active": true,
+  "sourceId": null,
+  "sourceType": null,
+  "state": "approved",
+  "createdBy": 7079,
+  "createdAt": "2026-08-10T15:42:46.169Z",
+  "updatedAt": null
+}

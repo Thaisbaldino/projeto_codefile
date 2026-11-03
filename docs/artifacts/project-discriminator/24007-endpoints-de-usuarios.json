@@ -1,0 +1,166 @@
+{
+  "id": 24007,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 17,
+        "name": "Pontos Únicos de Falha",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem redundância, uma falha na camada de back-end impede a cadastrar novos colaboradores, violando a SLA de disponibilidade.",
+        "confidence": 0.8495,
+        "context_element_id": 2817
+      }
+    ],
+    "attributes": [
+      {
+        "id": 10,
+        "name": "Perfil primário dos usuários que utilizarão a interface",
+        "value": [
+          "users"
+        ],
+        "method": "user-input",
+        "reasoning": "Os usuários que usam a interface são os usuários finais, com perfil de interface definido.",
+        "confidence": 0.8155,
+        "context_element_id": 2723
+      },
+      {
+        "id": 11,
+        "name": "Perfil primário do usuário ou participante que interage com esta superfície",
+        "value": [
+          "end-customer"
+        ],
+        "method": "user-input",
+        "reasoning": "A interface é destinada a usuários finais, ou seja, clientes externos.",
+        "confidence": 0.7117,
+        "context_element_id": 2728
+      },
+      {
+        "id": 15,
+        "name": "Operação de domínio ou caso de uso que o handler processa",
+        "value": [
+          "create-user, list-user, edit-user, activate-user, deactivate-user",
+          "user"
+        ],
+        "method": "user-input",
+        "reasoning": "Os endpoints de usuários atuam sobre a criação, listagem, edição, ativação e desativação de usuários dentro de um tenant.\nA requisição POST /api/users é um domínio de operação de usuário.",
+        "confidence": 0.7157,
+        "context_element_id": 2782
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 19,
+        "name": "Implementar rate limiting com throttling configurável por endpoint e amostragem de requisições em cenários de alta carga",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem limite, o sistema sobrevive apenas por tempo suficiente para que o administrador saia do sistema, e o tempo é o que paga.",
+        "confidence": 0.7644,
+        "context_element_id": 2860
+      },
+      {
+        "id": 20,
+        "name": "Otimizar algoritmos e estruturas de dados para aumentar a eficiência computacional e reduzir o consumo de recursos",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Crescimento de 5.000 usuários por tenant é um cenário de escalabilidade, e otimizar operações de banco de dados é a prioridade.",
+        "confidence": 0.787,
+        "context_element_id": 2864
+      },
+      {
+        "id": 21,
+        "name": "Configurar limites de tamanho de fila com políticas de overflow definidas (drop, reject, circuit breaker)",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem limite, o sistema sobrevive apenas por tempo suficiente para que o administrador saia do sistema, e o tempo é o que paga.",
+        "confidence": 0.8552,
+        "context_element_id": 2865
+      },
+      {
+        "id": 23,
+        "name": "Estabelecer um sistema de rastreabilidade abrangente com logs detalhados de todas as ações de usuários e mudanças do sistema",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem rastreabilidade completa, qualquer ação administrativa seria perdida, e a responsabilidade por cada operação seria questionada.",
+        "confidence": 0.7375,
+        "context_element_id": 2925
+      },
+      {
+        "id": 24,
+        "name": "Implementar identificação única de atores com sistemas de identidade centralizados e gerenciamento unificado de credenciais",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem verificação, um usuário do mesmo tenant pode alterar o e-mail de outro e-mail existente, e a mudança não seria detectada.",
+        "confidence": 0.8733,
+        "context_element_id": 2928
+      },
+      {
+        "id": 26,
+        "name": "Implementar validação rigorosa de entradas com sanitização, whitelists de caracteres permitidos e prevenção contra ataques de injeção",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Entrada maliciosa que chega ao banco é aceita e pode comprometer a integridade do sistema.",
+        "confidence": 0.7942,
+        "context_element_id": 2936
+      },
+      {
+        "id": 29,
+        "name": "Implementar verificação de integridade de dados em cada camada arquitetural com validações específicas para cada responsabilidade",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Verificar o tenant_id em cada chamada de criação de usuário é uma verificação de integridade que não é feita em cada chamada.",
+        "confidence": 0.7459,
+        "context_element_id": 2960
+      },
+      {
+        "id": 30,
+        "name": "Garanta compatibilidade retroativa e futura por meio de campos opcionais, valores padrão e campos obsoletos com períodos de carência",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Campos opcionais em versão futura exigem que o sistema aceite dados que não foram solicitados, e a regra de negócio precisa saber qual é o padrão padrão.",
+        "confidence": 0.7483,
+        "context_element_id": 2962
+      },
+      {
+        "id": 32,
+        "name": "Implemente restrições operacionais que limitem as ações do sistema com base em critérios de segurança predefinidos, incluindo rate limits, limites de operação e políticas de acesso restritivas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem limite específico, qualquer um pode criar múltiplos usuários em um curto período, comprometendo a integridade do sistema.",
+        "confidence": 0.9402,
+        "context_element_id": 3062
+      },
+      {
+        "id": 33,
+        "name": "Estabeleça validação rigorosa de entrada e saída com sanitização automática, verificação de tipos de dados, limites de intervalo e detecção de payloads maliciosos ou malformados",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Entrada maliciosa que passa sem sanificação chega ao banco e pode comprometer a integridade do sistema.",
+        "confidence": 0.9352,
+        "context_element_id": 3063
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 41,
+        "name": "Padrão de Navegação",
+        "value": "fluxo sequencial",
+        "method": "user-input",
+        "reasoning": "A paginação é feita em sequência, com limit, cursor, sort_by e sort_order como parâmetros de navegação.",
+        "confidence": 0.7457,
+        "context_element_id": 4872
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 4,
+  "active": true,
+  "sourceId": 23839,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}

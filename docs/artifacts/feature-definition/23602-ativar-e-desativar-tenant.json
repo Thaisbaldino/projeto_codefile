@@ -1,0 +1,285 @@
+{
+  "id": 23602,
+  "projectId": 4118,
+  "type": "feature_definition",
+  "content": {
+    "pendencies": [
+      {
+        "id": 33,
+        "section": "functional",
+        "description": "Quando um tenant é desativado e possui usuários com sessões ativas, o sistema deve invalidar todas as sessões em tempo real (por exemplo, via revogação de token JWT com blacklist ou refresh bloqueado) ou é aceitável que as sessões expirem naturalmente no próximo ciclo de validação do token?",
+        "resolutionOptions": [
+          {
+            "id": 34,
+            "text": "Invalidar todas as sessões ativas dos usuários do tenant em tempo real no momento da desativação, por meio de mecanismo de revogação de token (blacklist ou token de curta duração com refresh bloqueado)."
+          },
+          {
+            "id": 35,
+            "text": "Aceitar que as sessões dos usuários do tenant expirem naturalmente no próximo ciclo de validação do token de acesso, sem necessidade de revogação imediata."
+          }
+        ],
+        "recommendedOptionId": 34
+      },
+      {
+        "id": 36,
+        "section": "functional",
+        "description": "Quando um tenant é desativado, o que deve acontecer com as tarefas abertas e em andamento dos usuários daquela organização? Elas permanecem inalteradas (apenas inacessíveis enquanto o tenant estiver inativo) ou o sistema deve aplicar alguma transição de status automática?",
+        "resolutionOptions": [
+          {
+            "id": 37,
+            "text": "As tarefas permanecem inalteradas com seus status atuais; ficam apenas inacessíveis enquanto o tenant estiver desativado e voltam a ser acessíveis normalmente após a reativação."
+          },
+          {
+            "id": 38,
+            "text": "O sistema exibe um alerta ao administrador interno no momento da desativação informando a quantidade de tarefas abertas do tenant, sem bloquear a operação."
+          }
+        ],
+        "recommendedOptionId": 37
+      },
+      {
+        "id": 39,
+        "section": "functional",
+        "description": "Deve existir alguma restrição que impeça a desativação de um tenant que possua o único administrador interno ativo da plataforma, ou a desativação de qualquer tenant é sempre permitida independentemente do impacto na administração da plataforma?",
+        "resolutionOptions": [
+          {
+            "id": 40,
+            "text": "Não há restrição relacionada ao administrador interno; qualquer tenant pode ser desativado independentemente de quem são seus usuários."
+          },
+          {
+            "id": 41,
+            "text": "O sistema impede a desativação de um tenant se isso resultar na perda do único administrador interno ativo da plataforma, exibindo mensagem explicativa."
+          }
+        ],
+        "recommendedOptionId": 40
+      },
+      {
+        "id": 42,
+        "section": "functional",
+        "description": "O administrador interno deve poder visualizar um histórico das operações de ativação e desativação realizadas sobre um tenant específico (por exemplo, data, executor e motivo de cada mudança de status) dentro desta funcionalidade?",
+        "resolutionOptions": [
+          {
+            "id": 43,
+            "text": "Não exibir histórico de operações na interface desta funcionalidade; o rastreamento é feito exclusivamente via log de auditoria interno."
+          },
+          {
+            "id": 44,
+            "text": "Exibir na tela de detalhes do tenant um histórico simplificado das últimas operações de ativação e desativação, incluindo data, executor e status resultante."
+          }
+        ],
+        "recommendedOptionId": 43
+      },
+      {
+        "id": 45,
+        "section": "functional",
+        "description": "O administrador interno deve poder informar um motivo ou justificativa ao desativar um tenant (campo de observação livre ou seleção de motivo pré-definido)? Esse motivo deve ser registrado no log de auditoria?",
+        "resolutionOptions": [
+          {
+            "id": 46,
+            "text": "Não exigir nem oferecer campo de motivo; a desativação é executada sem justificativa obrigatória."
+          },
+          {
+            "id": 47,
+            "text": "Oferecer campo de observação livre e opcional no diálogo de confirmação de desativação, registrando o motivo informado no log de auditoria quando preenchido."
+          },
+          {
+            "id": 48,
+            "text": "Exigir a seleção de um motivo pré-definido (ex.: inadimplência, encerramento de contrato, manutenção) antes de confirmar a desativação, registrando o motivo no log de auditoria."
+          }
+        ],
+        "recommendedOptionId": 46
+      },
+      {
+        "id": 49,
+        "section": "non-functional",
+        "description": "Existe algum SLA ou tempo máximo aceitável para que a invalidação das sessões dos usuários do tenant desativado seja propagada por todos os serviços da plataforma (por exemplo, em arquiteturas com múltiplas instâncias ou cache de tokens)?",
+        "resolutionOptions": [
+          {
+            "id": 50,
+            "text": "A invalidação deve ser imediata e consistente em todas as instâncias no momento da desativação, sem tolerância a janelas de acesso residual."
+          },
+          {
+            "id": 51,
+            "text": "Aceitar uma janela de propagação de até 60 segundos para que a invalidação se propague por todas as instâncias, dado o uso de tokens de curta duração."
+          }
+        ],
+        "recommendedOptionId": 50
+      }
+    ],
+    "functional_requirements": [
+      {
+        "group": {
+          "id": 1,
+          "name": "Listagem e Visualização de Tenants",
+          "items": [
+            {
+              "id": 2,
+              "description": "Exibir a lista de todos os tenants cadastrados na plataforma para o administrador interno, apresentando ao menos nome da organização, identificador do tenant, status atual (ativo ou inativo) e data de criação."
+            },
+            {
+              "id": 3,
+              "description": "Exibir indicação visual clara do status de ativação (ativo ou inativo) de cada tenant na listagem de organizações."
+            },
+            {
+              "id": 4,
+              "description": "Permitir ao administrador interno acessar os detalhes de um tenant específico a partir da listagem, visualizando suas informações e o status atual antes de executar qualquer ação de ativação ou desativação."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 5,
+          "name": "Ativação de Tenant",
+          "items": [
+            {
+              "id": 6,
+              "description": "Permitir ao administrador interno ativar um tenant previamente desativado, habilitando imediatamente o acesso de todos os usuários daquela organização à plataforma."
+            },
+            {
+              "id": 7,
+              "description": "Exibir solicitação de confirmação ao administrador interno antes de efetivar a ativação de um tenant, prevenindo ações acidentais."
+            },
+            {
+              "id": 8,
+              "description": "Exibir mensagem de confirmação de sucesso ao administrador interno após a ativação do tenant ser concluída com êxito."
+            },
+            {
+              "id": 9,
+              "description": "Impedir que usuários de um tenant inativo realizem login na plataforma, retornando mensagem de erro adequada ao tentar autenticar enquanto o tenant estiver desativado."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 10,
+          "name": "Desativação de Tenant",
+          "items": [
+            {
+              "id": 11,
+              "description": "Permitir ao administrador interno desativar um tenant ativo, revogando imediatamente o acesso de todos os usuários daquela organização à plataforma sem excluir seus dados, histórico de tarefas ou configurações."
+            },
+            {
+              "id": 12,
+              "description": "Exibir solicitação de confirmação ao administrador interno antes de efetivar a desativação de um tenant, informando o impacto da ação (bloqueio de acesso de todos os usuários da organização) e prevenindo ações acidentais."
+            },
+            {
+              "id": 13,
+              "description": "Exibir mensagem de confirmação de sucesso ao administrador interno após a desativação do tenant ser concluída com êxito."
+            },
+            {
+              "id": 14,
+              "description": "Invalidar imediatamente todas as sessões ativas dos usuários pertencentes ao tenant desativado no momento em que a desativação for efetivada, impedindo o uso continuado da plataforma após a revogação de acesso."
+            },
+            {
+              "id": 15,
+              "description": "Exibir mensagem de erro clara e descritiva ao administrador interno quando a operação de desativação não puder ser concluída por falha técnica ou restrição de negócio."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 16,
+          "name": "Controle de Acesso à Funcionalidade",
+          "items": [
+            {
+              "id": 17,
+              "description": "Restringir o acesso à funcionalidade de ativação e desativação de tenants exclusivamente a usuários com perfil de administrador interno da plataforma."
+            },
+            {
+              "id": 18,
+              "description": "Impedir que administradores de tenant, gestores ou colaboradores acessem ou executem operações de ativação ou desativação de organizações."
+            },
+            {
+              "id": 19,
+              "description": "Garantir que a funcionalidade de ativação e desativação de tenants não seja acessível por nenhuma interface voltada ao cliente final, sendo disponível apenas em área administrativa interna da plataforma."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 20,
+          "name": "Feedback e Tratamento de Erros",
+          "items": [
+            {
+              "id": 21,
+              "description": "Exibir mensagem de erro clara e descritiva ao administrador interno quando a operação de ativação não puder ser concluída por falha técnica ou restrição de negócio."
+            },
+            {
+              "id": 22,
+              "description": "Atualizar o status do tenant na listagem imediatamente após a conclusão bem-sucedida de qualquer operação de ativação ou desativação, refletindo o novo estado sem necessidade de recarregar a página manualmente."
+            }
+          ]
+        }
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "group": {
+          "id": 23,
+          "name": "Segurança e Conformidade",
+          "items": [
+            {
+              "id": 24,
+              "description": "Registrar em log de auditoria toda operação de ativação ou desativação de tenant, incluindo identificação do administrador interno executor, timestamp, identificação do tenant afetado e resultado da operação, em conformidade com os requisitos de rastreabilidade da plataforma."
+            },
+            {
+              "id": 25,
+              "description": "Garantir que apenas administradores internos autenticados e autorizados possam invocar as operações de ativação e desativação de tenants, aplicando controle de acesso baseado em papel (RBAC) com verificação em cada requisição."
+            },
+            {
+              "id": 26,
+              "description": "Garantir que a desativação de um tenant não comprometa a integridade ou a confidencialidade dos dados daquela organização, preservando todos os registros de tarefas, usuários e configurações para eventual reativação futura."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 27,
+          "name": "Desempenho",
+          "items": [
+            {
+              "id": 28,
+              "description": "Concluir a operação de ativação ou desativação de tenant e retornar a confirmação ao administrador interno em tempo adequado, suportando o volume operacional estimado de até 50 tenants cadastrados na plataforma."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 29,
+          "name": "Usabilidade e Responsividade",
+          "items": [
+            {
+              "id": 30,
+              "description": "Renderizar a interface de ativação e desativação de tenants de forma responsiva e adaptativa, garantindo usabilidade adequada em dispositivos móveis (smartphones e tablets) e em desktops."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 31,
+          "name": "Disponibilidade",
+          "items": [
+            {
+              "id": 32,
+              "description": "Garantir que o serviço de controle de ciclo de vida de tenants esteja disponível com alta disponibilidade, dado que sua indisponibilidade impede o administrador interno de habilitar organizações bloqueadas e de revogar acessos indevidos."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 7,
+  "sourceType": "feature",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-10T20:51:57.829Z",
+  "updatedAt": null
+}

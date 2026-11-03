@@ -1,0 +1,313 @@
+{
+  "id": 23628,
+  "projectId": 4118,
+  "type": "feature_definition",
+  "content": {
+    "pendencies": [
+      {
+        "id": 38,
+        "section": "functional",
+        "description": "Quais são as colunas fixas exatas do quadro Kanban e sua ordenação da esquerda para a direita? O brief menciona exemplos como 'A Fazer', 'Em Andamento' e 'Concluído', mas os valores definitivos e a quantidade de colunas precisam ser confirmados para garantir consistência com as features de Atualizar Status da Tarefa e Concluir Tarefa.",
+        "resolutionOptions": [
+          {
+            "id": 39,
+            "text": "Adotar três colunas fixas em ordem de progressão: A Fazer, Em Andamento e Concluído."
+          },
+          {
+            "id": 40,
+            "text": "Adotar quatro colunas fixas em ordem de progressão: A Fazer, Em Andamento, Em Revisão e Concluído."
+          },
+          {
+            "id": 41,
+            "text": "Adotar cinco colunas fixas em ordem de progressão: Backlog, A Fazer, Em Andamento, Em Revisão e Concluído."
+          }
+        ],
+        "recommendedOptionId": 39
+      },
+      {
+        "id": 42,
+        "section": "functional",
+        "description": "O quadro Kanban deve exibir por padrão todas as tarefas do tenant independentemente do responsável (visão global), ou cada usuário visualiza por padrão apenas as tarefas atribuídas a ele, com opção de expandir para ver todas? A definição deve ser consistente com a política adotada na feature Visualizar Tarefas em Lista.",
+        "resolutionOptions": [
+          {
+            "id": 43,
+            "text": "Exibir por padrão todas as tarefas do tenant sem filtro de responsável; o usuário pode aplicar o filtro de responsável para restringir a visualização às suas próprias tarefas."
+          },
+          {
+            "id": 44,
+            "text": "Exibir por padrão apenas as tarefas atribuídas ao usuário autenticado; o usuário pode remover o filtro para visualizar todas as tarefas do tenant."
+          },
+          {
+            "id": 45,
+            "text": "Exibir por padrão todas as tarefas do tenant para gestores e administradores, e apenas as tarefas do próprio usuário para colaboradores, com opção de expandir a visualização."
+          }
+        ],
+        "recommendedOptionId": 43
+      },
+      {
+        "id": 46,
+        "section": "functional",
+        "description": "Quando uma coluna do quadro Kanban possuir muitos cartões, o sistema deve aplicar algum mecanismo de paginação ou rolagem interna dentro da coluna, ou todos os cartões da coluna devem ser exibidos de uma só vez com rolagem vertical da página inteira?",
+        "resolutionOptions": [
+          {
+            "id": 47,
+            "text": "Exibir todos os cartões da coluna de uma só vez com rolagem vertical da página inteira, sem paginação interna por coluna."
+          },
+          {
+            "id": 48,
+            "text": "Implementar rolagem interna por coluna com carregamento incremental de cartões ao rolar dentro da coluna, limitando o carregamento inicial a um número fixo de cartões por coluna."
+          },
+          {
+            "id": 49,
+            "text": "Exibir um número fixo de cartões por coluna (por exemplo, 20) com botão de 'Ver mais' para carregar cartões adicionais dentro da mesma coluna."
+          }
+        ],
+        "recommendedOptionId": 47
+      },
+      {
+        "id": 50,
+        "section": "functional",
+        "description": "Os filtros aplicados no quadro Kanban devem ser preservados ao navegar para outra tela e retornar ao quadro (persistência de estado de sessão), ou o quadro deve sempre ser carregado sem filtros ativos ao ser acessado novamente? A definição deve ser consistente com a política adotada na feature Visualizar Tarefas em Lista.",
+        "resolutionOptions": [
+          {
+            "id": 51,
+            "text": "Preservar os filtros ativos durante a sessão do usuário, restaurando-os ao retornar ao quadro Kanban sem necessidade de reaplicação manual."
+          },
+          {
+            "id": 52,
+            "text": "Sempre carregar o quadro Kanban sem filtros ativos ao ser acessado, sem preservação do estado de filtros entre navegações."
+          }
+        ],
+        "recommendedOptionId": 51
+      },
+      {
+        "id": 53,
+        "section": "functional",
+        "description": "Quais informações devem ser exibidas no cartão da tarefa no quadro Kanban além das essenciais (título, responsável, prioridade e data limite)? Por exemplo, deve haver indicação do criador da tarefa, data de criação ou outros atributos no cartão?",
+        "resolutionOptions": [
+          {
+            "id": 54,
+            "text": "Exibir apenas as informações essenciais no cartão: título, responsável, prioridade e data limite; nenhuma informação adicional é necessária nesta versão."
+          },
+          {
+            "id": 55,
+            "text": "Incluir também o indicador de destaque (ícone ou rótulo de atraso ou prioridade elevada) como elemento visual explícito no cartão, além das informações essenciais."
+          },
+          {
+            "id": 56,
+            "text": "Incluir título, responsável, prioridade, data limite e indicadores de destaque, além de um avatar ou iniciais do responsável para identificação visual rápida."
+          }
+        ],
+        "recommendedOptionId": 56
+      },
+      {
+        "id": 57,
+        "section": "non-functional",
+        "description": "A atualização do quadro Kanban após a movimentação de um cartão por outro usuário deve ser refletida em tempo real na interface dos demais usuários que estejam visualizando o mesmo quadro simultaneamente (WebSocket/SSE), ou a atualização ocorre apenas no próximo carregamento da página? A definição deve ser consistente com a decisão tomada nas features Atualizar Status da Tarefa e Editar Tarefa.",
+        "resolutionOptions": [
+          {
+            "id": 58,
+            "text": "Não implementar atualização em tempo real para outros usuários nesta versão; a movimentação de cartões é refletida para o usuário executor imediatamente, e os demais visualizam a mudança no próximo carregamento ou atualização manual da página."
+          },
+          {
+            "id": 59,
+            "text": "Implementar atualização em tempo real via WebSocket ou Server-Sent Events (SSE), propagando a movimentação de cartões para todos os usuários que estejam visualizando o mesmo quadro simultaneamente."
+          }
+        ],
+        "recommendedOptionId": 58
+      }
+    ],
+    "functional_requirements": [
+      {
+        "group": {
+          "id": 1,
+          "name": "Exibição do Quadro Kanban",
+          "items": [
+            {
+              "id": 2,
+              "description": "Exibir as tarefas do tenant do usuário autenticado organizadas em colunas fixas definidas pelo sistema, representando os status disponíveis no ciclo de vida das tarefas."
+            },
+            {
+              "id": 3,
+              "description": "Exibir cada coluna do quadro Kanban com o rótulo correspondente ao status que representa, permitindo ao usuário identificar imediatamente o estágio de cada grupo de tarefas."
+            },
+            {
+              "id": 4,
+              "description": "Exibir cada tarefa como um cartão dentro da coluna correspondente ao seu status atual, apresentando ao menos título, responsável, prioridade e data limite no cartão."
+            },
+            {
+              "id": 5,
+              "description": "Exibir indicação visual diferenciada nos cartões de tarefas com prazo vencido e nos cartões de tarefas com prioridade elevada, integrando os destaques definidos pela feature Destacar Tarefas Críticas ou Atrasadas."
+            },
+            {
+              "id": 6,
+              "description": "Exibir mensagem informativa ao usuário quando uma coluna não possuir nenhuma tarefa, sinalizando que não há atividades naquele status no momento."
+            },
+            {
+              "id": 7,
+              "description": "Permitir que o usuário acesse a visualização detalhada de uma tarefa a partir do clique ou toque no cartão correspondente no quadro Kanban."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 8,
+          "name": "Movimentação de Tarefas entre Colunas",
+          "items": [
+            {
+              "id": 9,
+              "description": "Permitir a movimentação de um cartão de tarefa entre colunas do quadro Kanban por meio de operação de arrastar e soltar (drag and drop), atualizando o status da tarefa de acordo com a coluna de destino."
+            },
+            {
+              "id": 10,
+              "description": "Validar que a coluna de destino da movimentação corresponde a um status fixo válido do sistema antes de persistir a alteração de status realizada via drag and drop."
+            },
+            {
+              "id": 11,
+              "description": "Exibir feedback visual imediato ao usuário durante a operação de arrastar e soltar, indicando a coluna de destino válida e a posição de encaixe do cartão antes de confirmar a ação."
+            },
+            {
+              "id": 12,
+              "description": "Persistir a alteração de status da tarefa imediatamente após a conclusão da movimentação do cartão para a coluna de destino, refletindo o novo status em todas as visualizações da plataforma."
+            },
+            {
+              "id": 13,
+              "description": "Exibir mensagem de erro clara e descritiva ao usuário quando a movimentação do cartão não puder ser concluída por falha de validação ou erro do sistema, restaurando o cartão à coluna de origem."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 14,
+          "name": "Controle de Acesso e Isolamento",
+          "items": [
+            {
+              "id": 15,
+              "description": "Exibir no quadro Kanban apenas as tarefas pertencentes ao tenant do usuário autenticado, garantindo que tarefas de outras organizações não sejam visíveis ou acessíveis."
+            },
+            {
+              "id": 16,
+              "description": "Impedir que usuários não autenticados ou pertencentes a tenants inativos acessem a visualização em Kanban de tarefas."
+            },
+            {
+              "id": 17,
+              "description": "Impedir que um usuário de um tenant mova ou altere o status de tarefas pertencentes a outro tenant por meio do quadro Kanban, garantindo o isolamento de dados entre organizações."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 18,
+          "name": "Modelo de Dados Extensível para Colunas",
+          "items": [
+            {
+              "id": 19,
+              "description": "Projetar o modelo de dados das colunas do quadro Kanban de forma a suportar a adição futura de colunas configuráveis por tenant, sem necessidade de reestruturação significativa do esquema de dados."
+            },
+            {
+              "id": 20,
+              "description": "Armazenar a definição das colunas do Kanban como entidades independentes referenciadas pelas tarefas, e não como valores textuais fixos embutidos diretamente no registro da tarefa, viabilizando a personalização futura de colunas por tenant."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 21,
+          "name": "Filtragem no Quadro Kanban",
+          "items": [
+            {
+              "id": 22,
+              "description": "Permitir ao usuário filtrar os cartões exibidos no quadro Kanban por responsável, apresentando apenas as tarefas atribuídas ao colaborador selecionado em todas as colunas."
+            },
+            {
+              "id": 23,
+              "description": "Permitir ao usuário filtrar os cartões exibidos no quadro Kanban por nível de prioridade, apresentando apenas as tarefas que correspondam ao nível selecionado em todas as colunas."
+            },
+            {
+              "id": 24,
+              "description": "Permitir a aplicação simultânea de múltiplos filtros combinados no quadro Kanban, exibindo apenas os cartões que satisfaçam todos os critérios selecionados ao mesmo tempo."
+            },
+            {
+              "id": 25,
+              "description": "Exibir indicação visual clara dos filtros ativos no quadro Kanban, permitindo ao usuário identificar quais critérios estão sendo aplicados à visualização."
+            },
+            {
+              "id": 26,
+              "description": "Permitir ao usuário remover filtros individualmente ou limpar todos os filtros de uma só vez no quadro Kanban, restaurando a exibição completa das tarefas do tenant em todas as colunas."
+            }
+          ]
+        }
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "group": {
+          "id": 27,
+          "name": "Desempenho",
+          "items": [
+            {
+              "id": 28,
+              "description": "Carregar e renderizar o quadro Kanban com todas as colunas e cartões em tempo adequado, mesmo em tenants com até 10.000 tarefas, sem degradação perceptível na experiência do usuário."
+            },
+            {
+              "id": 29,
+              "description": "Executar as operações de filtragem de cartões no quadro Kanban com tempo de resposta adequado, garantindo que a atualização dos cartões exibidos após a aplicação de critérios ocorra de forma fluida e sem atrasos perceptíveis."
+            },
+            {
+              "id": 30,
+              "description": "Concluir a operação de persistência da alteração de status via drag and drop e retornar a confirmação ao usuário em tempo adequado, mesmo sob carga de até 5.000 usuários ativos e 10.000 tarefas por tenant na plataforma."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 31,
+          "name": "Usabilidade e Responsividade",
+          "items": [
+            {
+              "id": 32,
+              "description": "Renderizar o quadro Kanban de forma responsiva e adaptativa, garantindo usabilidade adequada em dispositivos móveis (smartphones e tablets) e em desktops, com ajuste do layout de colunas conforme o tamanho da tela."
+            },
+            {
+              "id": 33,
+              "description": "Garantir que a operação de arrastar e soltar no Kanban seja substituída por interação alternativa equivalente em dispositivos de toque (touch), como toque longo seguido de seleção de coluna de destino, garantindo a movimentação de cartões em smartphones e tablets."
+            },
+            {
+              "id": 34,
+              "description": "Garantir que os controles de filtragem do quadro Kanban sejam acessíveis e utilizáveis em dispositivos de toque (touch), sem dependência exclusiva de interações de mouse."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 35,
+          "name": "Segurança e Isolamento",
+          "items": [
+            {
+              "id": 36,
+              "description": "Garantir que as consultas de carregamento e filtragem de tarefas no quadro Kanban sejam sempre escopadas ao tenant do usuário autenticado, impedindo o acesso ou a exposição de dados de outros tenants por meio de manipulação de parâmetros."
+            },
+            {
+              "id": 37,
+              "description": "Garantir que as operações de alteração de status via drag and drop sejam validadas no servidor (backend) quanto ao escopo do tenant, impedindo que requisições manipuladas alterem o status de tarefas de outros tenants."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 17,
+  "sourceType": "feature",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-10T21:50:34.775Z",
+  "updatedAt": null
+}

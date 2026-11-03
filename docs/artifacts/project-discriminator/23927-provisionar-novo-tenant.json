@@ -1,0 +1,108 @@
+{
+  "id": 23927,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 5,
+        "name": "Domínios de negócio sobre os quais a regra atua, valida ou decide",
+        "value": [
+          "provisioning"
+        ],
+        "method": "user-input",
+        "reasoning": "O formulário de provisionamento atua sobre a entidade documentada, que é o provisionamento.",
+        "confidence": 0.7147,
+        "context_element_id": 2678
+      },
+      {
+        "id": 9,
+        "name": "Domínio funcional das mensagens roteadas através do sistema",
+        "value": [
+          "user-events"
+        ],
+        "method": "user-input",
+        "reasoning": "A comunicação automática enviada ao administrador do tenant recém-criado é destinada a eventos de usuário, como boas-vindas e instruções de acesso.",
+        "confidence": 0.7196,
+        "context_element_id": 2754
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 11,
+        "name": "Implementar reinício escalonado começando pelos componentes menos críticos e progredindo gradualmente",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Reconstruir o sistema a cada aumento de tenants exigiria reavaliação manual de cada registro, o que não é viável em tempo real.",
+        "confidence": 0.7231,
+        "context_element_id": 2904
+      },
+      {
+        "id": 18,
+        "name": "Estabeleça políticas arquiteturais que restrinjam o uso direto de APIs específicas de fornecedores, forçando o uso por meio de camadas de abstração",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem essa regra, qualquer acesso externo a um tenant seria direcionado ao domínio de acesso do próprio sistema, não ao de terceiros.",
+        "confidence": 0.7422,
+        "context_element_id": 3026
+      },
+      {
+        "id": 19,
+        "name": "Garanta o engajamento do usuário implementando feedback imediato, notificações contextuais e responsividade em todas as interações",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Reações imediatas em cada etapa do fluxo reforçam a confiança do usuário em que ele está correto, sem esperar o relatório final.",
+        "confidence": 0.7698,
+        "context_element_id": 3052
+      },
+      {
+        "id": 20,
+        "name": "Implemente restrições operacionais que limitem as ações do sistema com base em critérios de segurança predefinidos, incluindo rate limits, limites de operação e políticas de acesso restritivas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O sistema deve bloquear ou alertar o administrador interno quando o limite de tenants é alcançado, sem permitir que o número cresça sem controle.",
+        "confidence": 0.9678,
+        "context_element_id": 3062
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 1,
+        "name": "Nível de Agregação de Domínio",
+        "value": "entidade independente",
+        "method": "internal-inference",
+        "reasoning": "A edição de dados e o controle de ciclo de vida (ativar/desativar) são tratados em funcionalidades separadas, caracterizando uma entidade independente.",
+        "confidence": 0.7759,
+        "context_element_id": 1472
+      },
+      {
+        "id": 3,
+        "name": "Padrão de Mutabilidade de Registro",
+        "value": "mutável",
+        "method": "internal-inference",
+        "reasoning": "A edição de dados de um tenant já provisionado, como nome da organização ou identificador, é uma mutabilidade de registro.",
+        "confidence": 0.7249,
+        "context_element_id": 1507
+      },
+      {
+        "id": 4,
+        "name": "Propósito do Registro",
+        "value": "schema de metadados",
+        "method": "user-input",
+        "reasoning": "O registro dos metadados do tenant provisionado, incluindo data e hora de criação e identificação do administrador interno responsável pelo provisionamento, é um schema de metadados.",
+        "confidence": 0.7292,
+        "context_element_id": 1511
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 6,
+  "active": true,
+  "sourceId": 23598,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T14:58:49.768Z",
+  "updatedAt": null
+}

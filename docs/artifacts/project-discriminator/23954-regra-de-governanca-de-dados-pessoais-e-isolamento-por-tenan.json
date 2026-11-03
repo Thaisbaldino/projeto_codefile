@@ -1,0 +1,30 @@
+{
+  "id": 23954,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [],
+    "best_practices": [],
+    "discriminators": [
+      {
+        "id": 11,
+        "name": "Versionamento Temporal",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "A integridade referencial é mantida em banco de dados através de constraints, sem histórico de versões temporais.",
+        "confidence": 0.7875,
+        "context_element_id": 1546
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 2,
+  "active": true,
+  "sourceId": 23882,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T14:58:49.768Z",
+  "updatedAt": null
+}

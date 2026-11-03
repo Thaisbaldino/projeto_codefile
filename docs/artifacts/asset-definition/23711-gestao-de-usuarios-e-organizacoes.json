@@ -1,0 +1,1424 @@
+{
+  "id": 23711,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 31,
+          "name": "Credenciais de Autenticação",
+          "format": "{ email: string, senha: string }",
+          "origin": "Formulário de Login (ASSET-012)",
+          "trigger": "Usuário submete formulário de login"
+        },
+        {
+          "id": 32,
+          "name": "Dados de Cadastro de Usuário",
+          "format": "{ nomeCompleto: string, email: string, nivelHierarquicoId: uuid }",
+          "origin": "Formulário de Cadastro (ASSET-014)",
+          "trigger": "Administrador de tenant submete formulário de cadastro"
+        },
+        {
+          "id": 33,
+          "name": "Dados de Edição de Perfil",
+          "format": "{ nomeCompleto?: string, email?: string, nivelHierarquicoId?: uuid, status?: enum }",
+          "origin": "Formulário de Edição (ASSET-014)",
+          "trigger": "Administrador de tenant submete formulário de edição"
+        },
+        {
+          "id": 34,
+          "name": "Solicitação de Recuperação de Senha",
+          "format": "{ email: string }",
+          "origin": "Formulário de Recuperação (ASSET-013)",
+          "trigger": "Usuário submete solicitação de recuperação de senha"
+        },
+        {
+          "id": 35,
+          "name": "Redefinição de Senha",
+          "format": "{ token: string, novaSenha: string, confirmacaoSenha: string }",
+          "origin": "Formulário de Redefinição (ASSET-013)",
+          "trigger": "Usuário acessa link de recuperação e submete nova senha"
+        },
+        {
+          "id": 36,
+          "name": "Dados de Provisionamento de Tenant",
+          "format": "{ nomeOrganizacao: string, slug: string }",
+          "origin": "Formulário de Provisionamento (ASSET-015)",
+          "trigger": "Administrador interno da plataforma submete formulário de provisionamento"
+        },
+        {
+          "id": 37,
+          "name": "Solicitação de Ativação/Desativação de Tenant",
+          "format": "{ tenantId: uuid, novoStatus: enum[ativo|inativo] }",
+          "origin": "Interface de Gerenciamento de Tenants (ASSET-015)",
+          "trigger": "Administrador interno da plataforma solicita ativação ou desativação de tenant"
+        },
+        {
+          "id": 38,
+          "name": "Dados de Criação de Nível Hierárquico",
+          "format": "{ nome: string, ordem?: integer }",
+          "origin": "Interface de Gerenciamento de Níveis (ASSET-014)",
+          "trigger": "Administrador de tenant submete criação de novo nível hierárquico"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 79,
+          "name": "Tokens de Sessão Autenticada",
+          "format": "{ accessToken: string (JWT), refreshToken: string (opaco), usuario: { id, email, tenant_id, nivel_hierarquico_id, status }, tenant: { id, slug, status } }",
+          "destination": "Cliente (navegador/aplicação)"
+        },
+        {
+          "id": 80,
+          "name": "Confirmação de Cadastro de Usuário",
+          "format": "{ mensagem: string, usuario: { id, nomeCompleto, email, nivelHierarquicoId, status } }",
+          "destination": "Interface de Gerenciamento de Usuários (ASSET-014)"
+        },
+        {
+          "id": 81,
+          "name": "Confirmação de Edição de Perfil",
+          "format": "{ mensagem: string, usuario: { id, nomeCompleto, email, nivelHierarquicoId, status } }",
+          "destination": "Interface de Gerenciamento de Usuários (ASSET-014)"
+        },
+        {
+          "id": 82,
+          "name": "Confirmação de Recuperação de Senha",
+          "format": "{ mensagem: string (genérica, não revela se e-mail existe) }",
+          "destination": "Interface de Recuperação (ASSET-013)"
+        },
+        {
+          "id": 83,
+          "name": "Confirmação de Redefinição de Senha",
+          "format": "{ mensagem: string }",
+          "destination": "Interface de Redefinição (ASSET-013)"
+        },
+        {
+          "id": 84,
+          "name": "Confirmação de Provisionamento de Tenant",
+          "format": "{ mensagem: string, tenant: { id, nomeOrganizacao, slug, status, dataCriacao } }",
+          "destination": "Interface de Provisionamento (ASSET-015)"
+        },
+        {
+          "id": 85,
+          "name": "Confirmação de Ativação/Desativação de Tenant",
+          "format": "{ mensagem: string, tenant: { id, nomeOrganizacao, slug, status } }",
+          "destination": "Interface de Gerenciamento de Tenants (ASSET-015)"
+        },
+        {
+          "id": 86,
+          "name": "Confirmação de Gerenciamento de Níveis Hierárquicos",
+          "format": "{ mensagem: string, nivel?: { id, nome, ordem } }",
+          "destination": "Interface de Gerenciamento de Níveis (ASSET-014)"
+        },
+        {
+          "id": 87,
+          "name": "Eventos de Auditoria",
+          "format": "{ tipoOperacao: string, usuarioExecutor: uuid, tenant: uuid, timestamp: timestamp, dados: object, resultado: enum[sucesso|falha] }",
+          "destination": "Trilha de Auditoria (ASSET-053)"
+        },
+        {
+          "id": 88,
+          "name": "Eventos de Autenticação",
+          "format": "{ tipoEvento: enum[user_authenticated|authentication_failed|session_revoked|password_recovery_requested|password_reset_completed], usuario: uuid, tenant: uuid, timestamp: timestamp, detalhes: object }",
+          "destination": "Camada de Observabilidade (ASSET-008)"
+        }
+      ],
+      "processing": [
+        {
+          "id": 39,
+          "step": "Validar Credenciais de Autenticação",
+          "description": "Valida preenchimento de e-mail e senha, formato de e-mail, e identifica tenant correspondente ao e-mail informado."
+        },
+        {
+          "id": 40,
+          "step": "Verificar Status de Tenant e Usuário",
+          "description": "Consulta banco de dados para verificar se tenant está ativo e se usuário existe, está ativo e pertence ao tenant identificado."
+        },
+        {
+          "id": 41,
+          "step": "Validar Credenciais contra Hash Armazenado",
+          "description": "Compara hash da senha informada contra hash armazenado no banco de dados utilizando algoritmo argon2id, retornando erro genérico se não corresponder."
+        },
+        {
+          "id": 42,
+          "step": "Aplicar Rate Limiting de Login",
+          "description": "Verifica número de tentativas falhadas consecutivas por IP e e-mail, bloqueando temporariamente após 5 tentativas em 15 minutos."
+        },
+        {
+          "id": 43,
+          "step": "Emitir Tokens de Sessão",
+          "description": "Gera access token JWT (3600 segundos) e refresh token opaco, armazenando refresh token em hash na tabela de sessões."
+        },
+        {
+          "id": 44,
+          "step": "Registrar Auditoria de Login",
+          "description": "Registra tentativa de login (bem-sucedida ou falhada) em log de auditoria com identificação de usuário, tenant, IP, timestamp e resultado."
+        },
+        {
+          "id": 45,
+          "step": "Validar Dados de Cadastro de Usuário",
+          "description": "Valida preenchimento de campos obrigatórios (nome, e-mail, nível hierárquico), formato de e-mail, unicidade de e-mail dentro do tenant, e existência de nível hierárquico."
+        },
+        {
+          "id": 46,
+          "step": "Verificar Permissão de Cadastro",
+          "description": "Valida que usuário executor possui perfil de administrador do tenant antes de permitir cadastro de novo usuário."
+        },
+        {
+          "id": 47,
+          "step": "Persistir Novo Usuário",
+          "description": "Insere novo registro de usuário no banco de dados com status inicial ativo, vinculado ao tenant do executor, e registra data/hora de criação."
+        },
+        {
+          "id": 48,
+          "step": "Registrar Auditoria de Cadastro",
+          "description": "Registra operação de cadastro de usuário em log de auditoria com identificação do administrador executor, tenant, timestamp e dados do usuário criado."
+        },
+        {
+          "id": 49,
+          "step": "Validar Dados de Edição de Perfil",
+          "description": "Valida preenchimento de campos obrigatórios, formato de e-mail, unicidade de e-mail dentro do tenant (excluindo o próprio usuário), e existência de nível hierárquico."
+        },
+        {
+          "id": 50,
+          "step": "Verificar Restrição de Auto-Desativação",
+          "description": "Valida que administrador não está tentando desativar seu próprio perfil, impedindo que tenant fique sem administrador ativo."
+        },
+        {
+          "id": 51,
+          "step": "Atualizar Registro de Usuário",
+          "description": "Atualiza campos editáveis do usuário no banco de dados e registra data/hora de última edição."
+        },
+        {
+          "id": 52,
+          "step": "Invalidar Sessões se Desativado",
+          "description": "Se status foi alterado para inativo, revoga imediatamente todas as sessões ativas do usuário na tabela de sessões."
+        },
+        {
+          "id": 53,
+          "step": "Registrar Auditoria de Edição",
+          "description": "Registra operação de edição de perfil em log de auditoria com identificação do administrador executor, tenant, timestamp e campos alterados."
+        },
+        {
+          "id": 54,
+          "step": "Validar Solicitação de Recuperação de Senha",
+          "description": "Valida preenchimento e formato de e-mail, verifica existência de e-mail na base de usuários do tenant correspondente."
+        },
+        {
+          "id": 55,
+          "step": "Gerar Token de Recuperação",
+          "description": "Gera token criptograficamente seguro, único e de uso único com expiração de 30 minutos, armazenando hash do token no banco de dados."
+        },
+        {
+          "id": 56,
+          "step": "Enviar E-mail de Recuperação",
+          "description": "Enfileira envio de e-mail transacional contendo link de redefinição com token embutido para o endereço informado."
+        },
+        {
+          "id": 57,
+          "step": "Aplicar Rate Limiting de Recuperação",
+          "description": "Verifica limite de 3 requisições de recuperação por hora por e-mail, bloqueando requisições excedentes."
+        },
+        {
+          "id": 58,
+          "step": "Registrar Auditoria de Solicitação de Recuperação",
+          "description": "Registra solicitação de recuperação de senha em log de auditoria com identificação de e-mail, tenant, IP e timestamp."
+        },
+        {
+          "id": 59,
+          "step": "Validar Token de Recuperação",
+          "description": "Valida que token é válido, não expirou, pertence ao tenant correto e não foi já utilizado."
+        },
+        {
+          "id": 60,
+          "step": "Validar Nova Senha",
+          "description": "Valida preenchimento de campos, correspondência entre nova senha e confirmação, e conformidade com requisitos de complexidade (8 caracteres, maiúscula, minúscula, número)."
+        },
+        {
+          "id": 61,
+          "step": "Persistir Nova Senha com Hash Seguro",
+          "description": "Calcula hash da nova senha utilizando argon2id (m=64MiB, t=3, p=4) e atualiza registro de usuário no banco de dados."
+        },
+        {
+          "id": 62,
+          "step": "Invalidar Token de Recuperação",
+          "description": "Marca token de recuperação como utilizado no banco de dados, impedindo sua reutilização."
+        },
+        {
+          "id": 63,
+          "step": "Invalidar Sessões Ativas do Usuário",
+          "description": "Revoga imediatamente todas as sessões ativas do usuário na tabela de sessões, forçando novo login com nova credencial."
+        },
+        {
+          "id": 64,
+          "step": "Registrar Auditoria de Redefinição de Senha",
+          "description": "Registra operação de redefinição de senha em log de auditoria com identificação de usuário, tenant, timestamp e resultado."
+        },
+        {
+          "id": 65,
+          "step": "Validar Dados de Provisionamento de Tenant",
+          "description": "Valida preenchimento de nome da organização e slug, formato de slug (apenas minúsculas, números e hífens), e unicidade de slug na plataforma."
+        },
+        {
+          "id": 66,
+          "step": "Verificar Permissão de Provisionamento",
+          "description": "Valida que usuário executor possui perfil de administrador interno da plataforma antes de permitir provisionamento de novo tenant."
+        },
+        {
+          "id": 67,
+          "step": "Criar Estrutura Isolada de Tenant",
+          "description": "Insere novo registro de tenant no banco de dados com status inicial ativo, cria estrutura de dados isolada (tabelas, índices, políticas de isolamento) para o novo tenant."
+        },
+        {
+          "id": 68,
+          "step": "Registrar Auditoria de Provisionamento",
+          "description": "Registra operação de provisionamento de tenant em log de auditoria com identificação do administrador interno executor, timestamp e dados do tenant criado."
+        },
+        {
+          "id": 69,
+          "step": "Validar Solicitação de Ativação/Desativação de Tenant",
+          "description": "Valida que tenant existe, verifica status atual e novo status solicitado."
+        },
+        {
+          "id": 70,
+          "step": "Verificar Permissão de Gerenciamento de Tenant",
+          "description": "Valida que usuário executor possui perfil de administrador interno da plataforma antes de permitir ativação ou desativação de tenant."
+        },
+        {
+          "id": 71,
+          "step": "Atualizar Status de Tenant",
+          "description": "Atualiza status do tenant no banco de dados para o novo valor solicitado (ativo ou inativo)."
+        },
+        {
+          "id": 72,
+          "step": "Invalidar Sessões se Tenant Desativado",
+          "description": "Se tenant foi desativado, revoga imediatamente todas as sessões ativas de usuários pertencentes ao tenant na tabela de sessões."
+        },
+        {
+          "id": 73,
+          "step": "Registrar Auditoria de Ativação/Desativação de Tenant",
+          "description": "Registra operação de ativação ou desativação de tenant em log de auditoria com identificação do administrador interno executor, tenant afetado, timestamp e novo status."
+        },
+        {
+          "id": 74,
+          "step": "Validar Dados de Nível Hierárquico",
+          "description": "Valida preenchimento de nome do nível, unicidade de nome dentro do tenant, e formato válido."
+        },
+        {
+          "id": 75,
+          "step": "Verificar Permissão de Gerenciamento de Níveis",
+          "description": "Valida que usuário executor possui perfil de administrador do tenant antes de permitir criação, edição ou exclusão de níveis hierárquicos."
+        },
+        {
+          "id": 76,
+          "step": "Persistir Nível Hierárquico",
+          "description": "Insere novo registro de nível hierárquico no banco de dados, vinculado ao tenant, com ordem relativa entre níveis."
+        },
+        {
+          "id": 77,
+          "step": "Validar Exclusão de Nível Hierárquico",
+          "description": "Verifica que nível não possui usuários vinculados antes de permitir exclusão, impedindo orfandade de usuários."
+        },
+        {
+          "id": 78,
+          "step": "Registrar Auditoria de Gerenciamento de Níveis",
+          "description": "Registra operações de criação, edição ou exclusão de nível hierárquico em log de auditoria com identificação do administrador executor, tenant, timestamp e dados alterados."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 89,
+        "category": "validation",
+        "description": "Validar preenchimento obrigatório de nome completo durante cadastro de usuário, rejeitando registros com campo vazio ou contendo apenas espaços em branco.",
+        "enforcement": "code",
+        "verification": "Teste unitário valida rejeição de cadastro com nome vazio; teste de integração valida mensagem de erro exibida ao usuário."
+      },
+      {
+        "id": 90,
+        "category": "validation",
+        "description": "Validar formato de endereço de e-mail conforme padrão RFC 5322 durante cadastro e edição de usuário, rejeitando entradas em formato inválido.",
+        "enforcement": "code",
+        "verification": "Teste unitário valida aceitação de e-mails válidos e rejeição de formatos inválidos (ex: 'usuario@', 'usuario.com', 'usuario @dominio.com')."
+      },
+      {
+        "id": 91,
+        "category": "validation",
+        "description": "Validar unicidade de endereço de e-mail dentro do escopo do tenant durante cadastro e edição, impedindo que dois usuários do mesmo tenant possuam o mesmo e-mail.",
+        "enforcement": "db_constraint",
+        "verification": "Constraint UNIQUE (email, tenant_id) na tabela de usuários; teste de integração valida rejeição de cadastro com e-mail duplicado."
+      },
+      {
+        "id": 92,
+        "category": "authorization",
+        "description": "Restringir operações de cadastro, edição e desativação de usuários exclusivamente a usuários com perfil de administrador do tenant, impedindo acesso por colaboradores ou gestores.",
+        "enforcement": "code",
+        "verification": "Teste de integração valida rejeição de operação quando usuário não possui perfil de administrador; auditoria registra tentativa de acesso não autorizado."
+      },
+      {
+        "id": 93,
+        "category": "invariant",
+        "description": "Garantir que cada tenant possua ao menos um usuário com perfil de administrador ativo, impedindo a desativação do último administrador do tenant.",
+        "enforcement": "code",
+        "verification": "Teste de integração valida rejeição de desativação quando usuário é o único administrador ativo do tenant; mensagem de erro específica exibida."
+      },
+      {
+        "id": 94,
+        "category": "authorization",
+        "description": "Restringir operações de provisionamento e gerenciamento de tenants (ativação, desativação) exclusivamente a usuários com perfil de administrador interno da plataforma.",
+        "enforcement": "code",
+        "verification": "Teste de integração valida rejeição de operação quando usuário não possui perfil de administrador interno; auditoria registra tentativa de acesso não autorizado."
+      },
+      {
+        "id": 95,
+        "category": "validation",
+        "description": "Validar que identificador de tenant (slug) respeita formato permitido (apenas letras minúsculas, números e hífens, sem espaços ou caracteres especiais) durante provisionamento.",
+        "enforcement": "code",
+        "verification": "Teste unitário valida aceitação de slugs válidos e rejeição de formatos inválidos; regex ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$ aplicado."
+      },
+      {
+        "id": 96,
+        "category": "validation",
+        "description": "Validar unicidade de slug de tenant na plataforma durante provisionamento, impedindo que dois tenants possuam o mesmo identificador.",
+        "enforcement": "db_constraint",
+        "verification": "Constraint UNIQUE (slug) na tabela de tenants; teste de integração valida rejeição de provisionamento com slug duplicado."
+      },
+      {
+        "id": 97,
+        "category": "validation",
+        "description": "Validar que nível hierárquico selecionado durante cadastro de usuário existe e pertence ao tenant do usuário criador, impedindo referências inválidas ou cruzadas entre tenants.",
+        "enforcement": "code",
+        "verification": "Teste de integração valida rejeição de cadastro com nível hierárquico inexistente ou de outro tenant; constraint de chave estrangeira na tabela de usuários."
+      },
+      {
+        "id": 98,
+        "category": "validation",
+        "description": "Validar que nível hierárquico não possui usuários vinculados antes de permitir sua exclusão, impedindo orfandade de usuários.",
+        "enforcement": "code",
+        "verification": "Teste de integração valida rejeição de exclusão quando nível possui usuários; mensagem de erro específica exibida."
+      },
+      {
+        "id": 99,
+        "category": "validation",
+        "description": "Validar unicidade de nome de nível hierárquico dentro do escopo do tenant durante criação e edição, impedindo que dois níveis do mesmo tenant possuam o mesmo nome.",
+        "enforcement": "db_constraint",
+        "verification": "Constraint UNIQUE (nome, tenant_id) na tabela de níveis hierárquicos; teste de integração valida rejeição de criação com nome duplicado."
+      },
+      {
+        "id": 100,
+        "category": "invariant",
+        "description": "Garantir isolamento rigoroso de dados entre tenants, impedindo que operações de um tenant acessem, modifiquem ou visualizem dados de outro tenant.",
+        "enforcement": "code",
+        "verification": "Teste de integração valida rejeição de operação quando usuário tenta acessar dados de tenant diferente; auditoria registra tentativa de violação de isolamento."
+      },
+      {
+        "id": 101,
+        "category": "validation",
+        "description": "Validar que usuário autenticado está ativo (status = ativo) durante autenticação, rejeitando login de usuários desativados com mensagem genérica que não revela o motivo.",
+        "enforcement": "code",
+        "verification": "Teste de integração valida rejeição de login com mensagem genérica 'Credenciais inválidas' quando usuário está desativado."
+      },
+      {
+        "id": 102,
+        "category": "validation",
+        "description": "Validar que tenant está ativo (status = ativo) durante autenticação, rejeitando login de usuários pertencentes a tenants desativados.",
+        "enforcement": "code",
+        "verification": "Teste de integração valida rejeição de login quando tenant está desativado; auditoria registra tentativa de acesso a tenant inativo."
+      },
+      {
+        "id": 103,
+        "category": "rate_limit",
+        "description": "Aplicar limite de 5 tentativas de login malsucedidas consecutivas por combinação de e-mail e IP em janela de 15 minutos, bloqueando temporariamente novas tentativas após atingir o limite.",
+        "enforcement": "code",
+        "verification": "Teste de integração valida bloqueio após 5 tentativas falhadas; resposta HTTP 429 com header Retry-After retornada; bloqueio é removido após 15 minutos."
+      },
+      {
+        "id": 104,
+        "category": "rate_limit",
+        "description": "Aplicar limite de 3 requisições de recuperação de senha por hora por endereço de e-mail, bloqueando requisições excedentes com resposta HTTP 429.",
+        "enforcement": "code",
+        "verification": "Teste de integração valida bloqueio após 3 requisições em 1 hora; resposta HTTP 429 com header Retry-After retornada."
+      },
+      {
+        "id": 105,
+        "category": "validation",
+        "description": "Validar que token de recuperação de senha é válido, não expirou (máximo 30 minutos), não foi já utilizado e pertence ao tenant correto antes de permitir redefinição.",
+        "enforcement": "code",
+        "verification": "Teste de integração valida rejeição de redefinição com token inválido, expirado ou já utilizado; mensagem de erro específica exibida."
+      },
+      {
+        "id": 106,
+        "category": "validation",
+        "description": "Validar que nova senha atende requisitos de complexidade mínima (8 caracteres, incluindo maiúscula, minúscula, número) durante redefinição de senha.",
+        "enforcement": "code",
+        "verification": "Teste unitário valida aceitação de senhas conformes e rejeição de senhas fracas; regex ^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$ aplicado."
+      },
+      {
+        "id": 107,
+        "category": "validation",
+        "description": "Validar que campos de nova senha e confirmação de senha são idênticos durante redefinição, rejeitando redefinição quando não correspondem.",
+        "enforcement": "code",
+        "verification": "Teste unitário valida rejeição quando campos não correspondem; mensagem de erro específica exibida."
+      },
+      {
+        "id": 108,
+        "category": "compliance",
+        "description": "Armazenar senhas de usuários exclusivamente em formato de hash seguro utilizando algoritmo argon2id (m=64MiB, t=3, p=4), nunca em texto simples ou formato reversível.",
+        "enforcement": "code",
+        "verification": "Teste de integração valida que senhas são armazenadas como hash argon2id; inspeção de banco de dados confirma ausência de senhas em texto simples."
+      },
+      {
+        "id": 109,
+        "category": "compliance",
+        "description": "Armazenar tokens de recuperação de senha em formato de hash seguro (SHA-256) na base de dados, nunca em texto simples, de modo que exposição do banco não permita uso direto do token.",
+        "enforcement": "db_constraint",
+        "verification": "Inspeção de banco de dados confirma que tokens são armazenados como hash SHA-256; teste de integração valida que token em texto simples não funciona."
+      },
+      {
+        "id": 110,
+        "category": "compliance",
+        "description": "Armazenar refresh tokens em formato de hash seguro (SHA-256) na tabela de sessões, nunca em texto simples, de modo que exposição do banco não permita reutilização de tokens.",
+        "enforcement": "db_constraint",
+        "verification": "Inspeção de banco de dados confirma que refresh tokens são armazenados como hash SHA-256; teste de integração valida que token em texto simples não funciona."
+      },
+      {
+        "id": 111,
+        "category": "observability",
+        "description": "Registrar em log de auditoria toda tentativa de login (bem-sucedida ou malsucedida), incluindo identificação de usuário/e-mail, tenant, IP, timestamp, user-agent e resultado da operação.",
+        "enforcement": "code",
+        "verification": "Teste de integração valida que cada tentativa de login gera entrada em log de auditoria; inspeção de logs confirma presença de todos os campos obrigatórios."
+      },
+      {
+        "id": 112,
+        "category": "observability",
+        "description": "Registrar em log de auditoria toda operação de cadastro, edição, ativação ou desativação de usuário, incluindo identificação do administrador executor, tenant, timestamp e dados alterados.",
+        "enforcement": "code",
+        "verification": "Teste de integração valida que cada operação de usuário gera entrada em log de auditoria; inspeção de logs confirma presença de todos os campos obrigatórios."
+      },
+      {
+        "id": 113,
+        "category": "observability",
+        "description": "Registrar em log de auditoria toda operação de criação, edição ou exclusão de nível hierárquico, incluindo identificação do administrador executor, tenant, timestamp e dados alterados.",
+        "enforcement": "code",
+        "verification": "Teste de integração valida que cada operação de nível hierárquico gera entrada em log de auditoria; inspeção de logs confirma presença de todos os campos obrigatórios."
+      },
+      {
+        "id": 114,
+        "category": "observability",
+        "description": "Registrar em log de auditoria toda solicitação de recuperação de senha e toda redefinição concluída, incluindo identificação de usuário/e-mail, tenant, IP, timestamp e resultado da operação.",
+        "enforcement": "code",
+        "verification": "Teste de integração valida que cada operação de recuperação/redefinição gera entrada em log de auditoria; inspeção de logs confirma presença de todos os campos obrigatórios."
+      },
+      {
+        "id": 115,
+        "category": "observability",
+        "description": "Registrar em log de auditoria toda operação de provisionamento de tenant, incluindo identificação do administrador interno executor, timestamp e dados do tenant criado.",
+        "enforcement": "code",
+        "verification": "Teste de integração valida que cada provisionamento gera entrada em log de auditoria; inspeção de logs confirma presença de todos os campos obrigatórios."
+      },
+      {
+        "id": 116,
+        "category": "observability",
+        "description": "Registrar em log de auditoria toda operação de ativação ou desativação de tenant, incluindo identificação do administrador interno executor, tenant afetado, timestamp e novo status.",
+        "enforcement": "code",
+        "verification": "Teste de integração valida que cada operação de ativação/desativação gera entrada em log de auditoria; inspeção de logs confirma presença de todos os campos obrigatórios."
+      },
+      {
+        "id": 117,
+        "category": "compliance",
+        "description": "Conformidade com LGPD: aplicar princípios de minimização de dados, coletando e armazenando apenas dados pessoais necessários para operação da plataforma (nome, e-mail, nível hierárquico).",
+        "enforcement": "code",
+        "verification": "Auditoria de conformidade valida que apenas campos necessários são coletados; política de retenção de dados implementada conforme LGPD."
+      },
+      {
+        "id": 118,
+        "category": "compliance",
+        "description": "Conformidade com LGPD: manter registro de consentimento e finalidade de processamento de dados pessoais de usuários, permitindo rastreabilidade de coleta e uso de dados.",
+        "enforcement": "code",
+        "verification": "Teste de integração valida que consentimento é registrado durante cadastro; auditoria de conformidade confirma presença de registros de consentimento."
+      },
+      {
+        "id": 119,
+        "category": "idempotency",
+        "description": "Garantir que operações de cadastro de usuário são idempotentes, de modo que requisições duplicadas não criam múltiplos registros de usuário.",
+        "enforcement": "code",
+        "verification": "Teste de integração valida que requisições duplicadas com mesmo idempotency key retornam mesmo resultado sem criar duplicatas."
+      },
+      {
+        "id": 120,
+        "category": "idempotency",
+        "description": "Garantir que operações de redefinição de senha são idempotentes, de modo que requisições duplicadas com mesmo token não causam efeitos colaterais.",
+        "enforcement": "code",
+        "verification": "Teste de integração valida que requisições duplicadas com mesmo token retornam sucesso sem alterar senha novamente."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "O módulo Gestão de Usuários e Organizações é o componente central de identidade e acesso da plataforma, responsável por orquestrar o ciclo de vida completo de usuários, tenants e autenticação em um ambiente multi-tenant. Encapsula funcionalidades críticas de cadastro e gerenciamento de perfis de usuário, definição de estruturas hierárquicas organizacionais, autenticação segura com recuperação de senha, e provisionamento de novos tenants por administradores internos. Implementa máquina de estados para transições de status de usuário e tenant, garante isolamento rigoroso de dados entre organizações, e mantém rastreabilidade completa de operações críticas para conformidade com LGPD. Serve como guardiã da identidade e do acesso à plataforma, orquestrando autenticação, autorização e governança de dados pessoais em contexto multi-tenant."
+    },
+    "definition": {
+      "params": [
+        {
+          "id": 26,
+          "name": "module_name",
+          "value": "gestao-usuarios-organizacoes"
+        },
+        {
+          "id": 27,
+          "name": "package_root",
+          "value": "src/modules/users-organizations"
+        },
+        {
+          "id": 28,
+          "name": "composition_style",
+          "value": "layered_with_domain_driven_design"
+        },
+        {
+          "id": 29,
+          "name": "deployment_unit",
+          "value": "backend_monolith_service"
+        },
+        {
+          "id": 30,
+          "name": "isolation_strategy",
+          "value": "tenant_scoped_with_strict_data_segregation"
+        }
+      ],
+      "exports": {
+        "id": 2,
+        "from": "Gestão de Usuários e Organizações",
+        "types": [
+          {
+            "id": 18,
+            "name": "Usuario"
+          },
+          {
+            "id": 19,
+            "name": "Tenant"
+          },
+          {
+            "id": 20,
+            "name": "NivelHierarquico"
+          },
+          {
+            "id": 21,
+            "name": "AuthContext"
+          },
+          {
+            "id": 22,
+            "name": "PermissionVariant"
+          }
+        ],
+        "functions": [
+          {
+            "id": 3,
+            "name": "autenticarUsuario",
+            "signature": "autenticarUsuario(email: string, senha: string) -> { accessToken: string, refreshToken: string, usuario: Usuario, tenant: Tenant }"
+          },
+          {
+            "id": 4,
+            "name": "cadastrarUsuario",
+            "signature": "cadastrarUsuario(nomeCompleto: string, email: string, nivelHierarquicoId: uuid, tenantId: uuid) -> Usuario"
+          },
+          {
+            "id": 5,
+            "name": "editarPerfilUsuario",
+            "signature": "editarPerfilUsuario(usuarioId: uuid, nomeCompleto?: string, email?: string, nivelHierarquicoId?: uuid) -> Usuario"
+          },
+          {
+            "id": 6,
+            "name": "ativarDesativarUsuario",
+            "signature": "ativarDesativarUsuario(usuarioId: uuid, novoStatus: enum[ativo|inativo]) -> Usuario"
+          },
+          {
+            "id": 7,
+            "name": "criarNivelHierarquico",
+            "signature": "criarNivelHierarquico(nome: string, tenantId: uuid) -> NivelHierarquico"
+          },
+          {
+            "id": 8,
+            "name": "editarNivelHierarquico",
+            "signature": "editarNivelHierarquico(nivelId: uuid, nome?: string, ordem?: integer) -> NivelHierarquico"
+          },
+          {
+            "id": 9,
+            "name": "excluirNivelHierarquico",
+            "signature": "excluirNivelHierarquico(nivelId: uuid) -> void"
+          },
+          {
+            "id": 10,
+            "name": "listarUsuariosPorTenant",
+            "signature": "listarUsuariosPorTenant(tenantId: uuid, filtros?: { status?: enum, nivelHierarquico?: uuid }) -> Usuario[]"
+          },
+          {
+            "id": 11,
+            "name": "listarNiveisHierarquicos",
+            "signature": "listarNiveisHierarquicos(tenantId: uuid) -> NivelHierarquico[]"
+          },
+          {
+            "id": 12,
+            "name": "provisionarTenantNovo",
+            "signature": "provisionarTenantNovo(nomeOrganizacao: string, slug: string) -> Tenant"
+          },
+          {
+            "id": 13,
+            "name": "ativarDesativarTenant",
+            "signature": "ativarDesativarTenant(tenantId: uuid, novoStatus: enum[ativo|inativo]) -> Tenant"
+          },
+          {
+            "id": 14,
+            "name": "solicitarRecuperacaoSenha",
+            "signature": "solicitarRecuperacaoSenha(email: string) -> { mensagem: string }"
+          },
+          {
+            "id": 15,
+            "name": "redefinirSenha",
+            "signature": "redefinirSenha(token: string, novaSenha: string, confirmacaoSenha: string) -> { mensagem: string }"
+          },
+          {
+            "id": 16,
+            "name": "obterDadosUsuarioAutenticado",
+            "signature": "obterDadosUsuarioAutenticado(usuarioId: uuid, tenantId: uuid) -> { usuario: Usuario, tenant: Tenant, permissoes: string[] }"
+          },
+          {
+            "id": 17,
+            "name": "logout",
+            "signature": "logout(usuarioId: uuid, tenantId: uuid) -> void"
+          }
+        ],
+        "stability": "stable"
+      },
+      "factory": {
+        "id": 23,
+        "signature": "GestaoUsuariosOrganizacoesFactory(config: ConfigurationResolved, authService: ControlleIdentidadeAcesso, validationRules: RegrasValidacaoUsuario, auditLog: TrilhaAuditoria) -> GestaoUsuariosOrganizacoes",
+        "deps_shape": "{ authService: ControlleIdentidadeAcesso, validationRules: RegrasValidacaoUsuario, auditLog: TrilhaAuditoria, configLoader: ModeloConfiguracaoMultiTenant, domainModel: DominioNegocio }",
+        "lifecycle_hooks": [
+          {
+            "id": 24,
+            "name": "onModuleInit",
+            "signature": "onModuleInit() -> void",
+            "description": "Inicializa o módulo carregando configurações de tenant, validando integridade de dados de usuários e níveis hierárquicos, e estabelecendo conexão com serviço de auditoria."
+          },
+          {
+            "id": 25,
+            "name": "onModuleDestroy",
+            "signature": "onModuleDestroy() -> void",
+            "description": "Finaliza o módulo encerrando conexões ativas, limpando cache de configurações e garantindo que todas as operações pendentes de auditoria sejam persistidas."
+          }
+        ]
+      }
+    },
+    "pendencies": [
+      {
+        "id": 190,
+        "section": "definition",
+        "description": "Definir estrutura exata de dados para PermissionVariant, incluindo lista de endpoints acessíveis, campos de formulário visíveis, ações permitidas e módulos ativados para cada perfil (colaborador, gestor, administrador_tenant, administrador_plataforma).",
+        "resolutionOptions": [
+          {
+            "id": 191,
+            "text": "Criar documento de especificação de PermissionVariant com matriz de permissões por perfil, mapeando cada endpoint, ação e módulo para cada perfil."
+          },
+          {
+            "id": 192,
+            "text": "Implementar PermissionVariant como estrutura de dados no código, com testes unitários validando permissões para cada perfil."
+          },
+          {
+            "id": 193,
+            "text": "Consultar com stakeholders de negócio para definir permissões exatas por perfil antes de implementação."
+          }
+        ],
+        "recommendedOptionId": 191
+      },
+      {
+        "id": 194,
+        "section": "definition",
+        "description": "Definir estrutura exata de dados para AuthContext, incluindo todos os claims necessários para autorização granular e rastreabilidade de ações.",
+        "resolutionOptions": [
+          {
+            "id": 195,
+            "text": "Criar documento de especificação de AuthContext com lista de claims obrigatórios e opcionais, tipos de dados e finalidade de cada claim."
+          },
+          {
+            "id": 196,
+            "text": "Implementar AuthContext como estrutura de dados no código, com testes unitários validando presença e tipo de cada claim."
+          }
+        ],
+        "recommendedOptionId": 195
+      },
+      {
+        "id": 197,
+        "section": "flow",
+        "description": "Definir mecanismo exato de enfileiramento de e-mail para recuperação de senha, incluindo sistema de fila (ex: RabbitMQ, AWS SQS), política de retry, e integração com serviço de e-mail transacional.",
+        "resolutionOptions": [
+          {
+            "id": 198,
+            "text": "Implementar fila de mensagens com RabbitMQ, com política de retry exponencial e integração com serviço de e-mail transacional."
+          },
+          {
+            "id": 199,
+            "text": "Implementar fila de mensagens com AWS SQS, com política de retry configurável e integração com serviço de e-mail transacional."
+          },
+          {
+            "id": 200,
+            "text": "Implementar fila em memória com persistência em banco de dados, com política de retry simples e integração com serviço de e-mail transacional."
+          }
+        ],
+        "recommendedOptionId": 198
+      },
+      {
+        "id": 201,
+        "section": "rules",
+        "description": "Definir política exata de limpeza de sessões expiradas, incluindo frequência de execução (ex: job cron), retenção de registros históricos e impacto em auditoria.",
+        "resolutionOptions": [
+          {
+            "id": 202,
+            "text": "Implementar job cron que executa diariamente à meia-noite, removendo sessões expiradas e mantendo registros históricos por 90 dias para auditoria."
+          },
+          {
+            "id": 203,
+            "text": "Implementar job cron que executa a cada 6 horas, removendo sessões expiradas imediatamente e mantendo registros históricos por 365 dias."
+          },
+          {
+            "id": 204,
+            "text": "Implementar limpeza lazy (sob demanda) durante validação de token, removendo sessões expiradas apenas quando consultadas."
+          }
+        ],
+        "recommendedOptionId": 202
+      },
+      {
+        "id": 205,
+        "section": "rules",
+        "description": "Definir política exata de armazenamento e retenção de logs de auditoria, incluindo formato de armazenamento (ex: banco de dados, arquivo, serviço externo), período de retenção e conformidade com LGPD.",
+        "resolutionOptions": [
+          {
+            "id": 206,
+            "text": "Armazenar logs de auditoria em tabela dedicada no banco de dados relacional, com retenção de 365 dias e arquivamento em storage externo após 90 dias."
+          },
+          {
+            "id": 207,
+            "text": "Armazenar logs de auditoria em serviço externo de logging (ex: ELK Stack, Datadog), com retenção de 365 dias e conformidade com LGPD."
+          },
+          {
+            "id": 208,
+            "text": "Armazenar logs de auditoria em arquivo estruturado (JSON Lines) com rotação diária, com retenção de 365 dias e conformidade com LGPD."
+          }
+        ],
+        "recommendedOptionId": 206
+      },
+      {
+        "id": 209,
+        "section": "non_functional_requirements",
+        "description": "Definir estratégia exata de cache para dados de configuração multi-tenant, incluindo TTL, invalidação e sincronização entre instâncias.",
+        "resolutionOptions": [
+          {
+            "id": 210,
+            "text": "Implementar cache em memória com TTL de 5 minutos, invalidação manual via evento de atualização de configuração e sincronização via pub/sub."
+          },
+          {
+            "id": 211,
+            "text": "Implementar cache distribuído com Redis, com TTL de 5 minutos, invalidação automática e sincronização automática entre instâncias."
+          },
+          {
+            "id": 212,
+            "text": "Implementar cache em memória com TTL de 1 hora, sem invalidação manual (recarregamento periódico) e sem sincronização entre instâncias."
+          }
+        ],
+        "recommendedOptionId": 211
+      },
+      {
+        "id": 213,
+        "section": "global",
+        "description": "Definir integração exata com serviço de e-mail transacional, incluindo provedor (ex: SendGrid, AWS SES), configuração de credenciais, templates de e-mail e tratamento de erros.",
+        "resolutionOptions": [
+          {
+            "id": 214,
+            "text": "Integrar com SendGrid, armazenando credenciais em vault de segurança, utilizando templates de e-mail gerenciados no SendGrid e implementando retry com backoff exponencial."
+          },
+          {
+            "id": 215,
+            "text": "Integrar com AWS SES, armazenando credenciais em AWS Secrets Manager, utilizando templates de e-mail gerenciados localmente e implementando retry com backoff exponencial."
+          },
+          {
+            "id": 216,
+            "text": "Integrar com provedor genérico via SMTP, armazenando credenciais em vault de segurança, utilizando templates de e-mail gerenciados localmente e implementando retry simples."
+          }
+        ],
+        "recommendedOptionId": 214
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 151,
+        "then": "Sistema rejeita cadastro e exibe mensagem de erro 'Formato de e-mail inválido'",
+        "type": "unit",
+        "when": "Usuário submete e-mail em formato inválido (ex: 'usuario@' ou 'usuario.com')",
+        "given": "Um formulário de cadastro de usuário com campo de e-mail",
+        "scenario": "Validação de formato de e-mail durante cadastro de usuário",
+        "target_section": "rules"
+      },
+      {
+        "id": 152,
+        "then": "Sistema rejeita cadastro e exibe mensagem de erro 'E-mail já cadastrado nesta organização'",
+        "type": "unit",
+        "when": "Administrador tenta cadastrar novo usuário com mesmo e-mail",
+        "given": "Um tenant com usuário já cadastrado com e-mail 'usuario@exemplo.com'",
+        "scenario": "Validação de unicidade de e-mail dentro do tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 153,
+        "then": "Sistema rejeita redefinição e exibe mensagem de erro descrevendo requisitos não atendidos",
+        "type": "unit",
+        "when": "Usuário submete senha fraca (ex: 'senha123' sem maiúscula)",
+        "given": "Um formulário de redefinição de senha com requisitos de complexidade (8 caracteres, maiúscula, minúscula, número)",
+        "scenario": "Validação de complexidade de senha durante redefinição",
+        "target_section": "rules"
+      },
+      {
+        "id": 154,
+        "then": "Sistema autentica usuário, emite access token e refresh token, registra auditoria e redireciona para tela principal",
+        "type": "integration",
+        "when": "Usuário submete e-mail e senha corretos no formulário de login",
+        "given": "Um usuário ativo cadastrado no tenant com credenciais válidas",
+        "scenario": "Fluxo completo de autenticação com sucesso",
+        "target_section": "flow"
+      },
+      {
+        "id": 155,
+        "then": "Sistema rejeita login com mensagem genérica 'Credenciais inválidas', registra tentativa falhada em auditoria e incrementa contador de tentativas",
+        "type": "integration",
+        "when": "Usuário submete e-mail correto mas senha incorreta",
+        "given": "Um usuário cadastrado no tenant",
+        "scenario": "Rejeição de login com credenciais inválidas",
+        "target_section": "flow"
+      },
+      {
+        "id": 156,
+        "then": "Sistema bloqueia login com resposta HTTP 429 e header Retry-After, impedindo novas tentativas até expiração do bloqueio",
+        "type": "integration",
+        "when": "Usuário realiza 5 tentativas de login falhadas em 15 minutos do mesmo IP",
+        "given": "Um usuário cadastrado no tenant",
+        "scenario": "Bloqueio de login após múltiplas tentativas falhadas",
+        "target_section": "rules"
+      },
+      {
+        "id": 157,
+        "then": "Sistema rejeita login com mensagem genérica 'Credenciais inválidas' (sem revelar que usuário está desativado)",
+        "type": "integration",
+        "when": "Usuário tenta fazer login com credenciais válidas",
+        "given": "Um usuário cadastrado no tenant com status inativo",
+        "scenario": "Rejeição de login de usuário desativado",
+        "target_section": "rules"
+      },
+      {
+        "id": 158,
+        "then": "Sistema rejeita login, registra tentativa em auditoria e impede acesso ao tenant desativado",
+        "type": "integration",
+        "when": "Usuário tenta fazer login com credenciais válidas",
+        "given": "Um tenant com status inativo e usuário ativo pertencente ao tenant",
+        "scenario": "Rejeição de login de tenant desativado",
+        "target_section": "rules"
+      },
+      {
+        "id": 159,
+        "then": "Sistema valida dados, persiste novo usuário com status ativo, registra auditoria e exibe confirmação de sucesso",
+        "type": "integration",
+        "when": "Administrador submete formulário de cadastro com dados válidos (nome, e-mail, nível hierárquico)",
+        "given": "Um administrador de tenant autenticado",
+        "scenario": "Fluxo completo de cadastro de usuário",
+        "target_section": "flow"
+      },
+      {
+        "id": 160,
+        "then": "Sistema rejeita acesso, registra tentativa não autorizada em auditoria e exibe mensagem de erro 'Acesso negado'",
+        "type": "integration",
+        "when": "Colaborador tenta acessar funcionalidade de cadastro de usuário",
+        "given": "Um colaborador (não administrador) autenticado",
+        "scenario": "Rejeição de cadastro por usuário sem permissão",
+        "target_section": "rules"
+      },
+      {
+        "id": 161,
+        "then": "Sistema valida dados, atualiza registro de usuário, registra auditoria e exibe confirmação de sucesso",
+        "type": "integration",
+        "when": "Administrador submete formulário de edição com dados válidos (nome, e-mail, nível hierárquico)",
+        "given": "Um administrador de tenant autenticado e um usuário cadastrado no tenant",
+        "scenario": "Fluxo completo de edição de perfil de usuário",
+        "target_section": "flow"
+      },
+      {
+        "id": 162,
+        "then": "Sistema marca sessão como revogada, usuário é desconectado imediatamente e requisições subsequentes com token são rejeitadas",
+        "type": "integration",
+        "when": "Administrador desativa o usuário",
+        "given": "Um usuário ativo com sessão autenticada",
+        "scenario": "Desativação de usuário revoga sessões ativas",
+        "target_section": "rules"
+      },
+      {
+        "id": 163,
+        "then": "Sistema rejeita operação e exibe mensagem de erro 'Não é permitido desativar o próprio perfil de administrador'",
+        "type": "integration",
+        "when": "Administrador tenta desativar seu próprio perfil",
+        "given": "Um tenant com apenas um administrador ativo",
+        "scenario": "Rejeição de desativação do último administrador",
+        "target_section": "rules"
+      },
+      {
+        "id": 164,
+        "then": "Sistema gera token de recuperação, enfileira envio de e-mail com link de redefinição, registra auditoria e exibe mensagem genérica de confirmação",
+        "type": "integration",
+        "when": "Usuário submete e-mail válido no formulário de recuperação de senha",
+        "given": "Um usuário cadastrado no tenant",
+        "scenario": "Fluxo completo de recuperação de senha",
+        "target_section": "flow"
+      },
+      {
+        "id": 165,
+        "then": "Sistema bloqueia requisições subsequentes com resposta HTTP 429 e header Retry-After, prevenindo abuso do serviço de e-mail",
+        "type": "integration",
+        "when": "Usuário realiza 3 solicitações de recuperação de senha em 1 hora",
+        "given": "Um usuário cadastrado no tenant",
+        "scenario": "Bloqueio de múltiplas solicitações de recuperação de senha",
+        "target_section": "rules"
+      },
+      {
+        "id": 166,
+        "then": "Sistema valida token, persiste nova senha com hash seguro, revoga todas as sessões ativas, registra auditoria e exibe confirmação de sucesso",
+        "type": "integration",
+        "when": "Usuário acessa link de recuperação e submete nova senha válida",
+        "given": "Um usuário com token de recuperação válido",
+        "scenario": "Fluxo completo de redefinição de senha",
+        "target_section": "flow"
+      },
+      {
+        "id": 167,
+        "then": "Sistema rejeita operação e exibe mensagem de erro 'Link de recuperação expirado'",
+        "type": "integration",
+        "when": "Usuário tenta redefinir senha com token expirado",
+        "given": "Um token de recuperação que expirou (> 30 minutos)",
+        "scenario": "Rejeição de redefinição com token expirado",
+        "target_section": "rules"
+      },
+      {
+        "id": 168,
+        "then": "Sistema rejeita operação e exibe mensagem de erro 'Link de recuperação inválido ou já utilizado'",
+        "type": "integration",
+        "when": "Usuário tenta redefinir senha novamente com mesmo token",
+        "given": "Um token de recuperação que foi já utilizado em redefinição anterior",
+        "scenario": "Rejeição de redefinição com token já utilizado",
+        "target_section": "rules"
+      },
+      {
+        "id": 169,
+        "then": "Sistema revoga todas as sessões ativas do usuário, forçando novo login com nova credencial",
+        "type": "integration",
+        "when": "Usuário redefine senha com sucesso",
+        "given": "Um usuário ativo com sessão autenticada",
+        "scenario": "Redefinição de senha revoga sessões ativas",
+        "target_section": "rules"
+      },
+      {
+        "id": 170,
+        "then": "Sistema valida dados, cria novo tenant com estrutura isolada, registra auditoria e exibe confirmação de sucesso",
+        "type": "integration",
+        "when": "Administrador submete formulário de provisionamento com dados válidos (nome, slug)",
+        "given": "Um administrador interno da plataforma autenticado",
+        "scenario": "Fluxo completo de provisionamento de tenant",
+        "target_section": "flow"
+      },
+      {
+        "id": 171,
+        "then": "Sistema rejeita acesso, registra tentativa não autorizada em auditoria e exibe mensagem de erro 'Acesso negado'",
+        "type": "integration",
+        "when": "Administrador tenta acessar funcionalidade de provisionamento de tenant",
+        "given": "Um administrador de tenant (não administrador interno) autenticado",
+        "scenario": "Rejeição de provisionamento por usuário sem permissão",
+        "target_section": "rules"
+      },
+      {
+        "id": 172,
+        "then": "Sistema rejeita operação e exibe mensagem de erro 'Slug já cadastrado na plataforma'",
+        "type": "integration",
+        "when": "Administrador interno tenta provisionar novo tenant com mesmo slug",
+        "given": "Um tenant já provisionado com slug 'empresa-a'",
+        "scenario": "Rejeição de provisionamento com slug duplicado",
+        "target_section": "rules"
+      },
+      {
+        "id": 173,
+        "then": "Sistema atualiza status para ativo, registra auditoria e exibe confirmação de sucesso",
+        "type": "integration",
+        "when": "Administrador interno ativa o tenant",
+        "given": "Um tenant desativado",
+        "scenario": "Fluxo completo de ativação de tenant",
+        "target_section": "flow"
+      },
+      {
+        "id": 174,
+        "then": "Sistema marca todas as sessões dos usuários do tenant como revogadas, usuários são desconectados imediatamente",
+        "type": "integration",
+        "when": "Administrador interno desativa o tenant",
+        "given": "Um tenant ativo com múltiplos usuários com sessões autenticadas",
+        "scenario": "Desativação de tenant revoga sessões ativas",
+        "target_section": "rules"
+      },
+      {
+        "id": 175,
+        "then": "Sistema valida dados, persiste novo nível hierárquico, registra auditoria e exibe confirmação de sucesso",
+        "type": "integration",
+        "when": "Administrador submete formulário de criação de nível com nome válido",
+        "given": "Um administrador de tenant autenticado",
+        "scenario": "Fluxo completo de criação de nível hierárquico",
+        "target_section": "flow"
+      },
+      {
+        "id": 176,
+        "then": "Sistema rejeita operação e exibe mensagem de erro 'Nível hierárquico com este nome já existe nesta organização'",
+        "type": "integration",
+        "when": "Administrador tenta criar novo nível com mesmo nome",
+        "given": "Um tenant com nível hierárquico 'Gerente' já cadastrado",
+        "scenario": "Rejeição de criação de nível com nome duplicado",
+        "target_section": "rules"
+      },
+      {
+        "id": 177,
+        "then": "Sistema rejeita operação e exibe mensagem de erro 'Não é possível excluir nível hierárquico que possui usuários vinculados'",
+        "type": "integration",
+        "when": "Administrador tenta excluir o nível",
+        "given": "Um nível hierárquico com usuários ativos vinculados",
+        "scenario": "Rejeição de exclusão de nível com usuários vinculados",
+        "target_section": "rules"
+      },
+      {
+        "id": 178,
+        "then": "Sistema retorna mensagem genérica 'Credenciais inválidas' (idêntica à mensagem de senha incorreta)",
+        "type": "security",
+        "when": "Usuário submete e-mail que não existe no tenant",
+        "given": "Um formulário de login",
+        "scenario": "Proteção contra enumeração de usuários em autenticação",
+        "target_section": "rules"
+      },
+      {
+        "id": 179,
+        "then": "Sistema retorna mensagem genérica de confirmação (idêntica à mensagem de e-mail válido)",
+        "type": "security",
+        "when": "Usuário submete e-mail que não existe no tenant",
+        "given": "Um formulário de recuperação de senha",
+        "scenario": "Proteção contra enumeração de usuários em recuperação de senha",
+        "target_section": "rules"
+      },
+      {
+        "id": 180,
+        "then": "Sistema identifica tenant correto pelo e-mail, autentica apenas contra usuário do tenant correto, impedindo acesso cruzado",
+        "type": "security",
+        "when": "Usuário de tenant A tenta fazer login com e-mail de usuário de tenant B",
+        "given": "Dois tenants com usuários de mesmo e-mail em cada um",
+        "scenario": "Isolamento de dados entre tenants em autenticação",
+        "target_section": "rules"
+      },
+      {
+        "id": 181,
+        "then": "Sistema rejeita operação, registra tentativa de violação de isolamento em auditoria e exibe mensagem de erro 'Acesso negado'",
+        "type": "security",
+        "when": "Administrador tenta editar usuário pertencente a tenant B",
+        "given": "Um administrador de tenant A autenticado",
+        "scenario": "Isolamento de dados entre tenants em operações de usuário",
+        "target_section": "rules"
+      },
+      {
+        "id": 182,
+        "then": "Sistema força transmissão via HTTPS, rejeita requisições HTTP e configura HSTS header com max-age=31536000",
+        "type": "security",
+        "when": "Usuário submete credenciais",
+        "given": "Um formulário de login",
+        "scenario": "Transmissão segura de credenciais via HTTPS",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 183,
+        "then": "Senhas são armazenadas como hash argon2id (m=64MiB, t=3, p=4), nunca em texto simples",
+        "type": "security",
+        "when": "Inspeção do banco de dados é realizada",
+        "given": "Um usuário cadastrado no sistema",
+        "scenario": "Armazenamento seguro de senhas com hash argon2id",
+        "target_section": "rules"
+      },
+      {
+        "id": 184,
+        "then": "Sistema processa autenticação com p99 <= 200ms, mantendo performance dentro do SLA",
+        "type": "performance",
+        "when": "Usuários submetem credenciais válidas",
+        "given": "5.000 usuários simultâneos realizando login",
+        "scenario": "Autenticação dentro do SLA de latência",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 185,
+        "then": "Sistema processa cadastro com p99 <= 300ms, mantendo performance dentro do SLA",
+        "type": "performance",
+        "when": "Administradores submetem formulários de cadastro",
+        "given": "Múltiplos administradores realizando cadastro simultâneo",
+        "scenario": "Cadastro de usuário dentro do SLA de latência",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 186,
+        "then": "Sistema retorna HTTP 200 com access_token, refresh_token, user e tenant no corpo da resposta",
+        "type": "contract",
+        "when": "Cliente submete credenciais válidas",
+        "given": "Um cliente consumindo endpoint POST /api/auth/login",
+        "scenario": "Contrato de API de autenticação",
+        "target_section": "definition"
+      },
+      {
+        "id": 187,
+        "then": "Sistema retorna HTTP 200 com mensagem de confirmação e invalida tokens",
+        "type": "contract",
+        "when": "Usuário executa logout",
+        "given": "Um usuário autenticado consumindo endpoint POST /api/auth/logout",
+        "scenario": "Contrato de API de logout",
+        "target_section": "definition"
+      },
+      {
+        "id": 188,
+        "then": "Sistema retorna HTTP 200 com mensagem genérica de confirmação",
+        "type": "contract",
+        "when": "Cliente submete e-mail válido",
+        "given": "Um cliente consumindo endpoint POST /api/auth/password-recovery",
+        "scenario": "Contrato de API de recuperação de senha",
+        "target_section": "definition"
+      },
+      {
+        "id": 189,
+        "then": "Sistema retorna HTTP 200 com mensagem de confirmação e invalida sessões ativas",
+        "type": "contract",
+        "when": "Cliente submete token válido e nova senha",
+        "given": "Um cliente consumindo endpoint POST /api/auth/password-recovery/reset",
+        "scenario": "Contrato de API de redefinição de senha",
+        "target_section": "definition"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 121,
+        "target": "p99 <= 200ms em condições normais de carga (até 5.000 usuários ativos simultâneos)",
+        "category": "performance",
+        "requirement": "Processar autenticação de usuário (validação de credenciais, emissão de tokens, registro de auditoria) em tempo adequado.",
+        "verification": "Teste de carga com 5.000 usuários simultâneos valida que p99 de latência de autenticação não excede 200ms; monitoramento de produção rastreia latência em tempo real."
+      },
+      {
+        "id": 122,
+        "target": "p99 <= 300ms em condições normais de carga",
+        "category": "performance",
+        "requirement": "Processar cadastro de novo usuário (validação, persistência, auditoria) em tempo adequado.",
+        "verification": "Teste de carga valida que p99 de latência de cadastro não excede 300ms; monitoramento de produção rastreia latência em tempo real."
+      },
+      {
+        "id": 123,
+        "target": "p99 <= 300ms em condições normais de carga",
+        "category": "performance",
+        "requirement": "Processar edição de perfil de usuário (validação, atualização, auditoria) em tempo adequado.",
+        "verification": "Teste de carga valida que p99 de latência de edição não excede 300ms; monitoramento de produção rastreia latência em tempo real."
+      },
+      {
+        "id": 124,
+        "target": "p99 <= 500ms em condições normais de carga (incluindo revogação de múltiplas sessões ativas)",
+        "category": "performance",
+        "requirement": "Processar operações de ativação/desativação de usuário (validação, atualização, revogação de sessões, auditoria) em tempo adequado.",
+        "verification": "Teste de carga valida que p99 de latência não excede 500ms; teste de integração valida que revogação de sessões é concluída dentro do tempo limite."
+      },
+      {
+        "id": 125,
+        "target": "p99 <= 500ms para enfileiramento de e-mail (envio assíncrono não bloqueia resposta ao usuário)",
+        "category": "performance",
+        "requirement": "Processar operações de recuperação de senha (geração de token, envio de e-mail, auditoria) em tempo adequado.",
+        "verification": "Teste de carga valida que p99 de latência de solicitação não excede 500ms; teste de integração valida que e-mail é enfileirado para envio assíncrono."
+      },
+      {
+        "id": 126,
+        "target": "p99 <= 500ms em condições normais de carga",
+        "category": "performance",
+        "requirement": "Processar redefinição de senha (validação de token, hash de senha, revogação de sessões, auditoria) em tempo adequado.",
+        "verification": "Teste de carga valida que p99 de latência não excede 500ms; teste de integração valida que revogação de sessões é concluída dentro do tempo limite."
+      },
+      {
+        "id": 127,
+        "target": "p99 <= 1000ms em condições normais de carga",
+        "category": "performance",
+        "requirement": "Processar provisionamento de novo tenant (validação, criação de estrutura isolada, auditoria) em tempo adequado.",
+        "verification": "Teste de carga valida que p99 de latência não excede 1000ms; teste de integração valida que estrutura isolada é criada completamente."
+      },
+      {
+        "id": 128,
+        "target": "p99 <= 1000ms em condições normais de carga (incluindo revogação de múltiplas sessões de múltiplos usuários)",
+        "category": "performance",
+        "requirement": "Processar operações de ativação/desativação de tenant (validação, atualização, revogação de sessões, auditoria) em tempo adequado.",
+        "verification": "Teste de carga valida que p99 de latência não excede 1000ms; teste de integração valida que revogação de sessões é concluída dentro do tempo limite."
+      },
+      {
+        "id": 129,
+        "target": "p99 <= 300ms em condições normais de carga",
+        "category": "performance",
+        "requirement": "Processar operações de gerenciamento de níveis hierárquicos (criação, edição, exclusão, auditoria) em tempo adequado.",
+        "verification": "Teste de carga valida que p99 de latência não excede 300ms; monitoramento de produção rastreia latência em tempo real."
+      },
+      {
+        "id": 130,
+        "target": "Até 5.000 usuários ativos simultâneos no primeiro ano de operação, com arquitetura preparada para crescimento progressivo",
+        "category": "scalability",
+        "requirement": "Suportar crescimento de usuários ativos simultâneos na plataforma.",
+        "verification": "Teste de carga com 5.000 usuários simultâneos valida que sistema mantém performance dentro dos limites; arquitetura de pool de conexões e cache permite escalabilidade horizontal."
+      },
+      {
+        "id": 131,
+        "target": "Até 50 tenants no primeiro ano de operação, com isolamento de dados garantido para cada tenant",
+        "category": "scalability",
+        "requirement": "Suportar crescimento de tenants cadastrados na plataforma.",
+        "verification": "Teste de integração com 50 tenants valida que isolamento de dados é mantido; monitoramento de produção rastreia número de tenants e performance por tenant."
+      },
+      {
+        "id": 132,
+        "target": "TLS 1.2 ou superior obrigatório; HSTS header com max-age=31536000 configurado",
+        "category": "security",
+        "requirement": "Transmitir todas as comunicações de autenticação exclusivamente por protocolo HTTPS.",
+        "verification": "Teste de segurança valida que requisições HTTP são redirecionadas ou rejeitadas; inspeção de headers confirma presença de HSTS; teste de integração valida que credenciais são transmitidas apenas via HTTPS."
+      },
+      {
+        "id": 133,
+        "target": "Rate limiting de 5 tentativas falhadas em 15 minutos por IP; bloqueio temporário com resposta HTTP 429",
+        "category": "security",
+        "requirement": "Proteger contra ataques de força bruta em autenticação.",
+        "verification": "Teste de segurança valida que após 5 tentativas falhadas, requisições subsequentes são bloqueadas com HTTP 429; bloqueio é removido após 15 minutos."
+      },
+      {
+        "id": 134,
+        "target": "Mensagem de erro genérica 'Credenciais inválidas' retornada para qualquer falha (usuário não existe, senha incorreta, usuário inativo, tenant inativo)",
+        "category": "security",
+        "requirement": "Proteger contra enumeração de usuários em autenticação.",
+        "verification": "Teste de segurança valida que mensagem de erro não revela motivo específico da falha; teste de integração valida que mensagem é idêntica para todos os cenários de falha."
+      },
+      {
+        "id": 135,
+        "target": "Mensagem de confirmação genérica retornada independentemente de e-mail existir ou não na base",
+        "category": "security",
+        "requirement": "Proteger contra enumeração de usuários em recuperação de senha.",
+        "verification": "Teste de segurança valida que mensagem é idêntica para e-mails válidos e inválidos; teste de integração valida que e-mail é enviado apenas para e-mails válidos."
+      },
+      {
+        "id": 136,
+        "target": "Rate limiting de 3 requisições por hora por e-mail; bloqueio temporário com resposta HTTP 429",
+        "category": "security",
+        "requirement": "Proteger contra abuso de serviço de recuperação de senha.",
+        "verification": "Teste de segurança valida que após 3 requisições em 1 hora, requisições subsequentes são bloqueadas com HTTP 429; bloqueio é removido após 1 hora."
+      },
+      {
+        "id": 137,
+        "target": "Access token JWT contém claims sub (user_id), tenant_id, email, nivel_hierarquico_id; refresh token é opaco e armazenado em hash no servidor",
+        "category": "security",
+        "requirement": "Garantir que tokens de sessão (access token e refresh token) são válidos apenas para o tenant e usuário para os quais foram emitidos.",
+        "verification": "Teste de integração valida que token de um usuário não funciona para outro usuário; teste de integração valida que token de um tenant não funciona para outro tenant."
+      },
+      {
+        "id": 138,
+        "target": "Access token expira após 3600 segundos (1 hora); refresh token expira após 7 dias",
+        "category": "security",
+        "requirement": "Garantir que tokens de sessão expiram após período configurado.",
+        "verification": "Teste de integração valida que access token expirado é rejeitado; teste de integração valida que refresh token expirado é rejeitado; teste de integração valida que novo access token pode ser obtido com refresh token válido."
+      },
+      {
+        "id": 139,
+        "target": "Token de recuperação expira após 30 minutos",
+        "category": "security",
+        "requirement": "Garantir que tokens de recuperação de senha expiram após período configurado.",
+        "verification": "Teste de integração valida que token expirado é rejeitado; teste de integração valida que novo token pode ser solicitado após expiração."
+      },
+      {
+        "id": 140,
+        "target": "Token é marcado como utilizado após redefinição bem-sucedida; requisições subsequentes com mesmo token são rejeitadas",
+        "category": "security",
+        "requirement": "Garantir que tokens de recuperação de senha são de uso único.",
+        "verification": "Teste de integração valida que token não pode ser reutilizado; teste de integração valida que mensagem de erro é exibida ao tentar reutilizar token."
+      },
+      {
+        "id": 141,
+        "target": "Algoritmo argon2id com parâmetros m=64MiB, t=3, p=4",
+        "category": "security",
+        "requirement": "Garantir que senhas são armazenadas com hash seguro resistente a ataques de força bruta.",
+        "verification": "Inspeção de código valida que argon2id é utilizado com parâmetros corretos; teste de integração valida que senhas são armazenadas como hash."
+      },
+      {
+        "id": 142,
+        "target": "Todas as sessões ativas do usuário são marcadas como revogadas imediatamente quando status é alterado para inativo",
+        "category": "security",
+        "requirement": "Garantir que sessões ativas são revogadas quando usuário é desativado.",
+        "verification": "Teste de integração valida que sessões ativas são revogadas; teste de integração valida que usuário é desconectado imediatamente após desativação."
+      },
+      {
+        "id": 143,
+        "target": "Todas as sessões ativas de usuários do tenant são marcadas como revogadas imediatamente quando status é alterado para inativo",
+        "category": "security",
+        "requirement": "Garantir que sessões ativas são revogadas quando tenant é desativado.",
+        "verification": "Teste de integração valida que sessões ativas são revogadas; teste de integração valida que usuários são desconectados imediatamente após desativação de tenant."
+      },
+      {
+        "id": 144,
+        "target": "Access token e refresh token são invalidados imediatamente quando usuário executa logout",
+        "category": "security",
+        "requirement": "Garantir que sessões ativas são revogadas quando usuário realiza logout.",
+        "verification": "Teste de integração valida que tokens são invalidados; teste de integração valida que requisições subsequentes com tokens invalidados são rejeitadas."
+      },
+      {
+        "id": 145,
+        "target": "Todas as sessões ativas do usuário são marcadas como revogadas imediatamente após redefinição bem-sucedida",
+        "category": "security",
+        "requirement": "Garantir que todas as sessões ativas são revogadas quando usuário redefine senha.",
+        "verification": "Teste de integração valida que sessões ativas são revogadas; teste de integração valida que usuário é desconectado imediatamente após redefinição de senha."
+      },
+      {
+        "id": 146,
+        "target": "Uptime >= 99.9% (máximo 43 minutos de downtime por mês); RTO <= 5 minutos; RPO <= 1 minuto",
+        "category": "availability",
+        "requirement": "Garantir alta disponibilidade do serviço de autenticação.",
+        "verification": "Monitoramento de produção rastreia uptime; teste de failover valida que serviço recupera em <= 5 minutos; backup de dados valida que perda de dados é <= 1 minuto."
+      },
+      {
+        "id": 147,
+        "target": "Uptime >= 99.9%; indisponibilidade do serviço impede que usuários bloqueados recuperem acesso",
+        "category": "availability",
+        "requirement": "Garantir alta disponibilidade do serviço de recuperação de senha.",
+        "verification": "Monitoramento de produção rastreia uptime; teste de failover valida que serviço recupera em <= 5 minutos."
+      },
+      {
+        "id": 148,
+        "target": "Retenção de logs de auditoria por 365 dias; logs incluem identificação de usuário/administrador, tenant, timestamp, operação, dados alterados e resultado",
+        "category": "observability",
+        "requirement": "Manter trilha de auditoria completa de todas as operações críticas.",
+        "verification": "Teste de integração valida que cada operação crítica gera entrada em log; inspeção de logs confirma presença de todos os campos obrigatórios; política de retenção é configurada e monitorada."
+      },
+      {
+        "id": 149,
+        "target": "Eventos user_authenticated, authentication_failed, session_revoked, password_recovery_requested, password_reset_completed são emitidos com delivery at_least_once",
+        "category": "observability",
+        "requirement": "Emitir eventos de autenticação para detecção de anomalias e análise de segurança.",
+        "verification": "Teste de integração valida que eventos são emitidos para cada operação; teste de integração valida que eventos contêm informações necessárias para análise."
+      },
+      {
+        "id": 150,
+        "target": "Utilização de pool de conexões com tamanho configurável (padrão 20); cache com TTL configurável (padrão 300 segundos); índices de banco de dados otimizados para consultas críticas",
+        "category": "cost",
+        "requirement": "Otimizar custos de infraestrutura mantendo performance e segurança.",
+        "verification": "Monitoramento de produção rastreia utilização de conexões e cache; análise de planos de execução de queries valida que índices são utilizados; teste de carga valida que performance é mantida com pool reduzido."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 2,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T02:25:21.854Z",
+  "updatedAt": null
+}

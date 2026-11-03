@@ -1,0 +1,142 @@
+{
+  "id": 23931,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 21,
+        "name": "Tipo principal de falha ou degradação que o padrão deve mitigar",
+        "value": [
+          "service-unavailability"
+        ],
+        "method": "user-input",
+        "reasoning": "A indisponibilidade do serviço de domínio é o tipo de falha principal a ser mitigado.",
+        "confidence": 0.7944,
+        "context_element_id": 2771
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 34,
+        "name": "Implementar versionamento de dados com timestamps e controle de versão para rastreabilidade e auditoria",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem data de última edição, quem edita a tarefa não sabe se o estado já foi alterado por outra pessoa.",
+        "confidence": 0.832,
+        "context_element_id": 2956
+      },
+      {
+        "id": 35,
+        "name": "Implementar verificação de integridade de dados em cada camada arquitetural com validações específicas para cada responsabilidade",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem essa verificação, um usuário poderia acessar tarefas de outro, e a equipe teria que procurar por cada uma de forma manual.",
+        "confidence": 0.705,
+        "context_element_id": 2960
+      },
+      {
+        "id": 37,
+        "name": "Externalize as configurações em arquivos de configuração para permitir mudanças sem recompilação",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Reconfigurar o sistema em um cliente diferente exigiria recompilar o código inteiro, o que não é viável em produção.",
+        "confidence": 0.7434,
+        "context_element_id": 2982
+      },
+      {
+        "id": 40,
+        "name": "Configure limites máximos para filas de mensagens e buffers para evitar o crescimento descontrolado de recursos e dos custos associados",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O limite de 512 caracteres para títulos é aplicado a mensagens de queue, caracterizando um uso de LLM para processamento de mensagens.\nSem limite definido, o texto cresce sem controle, consumindo recursos e custos sem parar.",
+        "confidence": 0.8271,
+        "context_element_id": 3029
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 2,
+        "name": "Requisito de Auditoria",
+        "value": "true",
+        "method": "user-input",
+        "reasoning": "O log de auditoria captura identificação de usuário executor, tenant, timestamp e dados alterados, em conformidade com requisitos de rastreabilidade LGPD.",
+        "confidence": 0.7282,
+        "context_element_id": 1437
+      },
+      {
+        "id": 4,
+        "name": "Mutabilidade do Conceito de Domínio",
+        "value": "immutable",
+        "method": "internal-inference",
+        "reasoning": "A transição de status é registrada no histórico com timestamp e usuário executor, caracterizando um conceito imutável.",
+        "confidence": 0.7153,
+        "context_element_id": 1471
+      },
+      {
+        "id": 6,
+        "name": "Natureza Temporal",
+        "value": "evento histórico",
+        "method": "internal-inference",
+        "reasoning": "A tarefa é avaliada com base em dados históricos, como data limite e status, indicando que o tempo é temporal.",
+        "confidence": 0.7274,
+        "context_element_id": 1475
+      },
+      {
+        "id": 8,
+        "name": "Tratamento de Exceções",
+        "value": "true",
+        "method": "user-input",
+        "reasoning": "A exceção de domínio lançada quando a transição de status é rejeitada rejeita diretamente o status, sem alteração manual.",
+        "confidence": 0.756,
+        "context_element_id": 1478
+      },
+      {
+        "id": 11,
+        "name": "Relacionamento de Registro",
+        "value": "entidade filha",
+        "method": "user-input",
+        "reasoning": "O Registro de Tarefa é um entidade filho do Domínio de Negócio, com atributos específicos de tarefas.",
+        "confidence": 0.8084,
+        "context_element_id": 1509
+      },
+      {
+        "id": 45,
+        "name": "Visibilidade de Progresso",
+        "value": "somente na conclusão",
+        "method": "user-input",
+        "reasoning": "O estado final da tarefa indica que a tarefa foi completada, sem exibir nenhuma outra informação.",
+        "confidence": 0.8846,
+        "context_element_id": 4290
+      },
+      {
+        "id": 47,
+        "name": "Complexidade da Tarefa",
+        "value": "etapa única",
+        "method": "internal-inference",
+        "reasoning": "A tarefa recém-criada é executada em um único passo, caracterizando um task single-step.",
+        "confidence": 0.7566,
+        "context_element_id": 4366
+      },
+      {
+        "id": 49,
+        "name": "Estratégia de Retenção",
+        "value": "orientado a conformidade",
+        "method": "user-input",
+        "reasoning": "O histórico é mantido por 90 dias para cumprir requisitos operacionais, um período regulatório definido.",
+        "confidence": 0.8066,
+        "context_element_id": 4374
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 7,
+  "active": true,
+  "sourceId": 23642,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T14:58:49.768Z",
+  "updatedAt": null
+}

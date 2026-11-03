@@ -1,0 +1,560 @@
+{
+  "id": 23693,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 37,
+          "name": "Usuário Autenticado",
+          "format": "User { id, email, status, nivel_hierarquico_id, tenant_id, perfil }",
+          "origin": "ASSET-025 Fluxo de Autenticação",
+          "trigger": "Após conclusão bem-sucedida de autenticação (login)"
+        },
+        {
+          "id": 38,
+          "name": "Contexto de Tenant",
+          "format": "Tenant { id, slug, status }",
+          "origin": "ASSET-027 Fluxo de Provisionamento de Tenant",
+          "trigger": "Resolvido a partir do tenant_id do usuário autenticado"
+        },
+        {
+          "id": 39,
+          "name": "Requisição de Recurso",
+          "format": "HTTP request com token de sessão contendo user_id e tenant_id",
+          "origin": "ASSET-1 Aplicação Web",
+          "trigger": "Cada requisição do usuário autenticado para acessar funcionalidade ou endpoint"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 50,
+          "name": "Variante de Permissão Ativa",
+          "format": "PermissionVariant { nome, endpoints_acessíveis[], campos_visíveis[], ações_permitidas[] }",
+          "destination": "Contexto de requisição (request context, session, JWT claims)"
+        },
+        {
+          "id": 51,
+          "name": "Interface Renderizada",
+          "format": "HTML/React com componentes, campos e botões filtrados conforme variante",
+          "destination": "ASSET-1 Aplicação Web (frontend)"
+        },
+        {
+          "id": 52,
+          "name": "Resposta de Autorização",
+          "format": "HTTP 200 OK com recurso acessível, ou HTTP 403 Forbidden se acesso negado",
+          "destination": "Cliente HTTP"
+        },
+        {
+          "id": 53,
+          "name": "Registro de Auditoria",
+          "format": "Log entry { timestamp, user_id, tenant_id, variante_resolvida, acao, resultado }",
+          "destination": "ASSET-53 Trilha de Auditoria de Ações"
+        }
+      ],
+      "processing": [
+        {
+          "id": 40,
+          "step": "Extrair contexto de autenticação",
+          "description": "Decodificar token de sessão para obter user_id e tenant_id; validar que token não está expirado e pertence ao tenant correto."
+        },
+        {
+          "id": 41,
+          "step": "Carregar dados do usuário",
+          "description": "Consultar repositório de usuários para obter registro completo do usuário (id, email, status, nivel_hierarquico_id, tenant_id, perfil)."
+        },
+        {
+          "id": 42,
+          "step": "Carregar dados do tenant",
+          "description": "Consultar repositório de tenants para obter status e configurações do tenant (id, slug, status)."
+        },
+        {
+          "id": 43,
+          "step": "Validar status de usuário e tenant",
+          "description": "Verificar se user.status = 'ativo' e tenant.status = 'ativo'; se algum estiver inativo, bloquear acesso e retornar erro de autorização."
+        },
+        {
+          "id": 44,
+          "step": "Determinar perfil do usuário",
+          "description": "Resolver o perfil do usuário (colaborador, gestor, administrador_tenant, administrador_plataforma) com base em atributos do usuário e tenant."
+        },
+        {
+          "id": 45,
+          "step": "Selecionar variante de permissão",
+          "description": "Aplicar lógica de seleção de variante: comparar perfil resolvido contra as condições de cada variante (colaborador, gestor, administrador_tenant, administrador_plataforma) e ativar a variante correspondente."
+        },
+        {
+          "id": 46,
+          "step": "Ativar estrutura de permissões",
+          "description": "Carregar conjunto de permissões, endpoints acessíveis, campos de formulário visíveis e ações permitidas definidas pela variante selecionada; armazenar em contexto de requisição (request context ou session)."
+        },
+        {
+          "id": 47,
+          "step": "Aplicar filtros de acesso a recursos",
+          "description": "Aplicar permissões ao roteamento de requisição: validar que endpoint solicitado está na lista de endpoints acessíveis da variante; validar que operação solicitada (GET, POST, PATCH, DELETE) é permitida; bloquear acesso se não autorizado."
+        },
+        {
+          "id": 48,
+          "step": "Renderizar interface conforme variante",
+          "description": "No frontend, usar contexto de variante para mostrar/ocultar campos de formulário, botões de ação, abas de navegação e seções de página conforme definido pela variante ativa."
+        },
+        {
+          "id": 49,
+          "step": "Registrar acesso em auditoria",
+          "description": "Registrar em log de auditoria a resolução de variante, o perfil determinado, a variante ativada e qualquer acesso negado, incluindo timestamp e identificação do usuário."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 54,
+        "category": "authorization",
+        "description": "Apenas usuários com status 'ativo' no tenant e tenant com status 'ativo' podem ter uma variante de permissão ativada. Usuários inativos ou pertencentes a tenants inativos devem ser bloqueados em qualquer tentativa de acesso, retornando erro de autorização sem revelar detalhes internos.",
+        "enforcement": "code",
+        "verification": "Validação no middleware de autenticação antes de resolver variante; teste de acesso negado para usuário inativo e tenant inativo."
+      },
+      {
+        "id": 55,
+        "category": "authorization",
+        "description": "Cada variante de permissão (colaborador, gestor, administrador_tenant, administrador_plataforma) define um conjunto fechado de endpoints acessíveis e operações permitidas. Nenhuma operação fora desse conjunto pode ser executada pelo usuário, independentemente de tentativas de manipulação de parâmetros.",
+        "enforcement": "code",
+        "verification": "Validação no handler de cada endpoint; teste de acesso negado para operação não autorizada (ex: colaborador tentando desativar usuário)."
+      },
+      {
+        "id": 56,
+        "category": "authorization",
+        "description": "A variante de permissão deve ser resolvida uma única vez por sessão autenticada e armazenada no contexto de requisição. Mudanças no perfil do usuário (ex: promoção de colaborador para gestor) exigem nova autenticação ou invalidação de sessão para que a nova variante seja resolvida.",
+        "enforcement": "code",
+        "verification": "Teste de cache de variante em sessão; teste de invalidação de sessão após alteração de perfil."
+      },
+      {
+        "id": 57,
+        "category": "authorization",
+        "description": "Variantes de permissão são sempre escopadas ao tenant do usuário autenticado. Um usuário de um tenant não pode acessar recursos, endpoints ou dados de outro tenant, mesmo que possua credenciais válidas.",
+        "enforcement": "code",
+        "verification": "Validação de tenant_id em cada requisição; teste de acesso negado para recurso de outro tenant."
+      },
+      {
+        "id": 58,
+        "category": "invariant",
+        "description": "A variante 'Administrador da Plataforma' não é escopada a um tenant específico e pode operar em múltiplos tenants. Deve ser identificada por um atributo ou flag especial no registro do usuário, separado do campo tenant_id.",
+        "enforcement": "db_constraint",
+        "verification": "Verificação de esquema de dados; teste de resolução de variante para administrador da plataforma sem tenant_id específico."
+      },
+      {
+        "id": 59,
+        "category": "compliance",
+        "description": "Toda resolução de variante de permissão, toda ativação de variante e todo acesso negado devem ser registrados em log de auditoria com timestamp, identificação do usuário, tenant, variante resolvida e resultado, em conformidade com requisitos de rastreabilidade (LGPD e ASSET-053).",
+        "enforcement": "code",
+        "verification": "Inspeção de logs de auditoria; teste de presença de entrada de auditoria para cada resolução de variante."
+      },
+      {
+        "id": 60,
+        "category": "invariant",
+        "description": "Campos de formulário, botões de ação e seções de interface devem ser renderizados ou ocultados conforme a variante ativa, sem exigir lógica condicional complexa no frontend. A variante deve fornecer lista explícita de campos visíveis e ações permitidas.",
+        "enforcement": "code",
+        "verification": "Teste de renderização de interface para cada variante; verificação de ausência de campos não autorizados na interface."
+      },
+      {
+        "id": 61,
+        "category": "invariant",
+        "description": "A seleção de variante não deve implementar lógica de negócio específica de cada permissão (ex: validação de regra de prioridade, cálculo de prazo). Lógica de negócio complexa deve residir em ASSET-009 Business Rules; a variante apenas ativa ou desativa módulos e endpoints.",
+        "enforcement": "code",
+        "verification": "Revisão de código; verificação de ausência de lógica de negócio dentro do seletor de variante."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "A Variante de Permissão por Perfil é uma variação estrutural que define como o sistema adapta seu comportamento de controle de acesso e autorização conforme o perfil do usuário autenticado (colaborador, gestor, administrador do tenant ou administrador da plataforma). Encapsula a seleção de qual conjunto de permissões, funcionalidades acessíveis e operações permitidas devem ser ativadas para cada perfil, garantindo que usuários vejam apenas as interfaces e executem apenas as ações compatíveis com seu papel. Funciona como um seletor estrutural que, uma vez resolvido o perfil do usuário no contexto de autenticação, ativa ou desativa módulos, endpoints, campos de formulário e controles de interface de forma isolada por tenant, sem implementar a lógica de negócio específica de cada permissão (delegada ao ASSET-009 Business Rules) nem a avaliação dinâmica em tempo real (delegada ao ASSET-042 Config)."
+    },
+    "definition": {
+      "selector": {
+        "id": 2,
+        "inputs": "user (id, email, status, nivel_hierarquico_id, tenant_id), tenant (id, status, slug), autenticação bem-sucedida, contexto de tenant resolvido",
+        "output": "PermissionVariant contendo conjunto de permissões, endpoints acessíveis, campos de formulário visíveis, ações permitidas",
+        "signature": "resolvePermissionVariant(user: User, tenant: Tenant) -> PermissionVariant"
+      },
+      "variants": [
+        {
+          "id": 3,
+          "name": "Colaborador",
+          "condition": "user.status = 'ativo' AND tenant.status = 'ativo' AND user.perfil = 'colaborador'",
+          "applies_to": [
+            {
+              "id": 4,
+              "target": "Endpoints de Tarefas (ASSET-041): GET /tasks, POST /tasks, PATCH /tasks/{id}, GET /tasks/{id}"
+            },
+            {
+              "id": 5,
+              "target": "Página de Tarefas (ASSET-16): visualização em lista e Kanban, criação de tarefa, edição de tarefa própria ou atribuída, conclusão de tarefa"
+            },
+            {
+              "id": 6,
+              "target": "Formulário de Tarefa (ASSET-19): campos de título, descrição, responsável (seleção de colaboradores ativos), prioridade, status, data limite"
+            },
+            {
+              "id": 7,
+              "target": "Painel Kanban de Tarefas (ASSET-20): visualização de colunas, movimentação de cartões via drag-and-drop, filtragem por responsável e prioridade"
+            },
+            {
+              "id": 8,
+              "target": "Painel de Filtros e Pesquisa de Tarefas (ASSET-21): filtros por status, responsável, prioridade, data limite; pesquisa textual"
+            },
+            {
+              "id": 9,
+              "target": "Endpoints de Usuários (ASSET-39): GET /users (listagem de colaboradores ativos do tenant), GET /users/{id} (perfil próprio)"
+            },
+            {
+              "id": 10,
+              "target": "Página de Perfil de Usuário (ASSET-22): visualização de dados próprios (nome, e-mail, nível hierárquico), sem acesso a edição ou gerenciamento de outros usuários"
+            }
+          ]
+        },
+        {
+          "id": 11,
+          "name": "Gestor/Líder de Equipe",
+          "condition": "user.status = 'ativo' AND tenant.status = 'ativo' AND user.perfil = 'gestor'",
+          "applies_to": [
+            {
+              "id": 12,
+              "target": "Endpoints de Tarefas (ASSET-41): GET /tasks, POST /tasks, PATCH /tasks/{id}, GET /tasks/{id}, DELETE /tasks/{id} (soft delete)"
+            },
+            {
+              "id": 13,
+              "target": "Página de Tarefas (ASSET-16): visualização em lista e Kanban com filtros avançados, criação de tarefa, edição de qualquer tarefa do tenant, conclusão de tarefa, reatribuição de responsável"
+            },
+            {
+              "id": 14,
+              "target": "Formulário de Tarefa (ASSET-19): todos os campos editáveis (título, descrição, responsável, prioridade, status, data limite), com acesso a histórico de transições"
+            },
+            {
+              "id": 15,
+              "target": "Painel Kanban de Tarefas (ASSET-20): visualização completa, movimentação de cartões, filtragem avançada, indicadores de tarefas críticas e atrasadas"
+            },
+            {
+              "id": 16,
+              "target": "Painel de Filtros e Pesquisa de Tarefas (ASSET-21): filtros por status, responsável, prioridade, data limite; pesquisa textual; salvamento de filtros personalizados"
+            },
+            {
+              "id": 17,
+              "target": "Endpoints de Usuários (ASSET-39): GET /users (listagem de colaboradores ativos do tenant), GET /users/{id}, visualização de perfis de equipe"
+            },
+            {
+              "id": 18,
+              "target": "Página de Perfil de Usuário (ASSET-22): visualização de dados próprios e de colaboradores da equipe, sem acesso a edição ou desativação"
+            }
+          ]
+        },
+        {
+          "id": 19,
+          "name": "Administrador do Tenant",
+          "condition": "user.status = 'ativo' AND tenant.status = 'ativo' AND user.perfil = 'administrador_tenant'",
+          "applies_to": [
+            {
+              "id": 20,
+              "target": "Endpoints de Tarefas (ASSET-41): acesso completo (GET, POST, PATCH, DELETE) a todas as tarefas do tenant"
+            },
+            {
+              "id": 21,
+              "target": "Página de Tarefas (ASSET-16): visualização completa em lista e Kanban, criação, edição, conclusão e exclusão de qualquer tarefa do tenant"
+            },
+            {
+              "id": 22,
+              "target": "Endpoints de Usuários (ASSET-39): GET /users, POST /users, PATCH /users/{id}, DELETE /users/{id} (desativação), GET /users/{id}"
+            },
+            {
+              "id": 23,
+              "target": "Página de Gerenciamento de Usuários (ASSET-14): cadastro de novos colaboradores, edição de perfis, ativação e desativação de usuários, visualização de listagem completa"
+            },
+            {
+              "id": 24,
+              "target": "Endpoints de Níveis Hierárquicos (não listado em ASSET-041 mas implícito): POST, PATCH, DELETE para gerenciamento de estrutura hierárquica do tenant"
+            },
+            {
+              "id": 25,
+              "target": "Página de Gerenciamento de Níveis Hierárquicos (não listada mas implícita): criação, edição, exclusão e ordenação de níveis hierárquicos"
+            },
+            {
+              "id": 26,
+              "target": "Formulário de Tarefa (ASSET-19): acesso completo a todos os campos e operações"
+            },
+            {
+              "id": 27,
+              "target": "Painel Kanban de Tarefas (ASSET-20): acesso completo com visualização de todas as tarefas do tenant"
+            },
+            {
+              "id": 28,
+              "target": "Painel de Filtros e Pesquisa de Tarefas (ASSET-21): acesso completo a todos os filtros e pesquisa"
+            },
+            {
+              "id": 29,
+              "target": "Página de Perfil de Usuário (ASSET-22): visualização e edição de dados de qualquer usuário do tenant, com restrição de não desativar a si mesmo"
+            }
+          ]
+        },
+        {
+          "id": 30,
+          "name": "Administrador da Plataforma",
+          "condition": "user.status = 'ativo' AND user.perfil = 'administrador_plataforma'",
+          "applies_to": [
+            {
+              "id": 31,
+              "target": "Endpoints de Tenants (ASSET-40): POST /tenants (provisionamento), GET /tenants, PATCH /tenants/{id} (ativação/desativação), GET /tenants/{id}"
+            },
+            {
+              "id": 32,
+              "target": "Página de Gerenciamento de Tenants (ASSET-15): provisionamento de novos tenants, listagem de organizações, ativação e desativação de tenants, visualização de detalhes"
+            },
+            {
+              "id": 33,
+              "target": "Endpoints de Autenticação (ASSET-38): acesso a endpoints de login, logout, recuperação de senha, com suporte a múltiplos tenants"
+            },
+            {
+              "id": 34,
+              "target": "Página de Login (ASSET-12): acesso ao formulário de login com identificação de tenant"
+            },
+            {
+              "id": 35,
+              "target": "Endpoints de Usuários (ASSET-39): acesso administrativo a usuários de qualquer tenant (quando necessário para operações de suporte)"
+            },
+            {
+              "id": 36,
+              "target": "Trilha de Auditoria de Ações (ASSET-53): acesso completo a logs de auditoria de todas as operações da plataforma"
+            }
+          ]
+        }
+      ]
+    },
+    "pendencies": [
+      {
+        "id": 76,
+        "section": "definition",
+        "description": "Necessário definir explicitamente como o perfil do usuário é armazenado e resolvido. Atualmente, o discriminador menciona 'Entidade primária ou tipo de dados armazenado: user-profiles' e 'Principal tipo de entidade a ser estruturada: employees', mas não está claro se o perfil é um atributo do registro de usuário (campo 'perfil' na tabela usuarios) ou uma entidade separada (tabela de perfis com relacionamento many-to-one). Isso afeta a implementação do seletor de variante.",
+        "resolutionOptions": [
+          {
+            "id": 77,
+            "text": "Armazenar perfil como campo enum na tabela usuarios (perfil: enum[colaborador|gestor|administrador_tenant|administrador_plataforma]), simplificando a resolução de variante com uma única consulta."
+          },
+          {
+            "id": 78,
+            "text": "Criar tabela separada de perfis (perfis: id, nome, descricao) e relacionamento many-to-one (usuarios.perfil_id -> perfis.id), permitindo extensão futura de perfis customizados por tenant."
+          },
+          {
+            "id": 79,
+            "text": "Usar RBAC (Role-Based Access Control) com tabela de roles e relacionamento many-to-many (usuarios_roles), permitindo que um usuário tenha múltiplos perfis simultâneos (ex: gestor e administrador_tenant)."
+          }
+        ],
+        "recommendedOptionId": 77
+      },
+      {
+        "id": 80,
+        "section": "definition",
+        "description": "Necessário definir o mecanismo de armazenamento de variante em sessão ou token. A variante pode ser armazenada em: (1) JWT claims (incluída no token de sessão), (2) session store no servidor (Redis/memcached), ou (3) recalculada a cada requisição. Cada abordagem tem trade-offs de performance, segurança e complexidade.",
+        "resolutionOptions": [
+          {
+            "id": 81,
+            "text": "Armazenar variante em JWT claims (ex: 'variant': 'colaborador') para stateless authentication; requer validação no servidor a cada requisição, mas evita consultas ao banco de dados."
+          },
+          {
+            "id": 82,
+            "text": "Armazenar variante em session store (Redis) com TTL igual ao da sessão; permite invalidação rápida após mudança de perfil, mas requer infraestrutura de cache."
+          },
+          {
+            "id": 83,
+            "text": "Recalcular variante a cada requisição consultando banco de dados; garante sempre dados atualizados, mas impacta performance (recomendado apenas com cache de usuário)."
+          }
+        ],
+        "recommendedOptionId": 81
+      },
+      {
+        "id": 84,
+        "section": "definition",
+        "description": "Necessário definir como a variante 'Administrador da Plataforma' é identificada no banco de dados. Diferentemente dos outros perfis que são escopados a um tenant, o administrador da plataforma opera globalmente. Precisa de um mecanismo de identificação claro (ex: flag booleano, tenant_id = null, ou tabela separada de administradores).",
+        "resolutionOptions": [
+          {
+            "id": 85,
+            "text": "Adicionar coluna booleano 'is_platform_admin' na tabela usuarios; administrador da plataforma tem is_platform_admin = true e tenant_id pode ser null ou ignorado."
+          },
+          {
+            "id": 86,
+            "text": "Usar tenant_id = null para identificar administrador da plataforma; requer ajuste de constraints de foreign key para permitir null em tenant_id."
+          },
+          {
+            "id": 87,
+            "text": "Criar tabela separada 'platform_admins' com relacionamento one-to-one com usuarios; administrador da plataforma tem entrada em platform_admins."
+          }
+        ],
+        "recommendedOptionId": 85
+      },
+      {
+        "id": 88,
+        "section": "flow",
+        "description": "Necessário definir o comportamento quando um usuário muda de perfil (ex: promoção de colaborador para gestor). Deve a sessão existente ser invalidada automaticamente, ou a variante deve ser recalculada na próxima requisição? Isso afeta a experiência do usuário e a segurança.",
+        "resolutionOptions": [
+          {
+            "id": 89,
+            "text": "Invalidar sessão imediatamente após mudança de perfil; usuário é forçado a fazer login novamente com novo perfil. Mais seguro, mas interrompe experiência do usuário."
+          },
+          {
+            "id": 90,
+            "text": "Recalcular variante na próxima requisição sem invalidar sessão; mudança de perfil é refletida automaticamente. Menos seguro, mas experiência mais fluida."
+          },
+          {
+            "id": 91,
+            "text": "Emitir evento de mudança de perfil e notificar cliente para recarregar sessão; cliente pode escolher quando fazer login novamente. Abordagem híbrida."
+          }
+        ],
+        "recommendedOptionId": 89
+      },
+      {
+        "id": 92,
+        "section": "rules",
+        "description": "Necessário definir explicitamente quais operações (GET, POST, PATCH, DELETE) são permitidas para cada variante em cada endpoint. Atualmente, a definição lista endpoints acessíveis, mas não especifica quais métodos HTTP são permitidos. Exemplo: colaborador pode fazer GET /tasks, mas não DELETE /tasks/{id}?",
+        "resolutionOptions": [
+          {
+            "id": 93,
+            "text": "Criar matriz de permissões (endpoint x método HTTP x variante) explícita; cada célula indica se operação é permitida (recomendado para clareza)."
+          },
+          {
+            "id": 94,
+            "text": "Definir permissões em nível de operação (ex: 'task.create', 'task.delete') e mapear operações para endpoints; mais flexível para extensão futura."
+          },
+          {
+            "id": 95,
+            "text": "Usar anotações ou decoradores no código de cada endpoint para declarar permissões necessárias; menos explícito, mas mais próximo da implementação."
+          }
+        ],
+        "recommendedOptionId": 93
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 67,
+        "then": "A variante 'Colaborador' é selecionada e retorna conjunto de permissões contendo endpoints de tarefas (GET, POST, PATCH) e campos de formulário de tarefa (título, descrição, responsável, prioridade, status, data limite)",
+        "type": "unit",
+        "when": "O seletor de variante é invocado com dados do usuário e tenant",
+        "given": "Um usuário com perfil 'colaborador', status 'ativo', pertencente a um tenant com status 'ativo'",
+        "scenario": "Resolução de variante para colaborador ativo",
+        "target_section": "definition"
+      },
+      {
+        "id": 68,
+        "then": "Nenhuma variante é selecionada; erro de autorização é retornado; acesso é bloqueado",
+        "type": "unit",
+        "when": "O seletor de variante é invocado com dados do usuário inativo",
+        "given": "Um usuário com status 'inativo' e um tenant com status 'ativo'",
+        "scenario": "Bloqueio de acesso para usuário inativo",
+        "target_section": "rules"
+      },
+      {
+        "id": 69,
+        "then": "Nenhuma variante é selecionada; erro de autorização é retornado; acesso é bloqueado",
+        "type": "unit",
+        "when": "O seletor de variante é invocado com dados do tenant inativo",
+        "given": "Um usuário com status 'ativo' e um tenant com status 'inativo'",
+        "scenario": "Bloqueio de acesso para tenant inativo",
+        "target_section": "rules"
+      },
+      {
+        "id": 70,
+        "then": "A variante 'Administrador do Tenant' é selecionada e retorna conjunto de permissões contendo endpoints de usuários (GET, POST, PATCH, DELETE), endpoints de tarefas (GET, POST, PATCH, DELETE), e acesso a página de gerenciamento de usuários",
+        "type": "unit",
+        "when": "O seletor de variante é invocado com dados do usuário administrador",
+        "given": "Um usuário com perfil 'administrador_tenant', status 'ativo', pertencente a um tenant com status 'ativo'",
+        "scenario": "Resolução de variante para administrador do tenant",
+        "target_section": "definition"
+      },
+      {
+        "id": 71,
+        "then": "Token de sessão é emitido; variante 'Gestor' é resolvida; requisição é autorizada; endpoint de tarefas retorna dados do tenant do usuário",
+        "type": "integration",
+        "when": "O usuário realiza login bem-sucedido e uma requisição autenticada é enviada para acessar endpoint de tarefas",
+        "given": "Um usuário com credenciais válidas (e-mail e senha) e perfil 'gestor' em um tenant ativo",
+        "scenario": "Fluxo completo de autenticação e resolução de variante",
+        "target_section": "flow"
+      },
+      {
+        "id": 72,
+        "then": "Variante 'Colaborador' é resolvida; endpoint DELETE não está na lista de endpoints acessíveis; requisição é bloqueada com erro 403 Forbidden",
+        "type": "security",
+        "when": "O colaborador tenta enviar requisição DELETE para desativar um usuário",
+        "given": "Um usuário com perfil 'colaborador' e um endpoint de desativação de usuário (DELETE /users/{id})",
+        "scenario": "Tentativa de acesso a endpoint não autorizado por colaborador",
+        "target_section": "rules"
+      },
+      {
+        "id": 73,
+        "then": "Variante é resolvida para tenant A; validação de tenant_id falha; requisição é bloqueada com erro 403 Forbidden; acesso a dados do tenant B é impedido",
+        "type": "security",
+        "when": "O usuário do tenant A tenta acessar tarefa do tenant B via GET /tasks/{id}",
+        "given": "Um usuário do tenant A e uma tarefa pertencente ao tenant B",
+        "scenario": "Tentativa de acesso a dados de outro tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 74,
+        "then": "Todas as resoluções completam em <= 5ms (p99); nenhuma requisição é bloqueada por timeout; desempenho permanece consistente",
+        "type": "performance",
+        "when": "Cada requisição dispara resolução de variante de permissão",
+        "given": "500 usuários autenticados de diferentes tenants enviando requisições simultâneas",
+        "scenario": "Resolução de variante sob carga de 500 requisições simultâneas",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 75,
+        "then": "Variante 'Administrador da Plataforma' é resolvida; endpoint POST /tenants está na lista de endpoints acessíveis; requisição é autorizada; novo tenant é provisionado",
+        "type": "contract",
+        "when": "O administrador invoca POST /tenants com dados de novo tenant",
+        "given": "Um usuário com perfil 'administrador_plataforma' e requisição para provisionar novo tenant",
+        "scenario": "Contrato de variante para administrador da plataforma",
+        "target_section": "definition"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 62,
+        "target": "p99 <= 5ms para resolução de variante, mesmo em tenants com até 5.000 usuários ativos",
+        "category": "performance",
+        "requirement": "Resolução de variante de permissão deve ser executada em tempo mínimo, sem impacto perceptível no tempo de resposta de requisições autenticadas.",
+        "verification": "Teste de carga com 500 requisições simultâneas; medição de latência de resolução de variante."
+      },
+      {
+        "id": 63,
+        "target": "100% das validações de autorização executadas no backend; zero confiança em dados de variante fornecidos pelo cliente",
+        "category": "security",
+        "requirement": "Variante de permissão deve ser resolvida no servidor (backend) e nunca confiada ao cliente. Tokens de sessão podem conter informações de variante para otimização, mas devem ser validados no servidor a cada requisição.",
+        "verification": "Teste de manipulação de token; verificação de rejeição de requisição com variante manipulada."
+      },
+      {
+        "id": 64,
+        "target": "100% de requisições com falha na resolução de variante são bloqueadas com erro 403 Forbidden",
+        "category": "availability",
+        "requirement": "Falha na resolução de variante de permissão deve resultar em bloqueio seguro de acesso (deny by default), nunca em concessão acidental de permissão.",
+        "verification": "Teste de falha de banco de dados; verificação de comportamento de bloqueio seguro."
+      },
+      {
+        "id": 65,
+        "target": "Tempo de resolução permanece <= 5ms mesmo com 50 tenants e 5.000 usuários totais na plataforma",
+        "category": "scalability",
+        "requirement": "Resolução de variante deve escalar linearmente com número de usuários e tenants, sem degradação de desempenho.",
+        "verification": "Teste de carga progressiva; medição de latência em diferentes volumes de usuários e tenants."
+      },
+      {
+        "id": 66,
+        "target": "Cada resolução de variante gera entrada de log estruturado com user_id, tenant_id, variante_resolvida, timestamp",
+        "category": "observability",
+        "requirement": "Resolução de variante deve ser rastreável através de logs estruturados, permitindo auditoria e debugging de problemas de autorização.",
+        "verification": "Inspeção de logs; teste de presença de informações de rastreamento em cada resolução."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 60,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T01:23:08.524Z",
+  "updatedAt": null
+}

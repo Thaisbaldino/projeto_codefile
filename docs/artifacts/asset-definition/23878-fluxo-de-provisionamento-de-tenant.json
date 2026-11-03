@@ -1,0 +1,470 @@
+{
+  "id": 23878,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 28,
+          "name": "Requisição de Provisionamento",
+          "format": "JSON com campos: nome_organizacao (string), slug_tenant (string)",
+          "origin": "Interface administrativa interna da plataforma",
+          "trigger": "Ação manual do administrador interno ao submeter formulário de provisionamento"
+        },
+        {
+          "id": 29,
+          "name": "Contexto de Autenticação",
+          "format": "JWT token contendo: usuario_id (uuid), tenant_id (uuid), perfil (enum), status (enum)",
+          "origin": "Middleware de autenticação da plataforma",
+          "trigger": "Automaticamente extraído de cada requisição HTTP autenticada"
+        },
+        {
+          "id": 30,
+          "name": "Configuração de Validação",
+          "format": "Objeto contendo regras de validação: comprimento_minimo_slug, comprimento_maximo_slug, padrão_regex_slug, comprimento_minimo_nome, comprimento_maximo_nome",
+          "origin": "Modelo de Configuração Multi-Tenant",
+          "trigger": "Carregado na inicialização do módulo"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 39,
+          "name": "Confirmação de Provisionamento",
+          "format": "JSON com campos: id (uuid), nome_organizacao (string), slug_tenant (string), status (enum[ativo|inativo]), data_criacao (timestamp)",
+          "destination": "Interface administrativa interna da plataforma"
+        },
+        {
+          "id": 40,
+          "name": "Mensagem de Erro",
+          "format": "JSON com campos: error.code (string), error.message (string), error.details (object com campo e razão)",
+          "destination": "Interface administrativa interna da plataforma"
+        },
+        {
+          "id": 41,
+          "name": "Entrada de Auditoria",
+          "format": "Registro estruturado contendo: timestamp, usuario_executor_id, tipo_operacao, tenant_id, dados_principais, resultado",
+          "destination": "Trilha de Auditoria de Ações"
+        },
+        {
+          "id": 42,
+          "name": "Evento de Provisionamento",
+          "format": "Evento 'TenantProvisionado' com payload: { id: uuid, nome: string, slug: string, data_criacao: timestamp, administrador_criador_id: uuid }",
+          "destination": "Sistema de Eventos de Negócio"
+        }
+      ],
+      "processing": [
+        {
+          "id": 31,
+          "step": "Validar Autenticação e Autorização",
+          "description": "Executar middleware de autenticação para validar JWT token, extrair contexto do usuário executor, e aplicar regras de controle de acesso para verificar que apenas administrador interno pode provisionar tenants."
+        },
+        {
+          "id": 32,
+          "step": "Validar Entrada",
+          "description": "Aplicar validações de preenchimento, formato e unicidade aos dados de entrada (nome da organização, slug do tenant) conforme configuração de validação carregada."
+        },
+        {
+          "id": 33,
+          "step": "Gerar Identificadores Únicos",
+          "description": "Gerar UUID para o novo tenant e preparar dados para persistência no banco de dados relacional."
+        },
+        {
+          "id": 34,
+          "step": "Criar Estrutura Isolada",
+          "description": "Executar operações de banco de dados para criar estrutura de dados isolada para o novo tenant (esquema, partições ou registros de isolamento conforme estratégia)."
+        },
+        {
+          "id": 35,
+          "step": "Persistir Tenant",
+          "description": "Inserir novo tenant no repositório com todos os dados validados, registrando metadados de provisionamento e auditoria."
+        },
+        {
+          "id": 36,
+          "step": "Registrar Auditoria",
+          "description": "Registrar em log de auditoria a operação de provisionamento com identificação do executor, timestamp, slug do tenant e dados principais."
+        },
+        {
+          "id": 37,
+          "step": "Emitir Evento",
+          "description": "Emitir evento de negócio 'TenantProvisionado' para fins de rastreabilidade e integração com sistemas de conformidade LGPD."
+        },
+        {
+          "id": 38,
+          "step": "Retornar Resposta",
+          "description": "Construir resposta HTTP com status 201 (Created) contendo dados do tenant provisionado ou status de erro com mensagem descritiva."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 43,
+        "category": "authorization",
+        "description": "Apenas usuários com perfil de administrador interno da plataforma podem executar operações de provisionamento de novos tenants; colaboradores, gestores e administradores de tenant não possuem permissão para provisionar.",
+        "enforcement": "code",
+        "verification": "Validar em tempo de execução que usuario_executor.perfil === 'administrador_plataforma' antes de permitir acesso ao formulário de provisionamento e antes de processar requisição de criação de tenant."
+      },
+      {
+        "id": 44,
+        "category": "validation",
+        "description": "O nome da organização deve ser preenchido, não estar em branco, e respeitar comprimento mínimo e máximo definidos na configuração de validação.",
+        "enforcement": "code",
+        "verification": "Validar que nome_organizacao não está vazio, comprimento >= configuracao.comprimento_minimo_nome e comprimento <= configuracao.comprimento_maximo_nome antes de persistir."
+      },
+      {
+        "id": 45,
+        "category": "validation",
+        "description": "O identificador do tenant (slug) deve ser preenchido, respeitar formato permitido (apenas letras minúsculas, números e hífens), e respeitar comprimento mínimo e máximo.",
+        "enforcement": "code",
+        "verification": "Validar que slug_tenant não está vazio, corresponde ao padrão regex '^[a-z0-9-]+$', comprimento >= configuracao.comprimento_minimo_slug e comprimento <= configuracao.comprimento_maximo_slug antes de persistir."
+      },
+      {
+        "id": 46,
+        "category": "invariant",
+        "description": "O identificador do tenant (slug) deve ser único na plataforma; não pode haver dois tenants com o mesmo slug.",
+        "enforcement": "db_constraint",
+        "verification": "Consultar repositório para verificar que nenhum tenant existente possui o mesmo slug antes de persistir; aplicar constraint UNIQUE na coluna slug da tabela tenants no banco de dados."
+      },
+      {
+        "id": 47,
+        "category": "invariant",
+        "description": "Cada tenant provisionado deve ter estrutura de dados isolada criada automaticamente no banco de dados, garantindo que nenhum dado de outros tenants seja acessível.",
+        "enforcement": "code",
+        "verification": "Executar operações de criação de estrutura isolada (esquema, partições ou registros de isolamento) como parte da transação de provisionamento; validar que estrutura foi criada com sucesso antes de confirmar operação."
+      },
+      {
+        "id": 48,
+        "category": "compliance",
+        "description": "Toda operação de provisionamento de tenant deve ser registrada em log de auditoria com identificação do administrador executor, timestamp, slug do tenant e dados principais, em conformidade com requisitos de rastreabilidade da plataforma e LGPD.",
+        "enforcement": "code",
+        "verification": "Registrar entrada de auditoria imediatamente após persistência bem-sucedida do tenant, incluindo todos os campos obrigatórios; validar que entrada foi persistida no repositório de auditoria."
+      },
+      {
+        "id": 49,
+        "category": "invariant",
+        "description": "O tenant provisionado deve receber status inicial 'ativo', habilitando imediatamente o acesso da organização à plataforma.",
+        "enforcement": "code",
+        "verification": "Validar que status do tenant recém-provisionado é 'ativo' imediatamente após persistência; impedir que tenant seja criado com status 'inativo'."
+      },
+      {
+        "id": 50,
+        "category": "observability",
+        "description": "Emitir evento de negócio 'TenantProvisionado' contendo identificação do novo tenant, nome da organização, slug e data de criação, para fins de rastreabilidade e integração com sistemas de conformidade.",
+        "enforcement": "code",
+        "verification": "Validar que evento foi emitido com sucesso após persistência do tenant; incluir no evento todos os campos obrigatórios (id, nome, slug, data_criacao, administrador_criador_id)."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "O Fluxo de Provisionamento de Tenant é um fluxo de negócio que orquestra o processo completo de criação e configuração de uma nova organização (tenant) na plataforma multi-tenant, executado exclusivamente por administradores internos da plataforma. Coordena a validação de dados de entrada (nome da organização, identificador único do tenant), a verificação de unicidade do slug na plataforma, a aplicação de regras de controle de acesso (apenas administradores internos podem provisionar), a criação da estrutura de dados isolada para o novo tenant no banco de dados, o registro de metadados de provisionamento (data, administrador responsável), a auditoria completa da operação para conformidade com LGPD, e a exibição de confirmação ou erro ao administrador. Materializa as funcionalidades de formulário de provisionamento, validações de entrada, criação de estrutura isolada e confirmação definidas na feature de provisionamento de tenants, integrando validações de negócio, regras de isolamento multi-tenant e rastreabilidade completa de ações administrativas críticas."
+    },
+    "definition": {
+      "params": [
+        {
+          "id": 2,
+          "name": "flow_name",
+          "value": "provisionamento-tenant"
+        },
+        {
+          "id": 3,
+          "name": "owner_module",
+          "value": "gestao-usuarios-organizacoes"
+        },
+        {
+          "id": 4,
+          "name": "execution_context",
+          "value": "plataforma_scoped_synchronous"
+        },
+        {
+          "id": 5,
+          "name": "primary_actor",
+          "value": "administrador_plataforma"
+        }
+      ],
+      "flow_spec": {
+        "steps": [
+          {
+            "id": 6,
+            "name": "Autenticar e Validar Acesso",
+            "description": "Validar que o usuário executor está autenticado, ativo e possui perfil de administrador interno da plataforma; validar que a requisição provém de área administrativa interna, não de interface voltada ao cliente final."
+          },
+          {
+            "id": 7,
+            "name": "Exibir Formulário de Provisionamento",
+            "description": "Apresentar ao administrador interno um formulário contendo campos obrigatórios (nome da organização, identificador único do tenant/slug) com indicações visuais de campos requeridos."
+          },
+          {
+            "id": 8,
+            "name": "Validar Preenchimento de Campos Obrigatórios",
+            "description": "Verificar que todos os campos obrigatórios (nome da organização, slug do tenant) estão preenchidos e não estão em branco antes de processar."
+          },
+          {
+            "id": 9,
+            "name": "Validar Formato do Identificador do Tenant",
+            "description": "Validar que o identificador do tenant (slug) respeita o formato permitido (apenas letras minúsculas, números e hífens, sem espaços ou caracteres especiais), rejeitando entradas malformadas."
+          },
+          {
+            "id": 10,
+            "name": "Validar Unicidade do Slug do Tenant",
+            "description": "Verificar que o slug do tenant não está duplicado em outro tenant já provisionado na plataforma, garantindo unicidade global do identificador."
+          },
+          {
+            "id": 11,
+            "name": "Aplicar Regras de Validação de Tenant",
+            "description": "Executar o conjunto completo de regras de validação de tenant para operação de provisionamento, incluindo validações de preenchimento, formato, unicidade e conformidade com políticas de nomeação."
+          },
+          {
+            "id": 12,
+            "name": "Aplicar Regras de Controle de Acesso por Perfil",
+            "description": "Executar regras de controle de acesso para garantir que apenas administrador interno da plataforma pode provisionar novos tenants."
+          },
+          {
+            "id": 13,
+            "name": "Gerar Identificador Único do Tenant",
+            "description": "Gerar um UUID único para o novo tenant que será persistido como identificador primário no banco de dados."
+          },
+          {
+            "id": 14,
+            "name": "Criar Estrutura de Dados Isolada para o Tenant",
+            "description": "Criar automaticamente a estrutura de dados isolada para o novo tenant no banco de dados relacional, garantindo que nenhum dado de outros tenants seja acessível ou compartilhado; incluir criação de esquema ou partições conforme estratégia de isolamento."
+          },
+          {
+            "id": 15,
+            "name": "Persistir Novo Tenant no Banco de Dados",
+            "description": "Inserir o novo tenant no repositório com todos os dados validados, registrando data e hora de provisionamento, identificação do administrador interno executor, nome da organização e slug único."
+          },
+          {
+            "id": 16,
+            "name": "Atribuir Status Inicial Ativo",
+            "description": "Atribuir status inicial 'ativo' ao tenant recém-provisionado, habilitando imediatamente o acesso da organização à plataforma."
+          },
+          {
+            "id": 17,
+            "name": "Registrar Metadados de Provisionamento",
+            "description": "Registrar os metadados do tenant provisionado, incluindo data e hora de criação, identificação do administrador interno responsável pelo provisionamento, e versão da plataforma."
+          },
+          {
+            "id": 18,
+            "name": "Registrar Auditoria de Provisionamento",
+            "description": "Registrar em log de auditoria a operação de provisionamento, incluindo identificação do executor (administrador interno), timestamp, slug do tenant e dados principais da organização criada."
+          },
+          {
+            "id": 19,
+            "name": "Emitir Evento de Provisionamento",
+            "description": "Emitir evento de negócio 'TenantProvisionado' contendo identificação do novo tenant, nome da organização, slug e data de criação, para fins de rastreabilidade e integração com sistemas de conformidade."
+          },
+          {
+            "id": 20,
+            "name": "Retornar Confirmação de Sucesso",
+            "description": "Exibir mensagem de confirmação ao administrador interno informando que o provisionamento foi concluído com sucesso, apresentando os dados principais do tenant criado (ID, nome, slug, status)."
+          },
+          {
+            "id": 21,
+            "name": "Tratar Erro de Validação",
+            "description": "Capturar erros de validação (campos obrigatórios, formato, unicidade, acesso) e retornar mensagem de erro específica ao administrador, indicando qual campo ou critério falhou."
+          },
+          {
+            "id": 22,
+            "name": "Tratar Erro de Persistência",
+            "description": "Capturar erros de banco de dados ou falhas de persistência e retornar mensagem de erro clara ao administrador, sem expor detalhes técnicos internos."
+          }
+        ],
+        "branches": [
+          {
+            "id": 23,
+            "condition": "validacao_falhou",
+            "description": "Desvio para tratamento de erro de validação quando algum critério de validação não é satisfeito",
+            "target_step": 21
+          },
+          {
+            "id": 24,
+            "condition": "persistencia_falhou",
+            "description": "Desvio para tratamento de erro de persistência quando a inserção no banco de dados falha",
+            "target_step": 22
+          }
+        ],
+        "compensations": [
+          {
+            "id": 25,
+            "action": "Reverter inserção do novo tenant no banco de dados",
+            "trigger": "Falha na persistência após validações bem-sucedidas"
+          },
+          {
+            "id": 26,
+            "action": "Remover estrutura de dados isolada criada para o tenant",
+            "trigger": "Falha na persistência após criação de estrutura isolada"
+          },
+          {
+            "id": 27,
+            "action": "Remover entrada de auditoria de operação falhada",
+            "trigger": "Falha crítica que impede conclusão da operação"
+          }
+        ]
+      }
+    },
+    "pendencies": [
+      {
+        "id": 63,
+        "section": "definition",
+        "description": "Definir estratégia exata de isolamento de dados para novos tenants: será utilizado isolamento por esquema (schema-per-tenant), isolamento por partição (partition-per-tenant), ou isolamento por coluna (row-level security com tenant_id)? A escolha impacta a implementação da etapa 'Criar Estrutura de Dados Isolada' e a performance de consultas.",
+        "resolutionOptions": [
+          {
+            "id": 64,
+            "text": "Isolamento por coluna (row-level security): Adicionar coluna tenant_id a todas as tabelas e usar políticas de RLS (Row Level Security) do PostgreSQL para filtrar dados automaticamente. Mais simples de implementar, menor overhead operacional, mas requer validação rigorosa em todas as queries."
+          },
+          {
+            "id": 65,
+            "text": "Isolamento por esquema (schema-per-tenant): Criar um esquema PostgreSQL separado para cada tenant, com suas próprias tabelas. Isolamento mais forte, melhor performance de queries, mas maior complexidade operacional e overhead de gerenciamento de esquemas."
+          },
+          {
+            "id": 66,
+            "text": "Isolamento por partição (partition-per-tenant): Particionar tabelas por tenant_id usando particionamento nativo do PostgreSQL. Balanço entre isolamento e simplicidade, bom desempenho, mas requer planejamento cuidadoso de crescimento."
+          }
+        ],
+        "recommendedOptionId": 64
+      },
+      {
+        "id": 67,
+        "section": "flow",
+        "description": "Definir se a criação de estrutura de dados isolada para o novo tenant deve ser síncrona (bloqueante, como parte da transação de provisionamento) ou assíncrona (enfileirada para processamento em background). A escolha impacta o tempo de resposta da operação e a resiliência a falhas.",
+        "resolutionOptions": [
+          {
+            "id": 68,
+            "text": "Síncrono (bloqueante): Criar estrutura isolada como parte da transação de provisionamento. Garante que tenant está pronto para uso imediatamente após confirmação, mas aumenta tempo de resposta da operação (potencialmente > 2 segundos)."
+          },
+          {
+            "id": 69,
+            "text": "Assíncrono (enfileirado): Enfileirar criação de estrutura isolada para processamento em background após confirmação de provisionamento. Reduz tempo de resposta, mas tenant pode não estar pronto para uso imediatamente; requer mecanismo de polling ou notificação para informar quando está pronto."
+          }
+        ],
+        "recommendedOptionId": 68
+      },
+      {
+        "id": 70,
+        "section": "rules",
+        "description": "Definir se o provisionamento de tenant deve validar a existência de um usuário administrador interno pré-existente que será associado como 'administrador_criador_id', ou se o sistema deve criar automaticamente um usuário administrador padrão para o novo tenant. Atualmente, a feature de provisionamento não menciona criação de usuário administrador inicial.",
+        "resolutionOptions": [
+          {
+            "id": 71,
+            "text": "Validar existência de administrador: Exigir que o administrador interno que está provisionando o tenant já exista no sistema como usuário administrador da plataforma. Simples, mas requer que administrador da plataforma seja um usuário do sistema."
+          },
+          {
+            "id": 72,
+            "text": "Criar usuário administrador padrão: Criar automaticamente um usuário administrador padrão para o novo tenant durante provisionamento, com credenciais temporárias que devem ser alteradas no primeiro acesso. Mais conveniente, mas requer lógica adicional de geração de credenciais e comunicação ao cliente."
+          }
+        ],
+        "recommendedOptionId": 71
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 56,
+        "then": "O sistema rejeita a entrada com mensagem de erro específica: 'Identificador do tenant deve conter apenas letras minúsculas, números e hífens'",
+        "type": "unit",
+        "when": "O administrador tenta provisionar um tenant com slug contendo caracteres especiais ou maiúsculas (ex: 'Meu-Tenant!' ou 'MeuTenant')",
+        "given": "Um administrador interno da plataforma está preenchendo o formulário de provisionamento de tenant",
+        "scenario": "Validação de formato de slug do tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 57,
+        "then": "O sistema rejeita a operação com mensagem de erro: 'Identificador do tenant já existe na plataforma'",
+        "type": "unit",
+        "when": "Um administrador interno tenta provisionar um novo tenant com o mesmo slug 'empresa-a'",
+        "given": "Um tenant com slug 'empresa-a' já foi provisionado na plataforma",
+        "scenario": "Validação de unicidade de slug do tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 58,
+        "then": "O sistema provisiona o tenant com sucesso, cria estrutura de dados isolada, registra auditoria, emite evento 'TenantProvisionado', e retorna confirmação com ID, nome, slug e status 'ativo'",
+        "type": "integration",
+        "when": "O administrador preenche o formulário com nome_organizacao='Empresa XYZ' e slug_tenant='empresa-xyz' e submete a requisição",
+        "given": "Um administrador interno da plataforma está autenticado e acessando a interface administrativa",
+        "scenario": "Provisionamento bem-sucedido de novo tenant",
+        "target_section": "flow"
+      },
+      {
+        "id": 59,
+        "then": "O sistema rejeita o acesso com status 403 (Forbidden) e mensagem: 'Acesso negado. Apenas administradores internos da plataforma podem provisionar tenants'",
+        "type": "security",
+        "when": "O usuário tenta acessar a funcionalidade de provisionamento de tenant ou submete requisição POST /api/tenants",
+        "given": "Um usuário com perfil de administrador de tenant (não administrador da plataforma) está autenticado",
+        "scenario": "Controle de acesso para provisionamento de tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 60,
+        "then": "O sistema rejeita o acesso com mensagem de erro genérica: 'Acesso negado. Recurso não encontrado' (sem revelar que o recurso existe em outro tenant)",
+        "type": "integration",
+        "when": "Um usuário autenticado no tenant 'empresa-a' tenta acessar dados de usuários ou tarefas do tenant 'empresa-b' por manipulação de parâmetros",
+        "given": "Dois tenants foram provisionados: 'empresa-a' e 'empresa-b'",
+        "scenario": "Isolamento de dados após provisionamento de tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 61,
+        "then": "O servidor retorna status 201 (Created) com corpo JSON contendo: { id: uuid, nome_organizacao: string, slug_tenant: string, status: 'ativo', data_criacao: timestamp }",
+        "type": "contract",
+        "when": "O servidor processa a requisição com sucesso",
+        "given": "Uma requisição POST /api/tenants é submetida com dados válidos",
+        "scenario": "Contrato de resposta da API de provisionamento",
+        "target_section": "flow"
+      },
+      {
+        "id": 62,
+        "then": "A operação é concluída em tempo <= 2 segundos, mesmo com 50 tenants pré-existentes",
+        "type": "performance",
+        "when": "Um administrador interno provisiona um novo tenant",
+        "given": "A plataforma possui 50 tenants já provisionados",
+        "scenario": "Desempenho de provisionamento sob carga",
+        "target_section": "non_functional_requirements"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 51,
+        "target": "Tempo de resposta <= 2 segundos para operação de provisionamento, mesmo com 50 tenants já cadastrados na plataforma.",
+        "category": "performance",
+        "requirement": "Concluir a operação de provisionamento do tenant e retornar a confirmação ao administrador interno em tempo adequado, suportando o crescimento progressivo de até 50 tenants no primeiro ano de operação.",
+        "verification": "Medir tempo de resposta da operação POST /api/tenants em ambiente de teste com 50 tenants pré-existentes; validar que p95 <= 2 segundos."
+      },
+      {
+        "id": 52,
+        "target": "100% das requisições de provisionamento devem ser validadas quanto a autenticação e autorização antes de processar.",
+        "category": "security",
+        "requirement": "Garantir que apenas administradores internos autenticados e autorizados possam invocar as operações de provisionamento, aplicando controle de acesso baseado em papel (RBAC) com verificação em cada requisição.",
+        "verification": "Implementar middleware de autenticação e autorização que valida JWT token e perfil do usuário em cada requisição; testar que requisições sem token ou com perfil insuficiente são rejeitadas com status 401 ou 403."
+      },
+      {
+        "id": 53,
+        "target": "100% das operações de provisionamento devem criar estrutura de dados isolada que impede acesso cruzado entre tenants.",
+        "category": "security",
+        "requirement": "Garantir que os dados de configuração de um tenant recém-provisionado não sejam visíveis, acessíveis ou interferentes nos dados de nenhum outro tenant, respeitando o isolamento multi-tenant desde o momento da criação.",
+        "verification": "Validar que estrutura de dados isolada foi criada para cada tenant provisionado; testar que usuários de um tenant não conseguem acessar dados de outro tenant por manipulação de parâmetros ou queries diretas."
+      },
+      {
+        "id": 54,
+        "target": "Disponibilidade >= 99.5% para operações de provisionamento de tenant.",
+        "category": "availability",
+        "requirement": "Garantir que o serviço de provisionamento de tenants esteja disponível com alta disponibilidade, dado que sua indisponibilidade impede o onboarding de novos clientes na plataforma.",
+        "verification": "Monitorar disponibilidade do endpoint POST /api/tenants; alertar quando disponibilidade cai abaixo de 99.5% em janelas de 1 hora."
+      },
+      {
+        "id": 55,
+        "target": "100% das operações de provisionamento devem gerar entrada de auditoria com todos os campos obrigatórios.",
+        "category": "observability",
+        "requirement": "Registrar em log de auditoria toda operação de provisionamento de tenant, incluindo identificação do administrador interno executor, timestamp, identificação do tenant afetado e resultado da operação, em conformidade com os requisitos de rastreabilidade da plataforma.",
+        "verification": "Validar que cada operação de provisionamento gera entrada de auditoria; verificar que entrada contém: timestamp, usuario_executor_id, tenant_id, slug, nome_organizacao, resultado (sucesso/falha)."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 27,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T08:27:29.350Z",
+  "updatedAt": null
+}

@@ -1,0 +1,239 @@
+{
+  "id": 24013,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 22,
+        "name": "Observabilidade e Detecção",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem métrica de falha, o sistema não consegue identificar quando a operação está parada e quando a falha é causada por um problema externo.",
+        "confidence": 0.8245,
+        "context_element_id": 2814
+      },
+      {
+        "id": 24,
+        "name": "Mensagens Envenenadas e Bloqueio",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Uma mensagem mal formada ou corrompida que chega ao cliente sem ser interceptada por um circuit breaker só aparece depois de tentativas inúteis.",
+        "confidence": 0.7607,
+        "context_element_id": 2818
+      },
+      {
+        "id": 25,
+        "name": "Falhas de Execução e Idempotência",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem confirmação de sucesso, o falhanço não é reconhecido, e a mensagem fica na fila sem chance de ser corrigida.",
+        "confidence": 0.7198,
+        "context_element_id": 2819
+      },
+      {
+        "id": 27,
+        "name": "Inconsistência de Estado e Sincronização",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem sincronização, múltiplas instâncias de worker divergem em cache, e a decisão de quem deve ser executada depende do momento em que o trabalho é solicitado.",
+        "confidence": 0.7262,
+        "context_element_id": 2831
+      },
+      {
+        "id": 28,
+        "name": "Ordenação e Duplicação de Mensagens",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Reenvios desnecessários causam reprocessamento e cobrança extra com o provedor, o que não é aceitável em um sistema de negócios.",
+        "confidence": 0.7752,
+        "context_element_id": 2833
+      }
+    ],
+    "attributes": [
+      {
+        "id": 13,
+        "name": "Domínio funcional das mensagens roteadas através do sistema",
+        "value": [
+          "user-authentication"
+        ],
+        "method": "user-input",
+        "reasoning": "A mensagem é enfileirada para recuperação de senha, um domínio funcional de autenticação de usuário.",
+        "confidence": 0.8221,
+        "context_element_id": 2754
+      },
+      {
+        "id": 14,
+        "name": "Tipo específico de evento ou mensagem que está sendo comunicado",
+        "value": [
+          "email-recuperacao",
+          "document-processed"
+        ],
+        "method": "user-input",
+        "reasoning": "O evento de e-mail enviado é comunicado como 'email-recuperacao'.\nA mensagem enfileirada aguarda consumo pelo worker, que processa o documento.",
+        "confidence": 0.7659,
+        "context_element_id": 2755
+      },
+      {
+        "id": 17,
+        "name": "Tipo principal de falha ou degradação que o padrão deve mitigar",
+        "value": [
+          "send_failure_permanent",
+          "network-latency"
+        ],
+        "method": "user-input",
+        "reasoning": "A falha é classificada como falha irrecuperável enviando e-mail, caracterizando falhas permanentes.\nA idempotência é aplicada para evitar duplicatas, o que se refere a falha de rede.",
+        "confidence": 0.7095,
+        "context_element_id": 2771
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 30,
+        "name": "Implementar rate limiting com throttling configurável por endpoint e amostragem de requisições em cenários de alta carga",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem limites definidos, o sistema sobrecarrega-se com demanda alta, e a mensagem que chega depois é rejeitada sem chance de ser processada.",
+        "confidence": 0.8884,
+        "context_element_id": 2860
+      },
+      {
+        "id": 31,
+        "name": "Definir timeouts configuráveis para todas as operações críticas e monitorar orçamentos de tempo por transação/endpoint",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O tempo de espera do circuit breaker é configurável com 60 segundos.\nSem tempo definido, a mensagem é movida para DLQ sem que o destinatário saiba que o envio falhou.",
+        "confidence": 0.9104,
+        "context_element_id": 2863
+      },
+      {
+        "id": 32,
+        "name": "Implementar tratamento robusto de exceções com circuit breakers, bulkheads e isolamento de falhas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem alerta, falha silenciosa se espalda e a corrupção se espalha sem que ninguém saiba.",
+        "confidence": 0.8248,
+        "context_element_id": 2892
+      },
+      {
+        "id": 33,
+        "name": "Implementar retry automático com exponential backoff, jitter e circuit breaker para prevenir falhas em cascata",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Repetir o mesmo erro em vez de parar o serviço é uma estratégia de tratamento de falha que não permite que o sistema se recupere.",
+        "confidence": 0.8327,
+        "context_element_id": 2895
+      },
+      {
+        "id": 34,
+        "name": "Implementar verificação de integridade de mensagens usando checksums e HMAC para detectar alterações não autorizadas durante a transmissão",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Reenviar sem verificação de falha de falha tornaria a mensagem perdida sem que ninguém soubesse.",
+        "confidence": 0.7584,
+        "context_element_id": 2923
+      },
+      {
+        "id": 35,
+        "name": "Configurar tratamento seguro de erros com logging detalhado que não exponha informações sensíveis, mas permita análise forense",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Logs de erro são o único meio de identificar falha e recuperação, e exposição desses dados em público comprometeria a confidencialidade dos usuários.",
+        "confidence": 0.9082,
+        "context_element_id": 2927
+      },
+      {
+        "id": 38,
+        "name": "Implemente operações idempotentes que podem ser executadas múltiplas vezes sem efeitos colaterais",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "E-mail enviado repetidamente pode causar duplicatas em sistemas externos, e a reenvio sem verificação de idempotência só piora a situação.",
+        "confidence": 0.8404,
+        "context_element_id": 2968
+      },
+      {
+        "id": 41,
+        "name": "Estabeleça validação rigorosa de entrada e saída com sanitização automática, verificação de tipos de dados, limites de intervalo e detecção de payloads maliciosos ou malformados",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem validação, o sistema aceita qualquer entrada, incluindo malicioso ou corrompida, que pode paralisar a comunicação ou causar falha de negócio.",
+        "confidence": 0.8769,
+        "context_element_id": 3063
+      },
+      {
+        "id": 43,
+        "name": "Estabeleça verificação automática de saída por meio de validação cruzada, sanity checks e comparação com resultados esperados ou padrões históricos",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Repetição de operação sem registro só aparece depois de ter sido processada, e a correção só se torna possível depois de o cliente ter pago.",
+        "confidence": 0.8843,
+        "context_element_id": 3068
+      },
+      {
+        "id": 45,
+        "name": "Configure controles de privacidade rigorosos incluindo minimização de dados, anonimização automática, controles de acesso granulares e auditoria do uso de informações pessoais sensíveis",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Dados pessoais processados pelo worker, como e-mail e userId, são protegidos contra exposição em logs, caches ou erros não tratados.",
+        "confidence": 0.8745,
+        "context_element_id": 3075
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 7,
+        "name": "Topologia de Distribuição",
+        "value": "consumidores concorrentes",
+        "method": "user-input",
+        "reasoning": "O Worker de Envio de E-mail é um processador assíncrono especializado que consome mensagens de uma fila de envio, competindo com outros consumidores.",
+        "confidence": 0.7251,
+        "context_element_id": 1988
+      },
+      {
+        "id": 52,
+        "name": "Tratamento de Falhas",
+        "value": "baseado em retentativa",
+        "method": "user-input",
+        "reasoning": "Os parâmetros de configuração carregados em tempo de inicialização do worker são configurados com retry-based, indicando que a estratégia de tratamento de falha é baseada em tentativa de reavaliação.",
+        "confidence": 0.9311,
+        "context_element_id": 4285
+      },
+      {
+        "id": 57,
+        "name": "Prioridade de Otimização",
+        "value": "focado em vazão",
+        "method": "internal-inference",
+        "reasoning": "O processamento de e-mail é otimizado para minimizar custos com o provedor transacional, focando em otimização de throughput.",
+        "confidence": 0.7638,
+        "context_element_id": 4495
+      },
+      {
+        "id": 61,
+        "name": "Modelo de Memória",
+        "value": "memória contextual",
+        "method": "user-input",
+        "reasoning": "O cache em memória local do worker é um modelo de memória contextual, não um banco de dados ou cache externo.",
+        "confidence": 0.701,
+        "context_element_id": 4667
+      },
+      {
+        "id": 62,
+        "name": "Modo de Interação",
+        "value": "notificações automatizadas",
+        "method": "user-input",
+        "reasoning": "O Conector externo é responsável por notificar o usuário sobre a recuperação de senha, um tipo de notificação automática.",
+        "confidence": 0.8338,
+        "context_element_id": 4826
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 4,
+  "active": true,
+  "sourceId": 23849,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}

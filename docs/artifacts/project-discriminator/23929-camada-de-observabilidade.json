@@ -1,0 +1,428 @@
+{
+  "id": 23929,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 24,
+        "name": "Esgotamento de Recursos",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Uso excessivo de CPU impede que a aplicação atenda a outras solicitações, causando performance ruim para todos.",
+        "confidence": 0.7359,
+        "context_element_id": 2812
+      },
+      {
+        "id": 26,
+        "name": "Pontos Únicos de Falha",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem SLA definido, a falha de um desses pontos de falha não é notificada, e a disponibilidade do sistema não é medida.",
+        "confidence": 0.848,
+        "context_element_id": 2817
+      },
+      {
+        "id": 27,
+        "name": "Falhas Silenciosas e Falsos Positivos",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Silent failures e false positives acumulam sem que ninguém saiba, e a confiança em monitoramento é reduzida com o tempo.",
+        "confidence": 0.7622,
+        "context_element_id": 2820
+      },
+      {
+        "id": 30,
+        "name": "Explosão de Custos",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem controle financeiro, o custo da operação não se mostra, e a revisão só acontece quando a conta já está fechada.",
+        "confidence": 0.9226,
+        "context_element_id": 2851
+      }
+    ],
+    "attributes": [
+      {
+        "id": 14,
+        "name": "Fonte principal de dados de entrada para o LLM",
+        "value": [
+          "real-time-streams"
+        ],
+        "method": "user-input",
+        "reasoning": "O processamento de logs, métricas e rastreamentos do OTLP gRPC é feito em tempo real, com dados em fluxo.",
+        "confidence": 0.7228,
+        "context_element_id": 2736
+      },
+      {
+        "id": 15,
+        "name": "Tipo específico de evento ou mensagem que está sendo comunicado",
+        "value": [
+          "email-sent-total",
+          "email-send"
+        ],
+        "method": "user-input",
+        "reasoning": "O tipo de evento comunicado é o número total de e-mails enviados, segmentado por tipo (recuperação de senha) e resultado (sucesso/falha).\nO evento é disparado quando um e-mail é enviado com sucesso, caracterizando um evento de comunicação de email.",
+        "confidence": 0.7203,
+        "context_element_id": 2755
+      },
+      {
+        "id": 16,
+        "name": "Sistemas externos que consomem ou fornecem dados de observabilidade",
+        "value": [
+          "Datadog",
+          "New Relic",
+          "Splunk"
+        ],
+        "method": "user-input",
+        "reasoning": "A plataforma de observabilidade integrada é Datadog, New Relic e Splunk.\nA plataforma de observabilidade integrada é Datadog, New Relic e Splunk.\nA plataforma de observabilidade integrada é Datadog, New Relic e Splunk.",
+        "confidence": 0.8419,
+        "context_element_id": 2769
+      },
+      {
+        "id": 17,
+        "name": "Tipo principal de falha ou degradação que o padrão deve mitigar",
+        "value": [
+          "telemetria falhada",
+          "service-unavailability",
+          "network-latency"
+        ],
+        "method": "user-input",
+        "reasoning": "A falha na coleta de telemetria deve impedir operações de negócio, como login e criação de tarefa, sem comprometer a disponibilidade.\nA disponibilidade do dashboard é testada com falha simulada, caracterizando um falha de serviço.\nO evento disparado quando o envio de e-mail falha é devido à latência da rede, caracterizando falha de rede.",
+        "confidence": 0.7182,
+        "context_element_id": 2771
+      },
+      {
+        "id": 21,
+        "name": "Destino dos dados processados pelo worker",
+        "value": [
+          "email-send"
+        ],
+        "method": "internal-inference",
+        "reasoning": "O destinatário do e-mail de notificação é o worker de e-mail.",
+        "confidence": 0.7831,
+        "context_element_id": 2788
+      },
+      {
+        "id": 22,
+        "name": "Tipo predominante de problema computacional tratado pelo toolkit",
+        "value": [
+          "statistical-processing"
+        ],
+        "method": "user-input",
+        "reasoning": "Agrupamento e cálculo de percentis de latência são processos de processamento estatístico.",
+        "confidence": 0.943,
+        "context_element_id": 2804
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 31,
+        "name": "Implementar rate limiting com throttling configurável por endpoint e amostragem de requisições em cenários de alta carga",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem limite definido, o sistema se esvazaria sob pressão, e a falha só apareceria depois de um cliente ter tentado demais.",
+        "confidence": 0.7109,
+        "context_element_id": 2860
+      },
+      {
+        "id": 33,
+        "name": "Estabelecer um planejamento de capacidade sistemático com coleta e análise de métricas de utilização de recursos",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem medir o uso, a expansão é feita sem saber se a capacidade já está sobrecarregada.",
+        "confidence": 0.7626,
+        "context_element_id": 2878
+      },
+      {
+        "id": 34,
+        "name": "Implementar monitoramento contínuo de métricas de sistema, aplicação e infraestrutura com alertas automáticos baseados em thresholds dinâmicos",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Testes de latência de dashboard e de alerta são realizados para garantir que o sistema atenda aos SLOs.",
+        "confidence": 0.7346,
+        "context_element_id": 2879
+      },
+      {
+        "id": 35,
+        "name": "Implementar heartbeat entre serviços com timeout configurável por criticidade e detecção automática de partições de rede",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem definição, a detecção de anomalias não se aplica a todas as métricas críticas, e a falha de um par aparece sem alerta.",
+        "confidence": 0.7102,
+        "context_element_id": 2880
+      },
+      {
+        "id": 36,
+        "name": "Monitorar condições operacionais críticas como CPU, memória, latência e throughput com detecção de anomalias baseada em ML",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Taxa de erro elevada, latência p99 acima do limite e múltiplas tentativas de login falhadas em 5 minutos são sinais de falha de sistema que exigem identificação rápida.",
+        "confidence": 0.7933,
+        "context_element_id": 2882
+      },
+      {
+        "id": 37,
+        "name": "Implementar retry automático com exponential backoff, jitter e circuit breaker para prevenir falhas em cascata",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A falha de exportação de telemetria é tratada sem a parada do negócio, mantendo a operação de negócio em execução.",
+        "confidence": 0.7821,
+        "context_element_id": 2895
+      },
+      {
+        "id": 40,
+        "name": "Projetar para operações com observabilidade completa, logging estruturado e troubleshooting automatizado",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Cada operação é visualizada com latência, atributos contextuais e erros capturados, sem depender de um único ponto de entrada.",
+        "confidence": 0.8891,
+        "context_element_id": 2920
+      },
+      {
+        "id": 41,
+        "name": "Implementar um sistema de detecção de intrusão (IDS) com monitoramento de tráfego de rede e análise de comportamento para identificar padrões suspeitos",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem alerta automático, o operador só descobre um ataque após ver o dano já feito, e a resposta só chega depois que o ataque já consumiu tempo.",
+        "confidence": 0.9732,
+        "context_element_id": 2921
+      },
+      {
+        "id": 43,
+        "name": "Implementar monitoramento contínuo de eventos de segurança com SIEM e alertas automáticos para comportamentos anômalos",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Eventos de múltiplas fontes se correlacionam e padrões de ataque são detectados sem que ninguém saiba quem fez o que.",
+        "confidence": 0.9425,
+        "context_element_id": 2926
+      },
+      {
+        "id": 44,
+        "name": "Configurar tratamento seguro de erros com logging detalhado que não exponha informações sensíveis, mas permita análise forense",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Rejeição ou marcação incompleta do log não bloqueia a operação, liberando o usuário para tentar novamente sem que a tentativa seja registrada como falha.",
+        "confidence": 0.7679,
+        "context_element_id": 2927
+      },
+      {
+        "id": 47,
+        "name": "Estabelecer um sistema de notificação automática para informar os atores relevantes sobre incidentes de segurança detectados",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem disparar alertas, o operador só descobre um ataque após ver o dano já feito, e a resposta só chega depois que o ataque já consumiu tempo.",
+        "confidence": 0.8221,
+        "context_element_id": 2948
+      },
+      {
+        "id": 48,
+        "name": "Preparar planos de resposta automatizados para eventos de segurança com playbooks predefinidos e escalonamento automático",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem regras pré-definidas, o PagerDuty reage a qualquer alerta, e a escalada automática não se aplica a todos os casos.",
+        "confidence": 0.8367,
+        "context_element_id": 2949
+      },
+      {
+        "id": 49,
+        "name": "Implemente event sourcing com um log de eventos imutável para dados críticos de auditoria e reconstrução de estado",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Reconstruir o estado do sistema após um incidente sem registro só confirma o que já aconteceu, sem provar que a solução correta foi aplicada.",
+        "confidence": 0.7787,
+        "context_element_id": 2966
+      },
+      {
+        "id": 50,
+        "name": "Automatize as verificações de conformidade por meio de pipelines de CI/CD e scanners que validam configurações, código e dependências contra padrões regulatórios",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem rastreio, o vazamento de dados sensíveis é difícil de identificar e provar, e a penalização é maior quando a prova é exigida por regulamentação.",
+        "confidence": 0.7396,
+        "context_element_id": 3011
+      },
+      {
+        "id": 54,
+        "name": "Implemente controle dinâmico da taxa de amostragem para logs, métricas e telemetria com base na criticidade e nos custos de processamento",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A latência adicional da instrumentação deve ser menor que 5% em carga normal, o que torna a configuração de sampling uma tarefa operacional.",
+        "confidence": 0.909,
+        "context_element_id": 3028
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 1,
+        "name": "Paradigma de Armazenamento",
+        "value": "série temporal",
+        "method": "user-input",
+        "reasoning": "O backend de armazenamento de telemetria é definido para Elasticsearch, Loki, CloudWatch, Prometheus, InfluxDB e Datadog, que são sistemas de armazenamento de tempo-series.",
+        "confidence": 0.8914,
+        "context_element_id": 1283
+      },
+      {
+        "id": 2,
+        "name": "Paradigma de Abstração de Acesso",
+        "value": "serviço de consulta",
+        "method": "internal-inference",
+        "reasoning": "O número total de consultas ao banco de dados, segmentado por tipo de operação e tabela, é uma consulta de serviço de serviço de consulta.",
+        "confidence": 0.741,
+        "context_element_id": 1358
+      },
+      {
+        "id": 3,
+        "name": "Mecanismo de Gatilho",
+        "value": "manual",
+        "method": "user-input",
+        "reasoning": "A atribuição de tarefas é feita manualmente, em vez de ser automática, caracterizando um mecanismo de execução manual.",
+        "confidence": 0.9206,
+        "context_element_id": 1399
+      },
+      {
+        "id": 4,
+        "name": "Estratégia de Tratamento de Erros",
+        "value": "retentativa",
+        "method": "user-input",
+        "reasoning": "O exportador de telemetria usa backoff com max 3 tentativas para reavaliar a falha de push, caracterizando erro de falha rejeitado com reavaliação.",
+        "confidence": 0.7489,
+        "context_element_id": 1400
+      },
+      {
+        "id": 7,
+        "name": "Escopo da Operação",
+        "value": "job assíncrono",
+        "method": "internal-inference",
+        "reasoning": "A criação de tarefa é processada, banco de dados é consultado e e-mail é enfileirado em uma operação async-job.",
+        "confidence": 0.7046,
+        "context_element_id": 1943
+      },
+      {
+        "id": 9,
+        "name": "Padrão de Interação",
+        "value": "fire-and-forget",
+        "method": "user-input",
+        "reasoning": "O evento email_sent é disparado sem esperar uma resposta, caracterizando um comportamento de disparo e-fuga.",
+        "confidence": 0.8898,
+        "context_element_id": 1975
+      },
+      {
+        "id": 10,
+        "name": "Padrão Temporal",
+        "value": "síncrono",
+        "method": "internal-inference",
+        "reasoning": "A correlação de rastreamentos é uma transformação síncrona inline, sem espera entre etapas.",
+        "confidence": 0.7347,
+        "context_element_id": 2059
+      },
+      {
+        "id": 60,
+        "name": "Fonte de Gatilho",
+        "value": "iniciado pelo cliente",
+        "method": "user-input",
+        "reasoning": "O evento password_reset_requested é disparado quando um usuário solicita recuperação de senha, indicando que a solicitação é client-initiated.",
+        "confidence": 0.8858,
+        "context_element_id": 3076
+      },
+      {
+        "id": 62,
+        "name": "Implantação de Segurança",
+        "value": "gerenciado na nuvem",
+        "method": "user-input",
+        "reasoning": "O serviço gerenciado usado na nuvem é CloudWatch (AWS), Azure Monitor (Azure) ou Google Cloud Logging (GCP), caracterizando uma opção de segurança de nuvem.",
+        "confidence": 0.7449,
+        "context_element_id": 4125
+      },
+      {
+        "id": 65,
+        "name": "Estratégia de Falhas",
+        "value": "backoff exponencial",
+        "method": "user-input",
+        "reasoning": "A exportação de telemetria é executada com backoff exponencial até 3 tentativas, caracterizando uma estratégia de backoff expônencial.",
+        "confidence": 0.7303,
+        "context_element_id": 4244
+      },
+      {
+        "id": 67,
+        "name": "Escopo de Coordenação",
+        "value": "entre serviços",
+        "method": "internal-inference",
+        "reasoning": "A operação é coordenada entre banco de dados, handler e worker de e-mail, com spans correlacionados entre eles.",
+        "confidence": 0.8304,
+        "context_element_id": 4287
+      },
+      {
+        "id": 68,
+        "name": "Visibilidade de Progresso",
+        "value": "acompanhamento em tempo real",
+        "method": "user-input",
+        "reasoning": "A renderização de Dashboard constrói visualizações em tempo real, com gráficos de taxa de requisição, distribuição de latência, contagem de tarefas por status/tenant e alertas ativos.",
+        "confidence": 0.9334,
+        "context_element_id": 4290
+      },
+      {
+        "id": 69,
+        "name": "Tipo de Gatilho",
+        "value": "disparado por evento",
+        "method": "user-input",
+        "reasoning": "O evento task_completed é disparado quando uma tarefa é marcada como concluída, caracterizando um evento-triggedr.",
+        "confidence": 0.7909,
+        "context_element_id": 4364
+      },
+      {
+        "id": 70,
+        "name": "Arquitetura de Stack",
+        "value": "centralizado",
+        "method": "user-input",
+        "reasoning": "A infraestrutura é gerenciada de forma centralizada, com Elasticsearch, Prometheus e Jaeger localizados em um único ambiente.",
+        "confidence": 0.9012,
+        "context_element_id": 4372
+      },
+      {
+        "id": 71,
+        "name": "Estratégia de Retenção",
+        "value": "retenção em camadas",
+        "method": "user-input",
+        "reasoning": "A retenção é configurada em três etapas: 30 dias para logs, 90 dias para métricas e 7 dias para rastreamentos, com dados mais antigos automaticamente excluídos ou arquivados em armazenamento de longo prazo.",
+        "confidence": 0.8163,
+        "context_element_id": 4374
+      },
+      {
+        "id": 72,
+        "name": "Amostragem de Traces",
+        "value": "baseado em amostragem",
+        "method": "user-input",
+        "reasoning": "O sampling de rastreamentos é configurado para reduzir o overhead, com 10% de amostragem para rastreamentos (1 em cada 10 requisições).",
+        "confidence": 0.9667,
+        "context_element_id": 4375
+      },
+      {
+        "id": 73,
+        "name": "Estratégia de Alertas",
+        "value": "proativo",
+        "method": "internal-inference",
+        "reasoning": "A notificação de alerta é disparada em resposta a uma métrica disparada, caracterizando uma estratégia de alerta proativa.",
+        "confidence": 0.7308,
+        "context_element_id": 4376
+      },
+      {
+        "id": 75,
+        "name": "Tipo de Falha",
+        "value": "falhas permanentes",
+        "method": "internal-inference",
+        "reasoning": "O envio de e-mail falha permanentemente, caracterizando falha permanente.",
+        "confidence": 0.7479,
+        "context_element_id": 4415
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 9,
+  "active": true,
+  "sourceId": 23633,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T14:58:49.768Z",
+  "updatedAt": null
+}

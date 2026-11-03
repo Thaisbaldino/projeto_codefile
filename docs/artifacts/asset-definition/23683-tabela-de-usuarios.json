@@ -1,0 +1,672 @@
+{
+  "id": 23683,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 31,
+          "name": "Requisição de Cadastro de Usuário",
+          "format": "JSON com campos: nome_completo, email, nivel_hierarquico_id, tenant_id",
+          "origin": "Feature: Cadastrar Usuários",
+          "trigger": "Ação do administrador do tenant no formulário de cadastro"
+        },
+        {
+          "id": 32,
+          "name": "Requisição de Edição de Perfil",
+          "format": "JSON com campos: id, nome_completo, email, nivel_hierarquico_id",
+          "origin": "Feature: Gerenciar Perfis de Usuário",
+          "trigger": "Ação do administrador do tenant no formulário de edição"
+        },
+        {
+          "id": 33,
+          "name": "Requisição de Autenticação",
+          "format": "JSON com campos: email, senha, tenant_id (identificado)",
+          "origin": "Feature: Autenticar Usuário",
+          "trigger": "Submissão do formulário de login pelo usuário"
+        },
+        {
+          "id": 34,
+          "name": "Requisição de Ativação/Desativação",
+          "format": "JSON com campos: id, novo_status (ativo|inativo)",
+          "origin": "Feature: Ativação e Desativação de Usuário",
+          "trigger": "Ação do administrador do tenant na interface de gerenciamento"
+        },
+        {
+          "id": 35,
+          "name": "Requisição de Listagem de Usuários",
+          "format": "Query parameters: tenant_id, filtros opcionais (status, nivel_hierarquico_id)",
+          "origin": "Feature: Visualização e Listagem de Usuários",
+          "trigger": "Carregamento da página de gerenciamento de usuários"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 44,
+          "name": "Registro de Usuário Persistido",
+          "format": "Linha de tabela com todos os campos preenchidos conforme validações e regras de negócio",
+          "destination": "Tabela usuarios no banco de dados relacional"
+        },
+        {
+          "id": 45,
+          "name": "Evento de Auditoria",
+          "format": "Evento estruturado com tipo, timestamp, executor, tenant_id, usuario_id e dados alterados",
+          "destination": "Sistema de trilha de auditoria (log de ações)"
+        },
+        {
+          "id": 46,
+          "name": "Confirmação de Operação",
+          "format": "Mensagem de sucesso ou erro com detalhes específicos da validação",
+          "destination": "Interface do usuário (administrador do tenant)"
+        },
+        {
+          "id": 47,
+          "name": "Token de Sessão (Autenticação)",
+          "format": "JWT ou token de sessão contendo id, tenant_id, email, status e timestamp de expiração",
+          "destination": "Cliente (navegador do usuário autenticado)"
+        }
+      ],
+      "processing": [
+        {
+          "id": 36,
+          "step": "Validar Integridade Referencial",
+          "description": "Verificar que tenant_id, nivel_hierarquico_id e criador_id/ultimo_editor_id referem-se a registros existentes nas tabelas de tenants, niveis_hierarquicos e usuarios respectivamente."
+        },
+        {
+          "id": 37,
+          "step": "Validar Unicidade de E-mail por Tenant",
+          "description": "Garantir que o e-mail informado não existe já para outro usuário no mesmo tenant, consultando o índice único (tenant_id, email)."
+        },
+        {
+          "id": 38,
+          "step": "Validar Formato de E-mail",
+          "description": "Verificar que o e-mail segue formato válido de endereço de correio eletrônico (RFC 5322 simplificado)."
+        },
+        {
+          "id": 39,
+          "step": "Validar Status do Tenant",
+          "description": "Confirmar que o tenant ao qual o usuário pertence está ativo antes de permitir operações de autenticação ou modificação."
+        },
+        {
+          "id": 40,
+          "step": "Criptografar Senha",
+          "description": "Aplicar algoritmo argon2id (m=64MiB, t=3, p=4) ou bcrypt para gerar hash seguro da senha antes de persistência."
+        },
+        {
+          "id": 41,
+          "step": "Persistir Registro",
+          "description": "Inserir ou atualizar o registro na tabela usuarios, respeitando constraints de NOT NULL, CHECK e UNIQUE."
+        },
+        {
+          "id": 42,
+          "step": "Registrar Auditoria",
+          "description": "Emitir evento de auditoria (UsuárioCadastrado, PerfilUsuárioEditado, UsuárioAtivado, UsuárioDesativado) com identificação do executor, timestamp e dados alterados."
+        },
+        {
+          "id": 43,
+          "step": "Invalidar Sessões Ativas",
+          "description": "Ao desativar um usuário, revogar imediatamente todas as sessões ativas associadas ao seu id para bloquear acesso instantaneamente."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 48,
+        "category": "invariant",
+        "description": "Cada usuário deve possuir um e-mail único dentro de seu tenant. Dois usuários do mesmo tenant não podem compartilhar o mesmo endereço de e-mail.",
+        "enforcement": "db_constraint",
+        "verification": "Índice único (tenant_id, email) na tabela usuarios; tentativa de inserção/atualização com e-mail duplicado é rejeitada pelo banco de dados com erro de constraint violation."
+      },
+      {
+        "id": 49,
+        "category": "invariant",
+        "description": "Cada usuário deve estar vinculado a um tenant ativo. Usuários de tenants inativos não podem realizar login ou operações na plataforma.",
+        "enforcement": "code",
+        "verification": "Antes de permitir autenticação ou operação, consultar status do tenant na tabela tenants; bloquear se status = 'inativo'."
+      },
+      {
+        "id": 50,
+        "category": "invariant",
+        "description": "Cada usuário deve estar vinculado a um nível hierárquico válido existente no tenant. A referência a nivel_hierarquico_id deve apontar para um registro existente na tabela niveis_hierarquicos.",
+        "enforcement": "db_constraint",
+        "verification": "Foreign key (nivel_hierarquico_id) REFERENCES niveis_hierarquicos(id); tentativa de inserção/atualização com nivel_hierarquico_id inválido é rejeitada."
+      },
+      {
+        "id": 51,
+        "category": "validation",
+        "description": "O campo nome_completo não pode estar vazio e deve conter ao menos um caractere alfabético. Espaços em branco apenas não são permitidos.",
+        "enforcement": "code",
+        "verification": "Validação no handler de cadastro/edição: verificar que nome_completo.trim().length > 0 e contém ao menos um caractere não-numérico."
+      },
+      {
+        "id": 52,
+        "category": "validation",
+        "description": "O campo email deve estar em formato válido de endereço de correio eletrônico (RFC 5322 simplificado). Rejeitar formatos inválidos como 'usuario@', '@dominio.com', 'usuario dominio.com'.",
+        "enforcement": "code",
+        "verification": "Validação no handler de cadastro/edição usando regex: /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}$/"
+      },
+      {
+        "id": 53,
+        "category": "validation",
+        "description": "O campo status deve ser um dos valores permitidos: 'ativo' ou 'inativo'. Nenhum outro valor é aceito.",
+        "enforcement": "db_constraint",
+        "verification": "CHECK constraint na tabela usuarios: CHECK (status IN ('ativo', 'inativo')); tentativa de inserção/atualização com valor inválido é rejeitada."
+      },
+      {
+        "id": 54,
+        "category": "authorization",
+        "description": "Apenas usuários com perfil de administrador do tenant podem cadastrar, editar, ativar ou desativar usuários. Colaboradores e gestores não possuem permissão para essas operações.",
+        "enforcement": "code",
+        "verification": "No handler de usuários, verificar que o usuário executor possui role = 'administrador_tenant' antes de permitir operações de CRUD em usuarios."
+      },
+      {
+        "id": 55,
+        "category": "authorization",
+        "description": "Um usuário administrador não pode desativar sua própria conta, evitando que um tenant fique sem nenhum administrador ativo.",
+        "enforcement": "code",
+        "verification": "No handler de desativação, verificar que usuario_executor.id != usuario_alvo.id; se forem iguais, retornar erro 'Não é permitido desativar sua própria conta'."
+      },
+      {
+        "id": 56,
+        "category": "authorization",
+        "description": "Um usuário só pode ser cadastrado, editado ou desativado por um administrador do mesmo tenant. Administradores de um tenant não podem gerenciar usuários de outro tenant.",
+        "enforcement": "code",
+        "verification": "No handler de usuários, verificar que usuario_executor.tenant_id == usuario_alvo.tenant_id; se diferentes, retornar erro 403 Forbidden."
+      },
+      {
+        "id": 57,
+        "category": "compliance",
+        "description": "Senhas de usuários devem ser armazenadas exclusivamente em formato de hash criptográfico seguro (argon2id com m=64MiB, t=3, p=4 ou bcrypt com cost >= 12), nunca em texto simples ou formato reversível.",
+        "enforcement": "code",
+        "verification": "No handler de cadastro/edição, aplicar algoritmo de hash antes de persistência; verificação de autenticação compara hash da senha informada com hash armazenado, nunca descriptografa."
+      },
+      {
+        "id": 58,
+        "category": "compliance",
+        "description": "Dados pessoais de usuários (nome completo, e-mail) devem ser tratados em conformidade com LGPD. Aplicar princípios de minimização de dados, consentimento implícito (cadastro no tenant) e proteção de informações pessoais.",
+        "enforcement": "code",
+        "verification": "Documentação de política de privacidade; logs de auditoria registram acesso a dados pessoais; implementar direito de exclusão (soft delete ou anonimização) quando solicitado."
+      },
+      {
+        "id": 59,
+        "category": "idempotency",
+        "description": "Operações de cadastro de usuário devem ser idempotentes. Se a mesma requisição for enviada duas vezes com os mesmos dados, a segunda não deve criar um usuário duplicado.",
+        "enforcement": "code",
+        "verification": "Implementar idempotency key no handler de cadastro; verificar se usuário com mesmo (tenant_id, email) já existe antes de inserir; retornar o usuário existente se já foi criado."
+      },
+      {
+        "id": 60,
+        "category": "observability",
+        "description": "Toda operação de cadastro, edição, ativação ou desativação de usuário deve ser registrada em log de auditoria com identificação do executor, timestamp, tenant_id, usuario_id e campos alterados.",
+        "enforcement": "code",
+        "verification": "Handler de usuários emite evento de auditoria (UsuárioCadastrado, PerfilUsuárioEditado, UsuárioAtivado, UsuárioDesativado) após persistência bem-sucedida; evento é armazenado em trilha de auditoria."
+      },
+      {
+        "id": 61,
+        "category": "retention",
+        "description": "Registros de usuários desativados devem ser mantidos na tabela usuarios (soft delete) com status = 'inativo', preservando histórico de auditoria e integridade referencial com tarefas e históricos. Exclusão física é proibida.",
+        "enforcement": "code",
+        "verification": "Operação de desativação atualiza status para 'inativo' e registra data_ultima_desativacao; nenhuma operação de DELETE é permitida na tabela usuarios."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "A Tabela de Usuários é uma estrutura de dados lógica que define o esquema relacional para armazenar e organizar os registros de colaboradores cadastrados em cada tenant da plataforma multi-tenant. Contém campos para identificação única (id, email único por tenant), informações pessoais (nome completo), vínculo organizacional (tenant proprietário, nível hierárquico), status de ativação (ativo/inativo), e metadados de auditoria (datas de criação e edição, usuários executores). Serve como entidade central para autenticação, controle de acesso baseado em perfil, atribuição de tarefas, visualização de colaboradores e rastreabilidade de ações administrativas. O esquema inclui índices para otimização de consultas por email, tenant, status e nível hierárquico, constraints de unicidade e validação de formato, e é projetado para suportar o ciclo de vida completo de usuários (cadastro, edição, ativação, desativação) conforme definido pelas features de gerenciamento de usuários, autenticação e atribuição de tarefas."
+    },
+    "definition": {
+      "schemas": [
+        {
+          "id": 2,
+          "name": "usuarios",
+          "fields": [
+            {
+              "id": 3,
+              "name": "id",
+              "type": "uuid",
+              "nullable": false,
+              "description": "Identificador único do usuário na plataforma, gerado automaticamente no momento do cadastro.",
+              "primary_key": true
+            },
+            {
+              "id": 4,
+              "name": "tenant_id",
+              "type": "uuid",
+              "nullable": false,
+              "description": "Referência ao tenant proprietário do usuário, garantindo isolamento de dados entre organizações."
+            },
+            {
+              "id": 5,
+              "name": "nome_completo",
+              "type": "string",
+              "nullable": false,
+              "description": "Nome completo do colaborador, informado no momento do cadastro ou edição do perfil."
+            },
+            {
+              "id": 6,
+              "name": "email",
+              "type": "string",
+              "nullable": false,
+              "description": "Endereço de e-mail único do usuário dentro do tenant, utilizado para autenticação e comunicação."
+            },
+            {
+              "id": 7,
+              "name": "senha_hash",
+              "type": "string",
+              "nullable": false,
+              "description": "Hash criptográfico da senha do usuário, armazenado em formato seguro (argon2id ou bcrypt), nunca em texto simples."
+            },
+            {
+              "id": 8,
+              "name": "nivel_hierarquico_id",
+              "type": "uuid",
+              "nullable": false,
+              "description": "Referência ao nível hierárquico atribuído ao usuário dentro da estrutura organizacional do tenant."
+            },
+            {
+              "id": 9,
+              "name": "status",
+              "type": "enum[ativo|inativo]",
+              "nullable": false,
+              "description": "Status de ativação do usuário; ativo permite acesso à plataforma, inativo bloqueia login e operações."
+            },
+            {
+              "id": 10,
+              "name": "data_criacao",
+              "type": "timestamp",
+              "nullable": false,
+              "description": "Data e hora de cadastro do usuário, registrada automaticamente pelo sistema no momento da criação."
+            },
+            {
+              "id": 11,
+              "name": "criador_id",
+              "type": "uuid",
+              "nullable": false,
+              "description": "Referência ao usuário administrador do tenant que realizou o cadastro inicial do usuário."
+            },
+            {
+              "id": 12,
+              "name": "data_ultima_edicao",
+              "type": "timestamp",
+              "nullable": true,
+              "description": "Data e hora da última edição dos dados cadastrais do usuário; null se nunca foi editado após criação."
+            },
+            {
+              "id": 13,
+              "name": "ultimo_editor_id",
+              "type": "uuid",
+              "nullable": true,
+              "description": "Referência ao usuário administrador que realizou a última edição do perfil; null se nunca foi editado."
+            },
+            {
+              "id": 14,
+              "name": "data_ultima_ativacao",
+              "type": "timestamp",
+              "nullable": true,
+              "description": "Data e hora da última ativação do usuário; null se nunca foi desativado após criação."
+            },
+            {
+              "id": 15,
+              "name": "data_ultima_desativacao",
+              "type": "timestamp",
+              "nullable": true,
+              "description": "Data e hora da última desativação do usuário; null se nunca foi desativado."
+            }
+          ],
+          "indexes": [
+            {
+              "id": 16,
+              "name": "idx_usuarios_tenant_email",
+              "unique": true,
+              "columns": [
+                {
+                  "id": 17,
+                  "column_name": "tenant_id"
+                },
+                {
+                  "id": 18,
+                  "column_name": "email"
+                }
+              ],
+              "description": "Índice único composto sobre (tenant_id, email) para garantir unicidade de e-mail dentro de cada tenant e otimizar buscas por e-mail durante autenticação."
+            },
+            {
+              "id": 19,
+              "name": "idx_usuarios_tenant_status",
+              "unique": false,
+              "columns": [
+                {
+                  "id": 20,
+                  "column_name": "tenant_id"
+                },
+                {
+                  "id": 21,
+                  "column_name": "status"
+                }
+              ],
+              "description": "Índice não-único composto sobre (tenant_id, status) para otimizar filtros e listagens de usuários ativos ou inativos por tenant."
+            },
+            {
+              "id": 22,
+              "name": "idx_usuarios_tenant_nivel_hierarquico",
+              "unique": false,
+              "columns": [
+                {
+                  "id": 23,
+                  "column_name": "tenant_id"
+                },
+                {
+                  "id": 24,
+                  "column_name": "nivel_hierarquico_id"
+                }
+              ],
+              "description": "Índice não-único composto sobre (tenant_id, nivel_hierarquico_id) para otimizar consultas de usuários por nível hierárquico dentro de um tenant."
+            },
+            {
+              "id": 25,
+              "name": "idx_usuarios_data_criacao",
+              "unique": false,
+              "columns": [
+                {
+                  "id": 26,
+                  "column_name": "data_criacao"
+                }
+              ],
+              "description": "Índice não-único sobre data_criacao para otimizar ordenações e filtros temporais na listagem de usuários."
+            }
+          ],
+          "foreign_keys": [
+            {
+              "id": 27,
+              "name": "fk_usuarios_tenant",
+              "column": "tenant_id",
+              "ref_table": "tenants",
+              "ref_column": "id",
+              "description": "Garante que o tenant ao qual o usuário pertence existe na tabela de tenants, mantendo integridade referencial."
+            },
+            {
+              "id": 28,
+              "name": "fk_usuarios_nivel_hierarquico",
+              "column": "nivel_hierarquico_id",
+              "ref_table": "niveis_hierarquicos",
+              "ref_column": "id",
+              "description": "Garante que o nível hierárquico atribuído ao usuário existe na tabela de níveis hierárquicos do tenant."
+            },
+            {
+              "id": 29,
+              "name": "fk_usuarios_criador",
+              "column": "criador_id",
+              "ref_table": "usuarios",
+              "ref_column": "id",
+              "description": "Garante que o usuário administrador que criou este registro existe na tabela de usuários."
+            },
+            {
+              "id": 30,
+              "name": "fk_usuarios_ultimo_editor",
+              "column": "ultimo_editor_id",
+              "ref_table": "usuarios",
+              "ref_column": "id",
+              "description": "Garante que o usuário administrador que editou este registro existe na tabela de usuários (quando não null)."
+            }
+          ]
+        }
+      ]
+    },
+    "pendencies": [
+      {
+        "id": 82,
+        "section": "definition",
+        "description": "Definição de tamanho máximo de caracteres para campo nome_completo não foi especificada. Necessário estabelecer limite (ex: 255 caracteres) para validação e armazenamento.",
+        "resolutionOptions": [
+          {
+            "id": 83,
+            "text": "Definir nome_completo como VARCHAR(255) com validação de comprimento máximo de 255 caracteres no handler"
+          },
+          {
+            "id": 84,
+            "text": "Definir nome_completo como VARCHAR(500) para permitir nomes mais longos em contextos internacionais"
+          },
+          {
+            "id": 85,
+            "text": "Definir nome_completo como TEXT sem limite de comprimento, validando apenas que não está vazio"
+          }
+        ],
+        "recommendedOptionId": 83
+      },
+      {
+        "id": 86,
+        "section": "definition",
+        "description": "Política de expiração de sessão não foi definida. Necessário especificar tempo de inatividade máximo antes de invalidação automática da sessão.",
+        "resolutionOptions": [
+          {
+            "id": 87,
+            "text": "Definir expiração de sessão em 30 minutos de inatividade (padrão de segurança para aplicações web)"
+          },
+          {
+            "id": 88,
+            "text": "Definir expiração de sessão em 8 horas de inatividade (mais permissivo para usuários internos)"
+          },
+          {
+            "id": 89,
+            "text": "Definir expiração de sessão em 24 horas de inatividade (máximo permissivo)"
+          }
+        ],
+        "recommendedOptionId": 87
+      },
+      {
+        "id": 90,
+        "section": "rules",
+        "description": "Regra de limite de tentativas de login falhadas não foi especificada. Necessário definir número máximo de tentativas consecutivas antes de bloqueio temporário.",
+        "resolutionOptions": [
+          {
+            "id": 91,
+            "text": "Bloquear após 5 tentativas falhadas por 15 minutos (padrão de segurança moderado)"
+          },
+          {
+            "id": 92,
+            "text": "Bloquear após 3 tentativas falhadas por 30 minutos (mais restritivo)"
+          },
+          {
+            "id": 93,
+            "text": "Bloquear após 10 tentativas falhadas por 5 minutos (mais permissivo)"
+          }
+        ],
+        "recommendedOptionId": 91
+      },
+      {
+        "id": 94,
+        "section": "non_functional_requirements",
+        "description": "Estratégia de backup e recuperação de dados da tabela usuarios não foi especificada. Necessário definir frequência de backup e RTO/RPO para conformidade com requisitos de disponibilidade.",
+        "resolutionOptions": [
+          {
+            "id": 95,
+            "text": "Backup automático a cada 1 minuto com replicação síncrona (RPO = 1 minuto, RTO = 5 minutos)"
+          },
+          {
+            "id": 96,
+            "text": "Backup automático a cada 5 minutos com replicação assíncrona (RPO = 5 minutos, RTO = 10 minutos)"
+          },
+          {
+            "id": 97,
+            "text": "Backup diário com replicação assíncrona (RPO = 1 dia, RTO = 30 minutos)"
+          }
+        ],
+        "recommendedOptionId": 95
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 71,
+        "then": "O sistema rejeita o cadastro e exibe mensagem de erro 'Formato de e-mail inválido'",
+        "type": "unit",
+        "when": "O formulário de cadastro é submetido com email = 'usuario@' ou 'usuario dominio.com'",
+        "given": "Um administrador do tenant tenta cadastrar um usuário com e-mail em formato inválido",
+        "scenario": "Validação de formato de e-mail durante cadastro",
+        "target_section": "rules"
+      },
+      {
+        "id": 72,
+        "then": "O sistema rejeita o cadastro com erro 'E-mail já cadastrado neste tenant' (constraint violation)",
+        "type": "unit",
+        "when": "Um administrador tenta cadastrar outro usuário com o mesmo email 'joao@empresa.com' no tenant A",
+        "given": "Um usuário com email 'joao@empresa.com' já existe no tenant A",
+        "scenario": "Validação de unicidade de e-mail por tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 73,
+        "then": "A senha é armazenada como hash argon2id (m=64MiB, t=3, p=4) na coluna senha_hash; texto simples nunca é armazenado",
+        "type": "unit",
+        "when": "O handler de cadastro processa a requisição",
+        "given": "Um novo usuário é cadastrado com senha 'SenhaSegura123!'",
+        "scenario": "Criptografia de senha com argon2id",
+        "target_section": "rules"
+      },
+      {
+        "id": 74,
+        "then": "O usuário é criado com tenant_id = A; um administrador do tenant B não consegue visualizar ou acessar este usuário; consulta SELECT * FROM usuarios WHERE tenant_id = B não retorna o usuário de A",
+        "type": "integration",
+        "when": "Um administrador do tenant A cadastra um usuário com email 'maria@empresa.com'",
+        "given": "Dois tenants (A e B) existem na plataforma",
+        "scenario": "Cadastro de usuário com isolamento de tenant",
+        "target_section": "definition"
+      },
+      {
+        "id": 75,
+        "then": "O sistema rejeita o login com erro 'Tenant inativo' ou 'Acesso bloqueado'; a sessão não é criada",
+        "type": "integration",
+        "when": "O usuário tenta fazer login com email e senha corretos",
+        "given": "Um usuário ativo pertence a um tenant que foi desativado",
+        "scenario": "Autenticação com validação de status de tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 76,
+        "then": "A sessão ativa do usuário é invalidada imediatamente; o usuário é desconectado; tentativa de usar o token de sessão retorna erro 401 Unauthorized",
+        "type": "integration",
+        "when": "Um administrador desativa este usuário na interface de gerenciamento",
+        "given": "Um usuário está autenticado e possui uma sessão ativa",
+        "scenario": "Desativação de usuário invalida sessões ativas",
+        "target_section": "flow"
+      },
+      {
+        "id": 77,
+        "then": "O sistema rejeita a ação com erro 'Não é permitido desativar sua própria conta'; a conta permanece ativa",
+        "type": "security",
+        "when": "O usuário tenta desativar sua própria conta via interface de gerenciamento",
+        "given": "Um usuário é administrador do tenant e está autenticado",
+        "scenario": "Prevenção de desativação de própria conta por administrador",
+        "target_section": "rules"
+      },
+      {
+        "id": 78,
+        "then": "O sistema identifica o tenant correto (A) e autentica apenas o usuário do tenant A; o usuário do tenant B não consegue acessar a conta do tenant A",
+        "type": "security",
+        "when": "Um usuário tenta fazer login com email 'usuario@empresa.com' e a senha do usuário do tenant A",
+        "given": "Dois tenants (A e B) possuem usuários com o mesmo email 'usuario@empresa.com'",
+        "scenario": "Isolamento de dados entre tenants na autenticação",
+        "target_section": "rules"
+      },
+      {
+        "id": 79,
+        "then": "p99 da latência de autenticação é <= 50ms; índice (tenant_id, email) é utilizado; nenhuma requisição excede 100ms",
+        "type": "performance",
+        "when": "Cada requisição consulta a tabela usuarios por (tenant_id, email) e valida a senha",
+        "given": "500 requisições simultâneas de login são enviadas para a plataforma",
+        "scenario": "Latência de autenticação sob carga",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 80,
+        "then": "p99 da latência é <= 200ms; índice (tenant_id, status) é utilizado; resultado contém apenas usuários do tenant com status ativo e nível hierárquico X",
+        "type": "performance",
+        "when": "O handler executa a consulta com paginação (limit 20, offset 0)",
+        "given": "Um tenant possui 100 usuários; uma requisição de listagem com filtros (status='ativo', nivel_hierarquico_id=X) é enviada",
+        "scenario": "Listagem de usuários com filtros",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 81,
+        "then": "Um evento UsuárioCadastrado é emitido com payload contendo: id (uuid), tenant_id (uuid), nome (string), email (string), nivel_hierarquico_id (uuid), status (enum), data_criacao (timestamp), criador_id (uuid)",
+        "type": "contract",
+        "when": "O handler de cadastro persiste o registro na tabela usuarios",
+        "given": "Um novo usuário é cadastrado com sucesso",
+        "scenario": "Contrato de evento UsuárioCadastrado",
+        "target_section": "definition"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 62,
+        "target": "p99 <= 50ms para consulta de autenticação (SELECT com índice único tenant_id, email) em até 5.000 usuários por tenant",
+        "category": "performance",
+        "requirement": "Consultas de autenticação (busca por email e tenant) devem ser executadas com latência mínima para não degradar a experiência de login.",
+        "verification": "Teste de carga com 500 requisições simultâneas de login; medir latência p99 da consulta de autenticação; índice (tenant_id, email) deve estar presente e ser utilizado pelo plano de execução."
+      },
+      {
+        "id": 63,
+        "target": "p99 <= 200ms para listagem com filtros (status, nivel_hierarquico_id) e paginação em até 100 usuários por página",
+        "category": "performance",
+        "requirement": "Operações de listagem de usuários (com filtros e paginação) devem ser responsivas mesmo em tenants com grande número de usuários.",
+        "verification": "Teste de carga com 100 requisições simultâneas de listagem; medir latência p99; índices (tenant_id, status) e (tenant_id, nivel_hierarquico_id) devem estar presentes."
+      },
+      {
+        "id": 64,
+        "target": "p99 <= 100ms para operação de INSERT ou UPDATE na tabela usuarios",
+        "category": "performance",
+        "requirement": "Operações de cadastro e edição de usuários devem ser concluídas rapidamente, mesmo sob carga.",
+        "verification": "Teste de carga com 200 requisições simultâneas de cadastro/edição; medir latência p99 da operação de persistência."
+      },
+      {
+        "id": 65,
+        "target": "Suportar até 5.000 usuários por tenant (estimativa inicial) com índices apropriados; arquitetura preparada para crescimento futuro com particionamento por tenant_id se necessário",
+        "category": "scalability",
+        "requirement": "A tabela usuarios deve suportar crescimento progressivo de usuários sem degradação de desempenho.",
+        "verification": "Teste de carga com 5.000 usuários; medir tempo de resposta de consultas de autenticação e listagem; plano de execução confirma uso de índices."
+      },
+      {
+        "id": 66,
+        "target": "Utilizar argon2id com parâmetros m=64MiB, t=3, p=4 ou bcrypt com cost >= 12; tempo de hash >= 100ms por senha",
+        "category": "security",
+        "requirement": "Senhas devem ser armazenadas com algoritmo de hash criptograficamente seguro e resistente a ataques de força bruta.",
+        "verification": "Código de hash de senha utiliza biblioteca padrão (bcrypt ou argon2); teste de desempenho confirma tempo de hash >= 100ms; senhas nunca são armazenadas em texto simples ou formato reversível."
+      },
+      {
+        "id": 67,
+        "target": "100% das consultas devem incluir filtro tenant_id; nenhuma consulta deve retornar dados de múltiplos tenants",
+        "category": "security",
+        "requirement": "Isolamento de dados por tenant deve ser garantido em todas as operações de leitura e escrita.",
+        "verification": "Auditoria de código: verificar que toda consulta na tabela usuarios inclui WHERE tenant_id = ?; teste de segurança: tentar acessar usuários de outro tenant via manipulação de parâmetros deve retornar erro 403."
+      },
+      {
+        "id": 68,
+        "target": "Disponibilidade >= 99.9% (máximo 43 minutos de downtime por mês); RTO <= 5 minutos, RPO <= 1 minuto",
+        "category": "availability",
+        "requirement": "A tabela usuarios deve estar disponível com alta disponibilidade para suportar autenticação contínua.",
+        "verification": "Implementar replicação de banco de dados (master-slave ou multi-master); backup automático a cada 1 minuto; teste de failover confirma RTO <= 5 minutos."
+      },
+      {
+        "id": 69,
+        "target": "100% das operações de INSERT, UPDATE (status, email, nome) registradas em log de auditoria com executor, timestamp, tenant_id, usuario_id e campos alterados",
+        "category": "observability",
+        "requirement": "Todas as operações na tabela usuarios devem ser rastreáveis via logs de auditoria estruturados.",
+        "verification": "Verificar que eventos UsuárioCadastrado, PerfilUsuárioEditado, UsuárioAtivado, UsuárioDesativado são emitidos e armazenados; auditoria contém todos os campos obrigatórios."
+      },
+      {
+        "id": 70,
+        "target": "Índices ocupam <= 30% do tamanho da tabela; índices compostos (tenant_id, coluna) são preferidos a índices simples quando aplicável",
+        "category": "cost",
+        "requirement": "Índices devem ser otimizados para minimizar overhead de armazenamento sem comprometer desempenho de consultas.",
+        "verification": "Análise de tamanho de índices via EXPLAIN ANALYZE; remover índices não utilizados; consolidar índices redundantes."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 44,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T00:52:15.011Z",
+  "updatedAt": null
+}

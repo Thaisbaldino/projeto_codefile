@@ -1,0 +1,305 @@
+{
+  "id": 23620,
+  "projectId": 4118,
+  "type": "feature_definition",
+  "content": {
+    "pendencies": [
+      {
+        "id": 35,
+        "section": "functional",
+        "description": "Quem tem permissão para concluir uma tarefa existente? Qualquer usuário autenticado do tenant pode concluir qualquer tarefa, ou apenas o criador da tarefa e o responsável atual têm essa permissão? A definição deve ser consistente com a política de permissões adotada nas features de prioridade, prazo, atribuição e edição.",
+        "resolutionOptions": [
+          {
+            "id": 36,
+            "text": "Qualquer usuário autenticado e ativo do tenant pode concluir qualquer tarefa, independentemente de ser o criador ou o responsável, alinhado com a política adotada nas features de prioridade e prazo."
+          },
+          {
+            "id": 37,
+            "text": "Apenas o criador da tarefa ou o responsável atual podem concluir a tarefa; outros colaboradores do tenant não têm permissão para encerrar tarefas às quais não estão vinculados."
+          },
+          {
+            "id": 38,
+            "text": "Apenas o responsável atual pode concluir a tarefa; o criador pode reabri-la, mas não encerrá-la diretamente."
+          }
+        ],
+        "recommendedOptionId": 36
+      },
+      {
+        "id": 39,
+        "section": "functional",
+        "description": "A reabertura de uma tarefa concluída deve ser permitida livremente ou deve exigir alguma justificativa ou confirmação adicional além do diálogo de confirmação padrão? Existe alguma restrição de quem pode reabrir uma tarefa concluída?",
+        "resolutionOptions": [
+          {
+            "id": 40,
+            "text": "A reabertura é permitida a qualquer usuário autenticado e ativo do tenant, exigindo apenas o diálogo de confirmação padrão, sem justificativa adicional."
+          },
+          {
+            "id": 41,
+            "text": "A reabertura é permitida apenas ao criador da tarefa ou ao responsável atual, exigindo apenas o diálogo de confirmação padrão."
+          },
+          {
+            "id": 42,
+            "text": "A reabertura exige preenchimento de campo de justificativa obrigatória antes de ser efetivada, independentemente de quem a executa."
+          }
+        ],
+        "recommendedOptionId": 40
+      },
+      {
+        "id": 43,
+        "section": "functional",
+        "description": "Ao reabrir uma tarefa concluída, para qual status ela deve retornar? O sistema deve restaurar o status imediatamente anterior à conclusão (por exemplo, 'Em Andamento'), sempre retornar ao status inicial ('A Fazer'), ou o usuário deve selecionar o status de destino manualmente?",
+        "resolutionOptions": [
+          {
+            "id": 44,
+            "text": "Restaurar automaticamente o status imediatamente anterior à conclusão, conforme registrado no histórico de transições da tarefa."
+          },
+          {
+            "id": 45,
+            "text": "Retornar sempre ao status inicial 'A Fazer' ao reabrir a tarefa, independentemente do status anterior à conclusão."
+          },
+          {
+            "id": 46,
+            "text": "Exibir seletor de status ao usuário no momento da reabertura, permitindo que ele escolha manualmente o status de destino entre os status ativos disponíveis."
+          }
+        ],
+        "recommendedOptionId": 45
+      },
+      {
+        "id": 47,
+        "section": "functional",
+        "description": "Após a conclusão bem-sucedida da tarefa, qual deve ser o comportamento de navegação do sistema? O usuário permanece na visualização atual (lista ou Kanban com a tarefa movida para a coluna 'Concluído'), é redirecionado para a visualização detalhada da tarefa concluída, ou retorna à tela anterior?",
+        "resolutionOptions": [
+          {
+            "id": 48,
+            "text": "O usuário permanece na visualização atual (lista ou Kanban), com a tarefa refletindo imediatamente o novo status 'Concluído' sem redirecionamento."
+          },
+          {
+            "id": 49,
+            "text": "O usuário é redirecionado para a visualização detalhada da tarefa concluída após a confirmação de sucesso."
+          },
+          {
+            "id": 50,
+            "text": "O usuário retorna à tela anterior (lista ou Kanban) após a confirmação de sucesso, com a tarefa visível na coluna ou linha correspondente ao status 'Concluído'."
+          }
+        ],
+        "recommendedOptionId": 48
+      },
+      {
+        "id": 51,
+        "section": "functional",
+        "description": "O sistema deve impedir a conclusão de uma tarefa que possua subtarefas ou itens de checklist pendentes? Considerando que checklists estão fora do escopo desta versão, esta pendência é relevante apenas para garantir que a regra não seja necessária agora, mas deve ser confirmada.",
+        "resolutionOptions": [
+          {
+            "id": 52,
+            "text": "Não aplicar nenhuma restrição de subtarefas ou checklist na conclusão nesta versão, pois essas funcionalidades estão fora do escopo."
+          },
+          {
+            "id": 53,
+            "text": "Registrar a regra de negócio como pendente de implementação futura, sem bloquear a conclusão nesta versão."
+          }
+        ],
+        "recommendedOptionId": 52
+      },
+      {
+        "id": 54,
+        "section": "non-functional",
+        "description": "A conclusão da tarefa deve ser refletida em tempo real na interface de outros usuários que estejam visualizando o mesmo quadro Kanban ou lista simultaneamente? O sistema deve suportar atualização em tempo real (WebSocket/SSE) ou a atualização ocorre apenas no próximo carregamento da página pelo outro usuário? A definição deve ser consistente com a decisão tomada na feature Atualizar Status da Tarefa.",
+        "resolutionOptions": [
+          {
+            "id": 55,
+            "text": "Não implementar atualização em tempo real para outros usuários nesta versão; a conclusão é refletida para o usuário executor imediatamente, e os demais visualizam a mudança no próximo carregamento ou atualização manual da página."
+          },
+          {
+            "id": 56,
+            "text": "Implementar atualização em tempo real via WebSocket ou Server-Sent Events (SSE), propagando a conclusão da tarefa para todos os usuários que estejam visualizando o mesmo quadro ou lista simultaneamente."
+          }
+        ],
+        "recommendedOptionId": 55
+      }
+    ],
+    "functional_requirements": [
+      {
+        "group": {
+          "id": 1,
+          "name": "Ação de Conclusão da Tarefa",
+          "items": [
+            {
+              "id": 2,
+              "description": "Permitir que o usuário marque uma tarefa como concluída por meio de ação explícita disponível nas visualizações de lista, Kanban e detalhe da tarefa."
+            },
+            {
+              "id": 3,
+              "description": "Exibir solicitação de confirmação ao usuário antes de efetivar a conclusão da tarefa, prevenindo ações acidentais de encerramento."
+            },
+            {
+              "id": 4,
+              "description": "Atualizar o status da tarefa para o valor fixo 'Concluído' no momento em que a conclusão for confirmada pelo usuário, encerrando seu ciclo ativo."
+            },
+            {
+              "id": 5,
+              "description": "Registrar automaticamente a data e hora de conclusão da tarefa no momento da persistência, sem necessidade de intervenção do usuário."
+            },
+            {
+              "id": 6,
+              "description": "Registrar o usuário executor da ação de conclusão no momento da persistência, associando a finalização da tarefa ao colaborador responsável pela ação."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 7,
+          "name": "Validações da Conclusão",
+          "items": [
+            {
+              "id": 8,
+              "description": "Validar que a tarefa a ser concluída pertence ao tenant do usuário executor antes de processar a ação, impedindo a conclusão de tarefas de outras organizações."
+            },
+            {
+              "id": 9,
+              "description": "Validar que a tarefa não está já com status 'Concluído' antes de processar a ação, exibindo mensagem informativa ao usuário caso a tarefa já tenha sido encerrada anteriormente."
+            },
+            {
+              "id": 10,
+              "description": "Exibir mensagem de erro clara e descritiva ao usuário quando a conclusão da tarefa não puder ser concluída por falha de validação ou erro do sistema."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 11,
+          "name": "Persistência e Confirmação",
+          "items": [
+            {
+              "id": 12,
+              "description": "Persistir a conclusão da tarefa vinculada ao tenant do usuário executor, garantindo o isolamento de dados entre organizações e que a alteração não seja acessível por outros tenants."
+            },
+            {
+              "id": 13,
+              "description": "Registrar a transição de status para 'Concluído' no histórico de transições da tarefa, armazenando o status anterior, o novo status, o usuário executor e o timestamp da ação."
+            },
+            {
+              "id": 14,
+              "description": "Exibir mensagem de confirmação de sucesso ao usuário após a conclusão da tarefa ser efetivada com êxito."
+            },
+            {
+              "id": 15,
+              "description": "Refletir imediatamente a conclusão da tarefa em todas as visualizações da plataforma (lista, Kanban e detalhe da tarefa) após a persistência bem-sucedida, sem necessidade de recarregar a página manualmente."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 16,
+          "name": "Controle de Acesso à Conclusão",
+          "items": [
+            {
+              "id": 17,
+              "description": "Permitir que qualquer usuário autenticado e ativo do tenant, independentemente do nível hierárquico, execute a ação de conclusão de tarefas."
+            },
+            {
+              "id": 18,
+              "description": "Impedir que usuários não autenticados ou pertencentes a tenants inativos acessem ou executem a ação de conclusão de tarefas na plataforma."
+            },
+            {
+              "id": 19,
+              "description": "Impedir que um usuário de um tenant conclua tarefas pertencentes a outro tenant, garantindo o isolamento de dados entre organizações."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 20,
+          "name": "Exibição de Tarefas Concluídas",
+          "items": [
+            {
+              "id": 21,
+              "description": "Exibir tarefas com status 'Concluído' na coluna correspondente da visualização Kanban, mantendo-as visíveis e identificáveis como encerradas."
+            },
+            {
+              "id": 22,
+              "description": "Exibir tarefas concluídas na visualização em lista tabular com indicação visual diferenciada do status 'Concluído', permitindo ao usuário distingui-las das tarefas em andamento."
+            },
+            {
+              "id": 23,
+              "description": "Exibir a data e hora de conclusão da tarefa na visualização detalhada, junto aos demais atributos como título, descrição, responsável, prioridade e prazo."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 24,
+          "name": "Reabertura de Tarefa Concluída",
+          "items": [
+            {
+              "id": 25,
+              "description": "Permitir que o usuário reabra uma tarefa previamente concluída, alterando seu status de 'Concluído' para um status ativo disponível no sistema, quando necessário."
+            },
+            {
+              "id": 26,
+              "description": "Registrar a reabertura da tarefa no histórico de transições de status, armazenando o status anterior ('Concluído'), o novo status, o usuário executor e o timestamp da ação."
+            }
+          ]
+        }
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "group": {
+          "id": 27,
+          "name": "Segurança e Conformidade",
+          "items": [
+            {
+              "id": 28,
+              "description": "Registrar em log de auditoria toda operação de conclusão ou reabertura de tarefa, incluindo identificação do usuário executor, tenant, timestamp, identificação da tarefa e os valores de status anterior e novo, em conformidade com os requisitos de rastreabilidade da plataforma."
+            },
+            {
+              "id": 29,
+              "description": "Garantir que o status de conclusão e o histórico de transições de uma tarefa de um tenant não sejam visíveis, acessíveis ou interferentes nos dados de nenhum outro tenant, respeitando o isolamento multi-tenant."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 30,
+          "name": "Usabilidade e Responsividade",
+          "items": [
+            {
+              "id": 31,
+              "description": "Renderizar os controles de conclusão e reabertura de tarefa de forma responsiva e adaptativa, garantindo usabilidade adequada em dispositivos móveis (smartphones e tablets) e em desktops."
+            },
+            {
+              "id": 32,
+              "description": "Tornar a ação de conclusão da tarefa facilmente acessível e identificável nas visualizações de lista, Kanban e detalhe da tarefa, sem exigir múltiplos passos de navegação para atingi-la."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 33,
+          "name": "Desempenho",
+          "items": [
+            {
+              "id": 34,
+              "description": "Concluir a operação de persistência da conclusão da tarefa e retornar a confirmação ao usuário em tempo adequado, mesmo sob carga de até 5.000 usuários ativos e 10.000 tarefas por tenant na plataforma."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 14,
+  "sourceType": "feature",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-10T21:32:34.297Z",
+  "updatedAt": null
+}

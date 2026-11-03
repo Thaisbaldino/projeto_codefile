@@ -1,0 +1,241 @@
+{
+  "id": 23967,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 23,
+        "name": "Degradação de Desempenho",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Carga de escrita crescente sem ajuste de desempenho é a chave do teste, e a latência de persistência e consulta é a métrica de performance a ser validada.",
+        "confidence": 0.7695,
+        "context_element_id": 2811
+      },
+      {
+        "id": 24,
+        "name": "Gargalos e Timeouts",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Uma tentativa de login falha e outra seguida é o que determina o bloqueio, não o número de tentativas em si.",
+        "confidence": 0.7485,
+        "context_element_id": 2813
+      },
+      {
+        "id": 25,
+        "name": "Autenticação e Controle de Acesso",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem registro de auditoria, ação de um colaborador comum não autorizado é confundida com uma tentativa de acesso autorizado, e a responsabilidade é atribuída erradamente.",
+        "confidence": 0.8644,
+        "context_element_id": 2824
+      },
+      {
+        "id": 26,
+        "name": "Complexidade e Proliferação",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "A complexidade de gerenciamento de partições aumenta com o número de tenants e o tempo de registro, sem ganho claro de performance.",
+        "confidence": 0.7558,
+        "context_element_id": 2842
+      },
+      {
+        "id": 27,
+        "name": "Auditoria e Rastreabilidade",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem registro de auditoria que não pode ser alterado, a prova de que uma ação foi realizada é perdida quando a tabela é atualizada ou apagada.",
+        "confidence": 0.8017,
+        "context_element_id": 2848
+      }
+    ],
+    "attributes": [
+      {
+        "id": 15,
+        "name": "Identificador de configuração específico dentro do escopo",
+        "value": [
+          "rate-limit",
+          "api-rate-limit"
+        ],
+        "method": "user-input",
+        "reasoning": "O rate_limit é configurado para bloquear o login após 5 tentativas falhadas em 15 minutos.\nO bloqueio de login após múltiplas tentativas falhadas é uma regra de rate-limitamento de autenticação.",
+        "confidence": 0.7246,
+        "context_element_id": 2680
+      },
+      {
+        "id": 17,
+        "name": "Ciclo de vida esperado do registro no contexto de negócio",
+        "value": [
+          "7-years"
+        ],
+        "method": "user-input",
+        "reasoning": "Os registros de auditoria devem ser retidos por no mínimo 7 anos, conforme requisitos de conformidade LGPD e regulamentações fiscais brasileiras.",
+        "confidence": 0.88,
+        "context_element_id": 2707
+      },
+      {
+        "id": 18,
+        "name": "Entidade de domínio principal exposta como recurso da API",
+        "value": [
+          "audit-logs"
+        ],
+        "method": "internal-inference",
+        "reasoning": "O JSON retornado é uma lista paginada de registros de auditoria filtrados, total de registros e informações de paginação, correspondendo ao domínio de auditoria.",
+        "confidence": 0.7706,
+        "context_element_id": 2750
+      },
+      {
+        "id": 20,
+        "name": "Aspectos de qualidade mais críticos para o contexto de negócio",
+        "value": [
+          "reliability"
+        ],
+        "method": "user-input",
+        "reasoning": "A fila de mensagens enfileirada com garantia de entrega é robusta e oferece alta confiabilidade, caracterizando uma qualidade de serviço de confiabilidade.",
+        "confidence": 0.8194,
+        "context_element_id": 2779
+      },
+      {
+        "id": 21,
+        "name": "Contexto ou evento que dispara a execução do workflow",
+        "value": [
+          "external-webhook"
+        ],
+        "method": "user-input",
+        "reasoning": "O envio de evento para o sistema externo de alertas (PagerDuty, Slack) é feito via webhook.",
+        "confidence": 0.8006,
+        "context_element_id": 2791
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 28,
+        "name": "Particionar dados com base em padrões de acesso para melhorar a escalabilidade e o desempenho de consultas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Regra de negócio que não se ajusta a um único intervalo de tempo, como 30 dias, torna a retenção e arquivamento confiabilidade de negócio.",
+        "confidence": 0.9206,
+        "context_element_id": 2872
+      },
+      {
+        "id": 29,
+        "name": "Implementar validação rigorosa de entradas e prevenção de condições que levem a exceções",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem preenchimento, o registro não é auditado e a responsabilidade de quem alterou fica indefinida.",
+        "confidence": 0.8097,
+        "context_element_id": 2909
+      },
+      {
+        "id": 30,
+        "name": "Definir metas de disponibilidade mensuráveis com SLA/SLO e monitoramento de conformidade",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem SLA definido, a confiabilidade é medida pelo custo de manutenção e não pelo tempo de resposta.",
+        "confidence": 0.9384,
+        "context_element_id": 2916
+      },
+      {
+        "id": 31,
+        "name": "Implementar autorização granular com RBAC, ABAC e ACLs baseada no princípio do menor privilégio e Zero Trust",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem restrição, qualquer usuário consegue acessar registros de auditoria, e a responsabilidade de cada entidade é questionada.",
+        "confidence": 0.7518,
+        "context_element_id": 2930
+      },
+      {
+        "id": 32,
+        "name": "Implementar criptografia robusta para dados em trânsito e em repouso usando algoritmos aprovados e gerenciamento seguro de chaves",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Dados em repouso são protegidos por criptografia AES-256-GCM, e registros auditados exigem armazenamento seguro com a mesma proteção.",
+        "confidence": 0.9709,
+        "context_element_id": 2933
+      },
+      {
+        "id": 33,
+        "name": "Manter accountability com rastreabilidade completa das ações por ator, incluindo contexto temporal e origem da requisição",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem rastrear quem fez o que, o responsável fica sem saber quem alterou o registro e quando, e a correção fica uma questão de suposição.",
+        "confidence": 0.7468,
+        "context_element_id": 2942
+      },
+      {
+        "id": 34,
+        "name": "Implementar validação de dados em múltiplas camadas com verificações de tipo, formato, faixa e regras de negócio antes da persistência",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Preenchimento obrigatório de campos críticos é uma exigência de trilha de auditoria, não uma regra de negócio ou padrão de projeto.",
+        "confidence": 0.7347,
+        "context_element_id": 2954
+      },
+      {
+        "id": 35,
+        "name": "Gere automaticamente trilhas de auditoria capturando todas as operações críticas com timestamps, identificação do usuário, dados antes/depois e contexto da operação",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem registro de quem alterou, quando e o que mudou, a responsabilidade é questionada e a prova é perdida.\nA Trilha de Auditoria de Ações captura automática de eventos de auditoria em pontos-chave do sistema, incluindo login, logout, cadastro de usuário, edição de perfil, ativação/desativação, criação/edição/conclusão de tarefa, provisionamento/ativação/desativação de tenant, com metadados completos incluindo identificação do executor, timestamp, endereço IP, tenant afetado, dados anteriores e novos.",
+        "confidence": 0.7622,
+        "context_element_id": 3012
+      },
+      {
+        "id": 36,
+        "name": "Automatize as políticas de retenção de dados com classificação automática, arquivamento baseado em regras e expurgo automatizado de acordo com os prazos regulatórios",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Registros antigos ocupam espaço que poderia ser usado para registros mais recentes, e a retenção automática evita que o custo de armazenamento cresça sem controle.",
+        "confidence": 0.7967,
+        "context_element_id": 3013
+      },
+      {
+        "id": 37,
+        "name": "Implemente logs de auditoria estruturados e centralizados que capturam todas as operações de negócio com correlação de transações e metadados de contexto",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Persistência síncrona em audit_log garante durabilidade, mas pode impactar latência da operação original.",
+        "confidence": 0.9402,
+        "context_element_id": 3016
+      },
+      {
+        "id": 38,
+        "name": "Crie registros imutáveis usando tecnologias como blockchain, cadeias de hash ou armazenamento write-once-read-many (WORM) para garantir a integridade histórica",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem registro imutável, a prova de que uma ação foi realizada é perdida, e a responsabilidade é questionada quando o tempo passa.",
+        "confidence": 0.8141,
+        "context_element_id": 3018
+      },
+      {
+        "id": 39,
+        "name": "Implemente sistemas de detecção de anomalias em tempo real usando algoritmos estatísticos e machine learning para identificar padrões de comportamento que se desviam significativamente do baseline normal",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Eventos que parecem normal mas são de natureza suspeita são identificados em tempo real, sem depender de análise posterior.",
+        "confidence": 0.9629,
+        "context_element_id": 3066
+      },
+      {
+        "id": 40,
+        "name": "Configure um sistema de alertas automático multicanal que notifica operadores, usuários e sistemas dependentes sobre condições perigosas detectadas, incluindo severidade e ações recomendadas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Notificação em tempo real para administradores é a única saída que pode evitar que o incidente se espalhe sem que ninguém saiba.",
+        "confidence": 0.9365,
+        "context_element_id": 3072
+      }
+    ],
+    "discriminators": [],
+    "business_questions": []
+  },
+  "version": 2,
+  "active": true,
+  "sourceId": 23913,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T15:57:03.734Z",
+  "updatedAt": null
+}

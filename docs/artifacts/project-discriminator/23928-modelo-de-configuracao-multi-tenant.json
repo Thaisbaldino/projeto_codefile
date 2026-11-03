@@ -1,0 +1,183 @@
+{
+  "id": 23928,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 12,
+        "name": "Domínio funcional ou estrutural que sofre variação",
+        "value": [
+          "PermissionVariant",
+          "user-permissions"
+        ],
+        "method": "user-input",
+        "reasoning": "A estrutura de PermissionVariant é definida como um tipo genérico, com campos endpoints, fields, actions e modules.\nA variante de permissão é resolvida a partir do perfil do usuário e do status do tenant, caracterizando o domínio funcional de permissões de usuário.",
+        "confidence": 0.7476,
+        "context_element_id": 2686
+      },
+      {
+        "id": 15,
+        "name": "Profundidade máxima esperada da hierarquia de navegação",
+        "value": [
+          "5-or-more-levels"
+        ],
+        "method": "user-input",
+        "reasoning": "A lista de níveis hierárquicos configurados para o tenant é resolvida a partir da tabela de níveis hierárquicos, com um máximo de 5 ou mais níveis.",
+        "confidence": 0.708,
+        "context_element_id": 2725
+      },
+      {
+        "id": 16,
+        "name": "Cadência de atualização esperada dos dados ou do estado visível na superfície",
+        "value": [
+          "periodic"
+        ],
+        "method": "user-input",
+        "reasoning": "O polling para recarregar configurações do banco de dados e invalidar cache é implementado com cadência periódica (ex: a cada 5 minutos).",
+        "confidence": 0.7607,
+        "context_element_id": 2730
+      },
+      {
+        "id": 17,
+        "name": "Nome ou identificador único da API dentro do contexto do sistema",
+        "value": [
+          "tenant-id | tenant-slug"
+        ],
+        "method": "user-input",
+        "reasoning": "O identificador de tenant é identificado por tenant-id ou tenant-slug.",
+        "confidence": 0.7045,
+        "context_element_id": 2751
+      },
+      {
+        "id": 18,
+        "name": "Nome ou identificador do serviço externo a ser integrado",
+        "value": [
+          "transactional_email_service"
+        ],
+        "method": "user-input",
+        "reasoning": "O identificador do provedor de serviço de envio de e-mail integrado à plataforma é transactional_email_service.",
+        "confidence": 0.8765,
+        "context_element_id": 2757
+      },
+      {
+        "id": 19,
+        "name": "Framework de compliance ou padrão que exige auditoria específica",
+        "value": [
+          "LGPD"
+        ],
+        "method": "user-input",
+        "reasoning": "A auditoria de código e os testes verificam que senhas são armazenadas em texto hash e em HTTPS, em conformidade com a LGPD.",
+        "confidence": 0.8318,
+        "context_element_id": 2768
+      },
+      {
+        "id": 20,
+        "name": "Tipo principal de falha ou degradação que o padrão deve mitigar",
+        "value": [
+          "service-unavailability",
+          "database-timeout"
+        ],
+        "method": "user-input",
+        "reasoning": "A indisponibilidade do serviço de configuração bloqueia acesso de todos os usuários à plataforma, caracterizando falha de serviço.\nO fallback para cache local de última configuração conhecida é implementado para mitigar a falha de banco de dados.",
+        "confidence": 0.7991,
+        "context_element_id": 2771
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 29,
+        "name": "Implementar testes automáticos de integridade (health checks) executados periodicamente para validar funcionalidades críticas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem testes automáticos, falhas de conexão ao banco de dados e ao vault só são descobertas quando o sistema entra em operação.",
+        "confidence": 0.9762,
+        "context_element_id": 2885
+      },
+      {
+        "id": 41,
+        "name": "Prepare-se para eventos de segurança implementando runbooks automatizados, isolamento automático de recursos comprometidos e procedimentos de resposta a incidentes previamente testados",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Operações de detecção, alerta e remediação são executadas automaticamente, sem intervenção manual, e a falha é identificada e tratada em tempo real.",
+        "confidence": 0.8796,
+        "context_element_id": 3022
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 3,
+        "name": "Mecanismo de Gatilho",
+        "value": "orientado a eventos",
+        "method": "user-input",
+        "reasoning": "Quando a configuração é alterada, um evento é publicado para que os subscribers recarreguem a configuração.",
+        "confidence": 0.8278,
+        "context_element_id": 1399
+      },
+      {
+        "id": 9,
+        "name": "Granularidade da Operação",
+        "value": "operação em massa",
+        "method": "internal-inference",
+        "reasoning": "A regra de isolamento de dados por tenant é aplicada em operações em massa, como importação de dados ou limpeza de logs, caracterizando uma operação bulk.",
+        "confidence": 0.7142,
+        "context_element_id": 1977
+      },
+      {
+        "id": 47,
+        "name": "Padrão de Handler",
+        "value": "handler de consulta",
+        "method": "user-input",
+        "reasoning": "A consulta da tabela de configuração para obter todas as chaves aplicáveis ao tenant é uma operação de handler de consulta.",
+        "confidence": 0.7468,
+        "context_element_id": 4202
+      },
+      {
+        "id": 51,
+        "name": "Tratamento de Falhas",
+        "value": "circuit breaker",
+        "method": "user-input",
+        "reasoning": "Quando a taxa de erro do loader excede 5% em uma janela de 1 minuto, o circuit breaker é acionado, rejeitando requisições com 503 até que a taxa normalize.",
+        "confidence": 0.7212,
+        "context_element_id": 4285
+      },
+      {
+        "id": 53,
+        "name": "Estratégia de Configuração",
+        "value": "configuração em tempo de execução",
+        "method": "user-input",
+        "reasoning": "O ConfigurationResolved é armazenado no contexto de execução da requisição (request context ou thread-local storage), caracterizando uma estratégia de configuração de execução.",
+        "confidence": 0.7788,
+        "context_element_id": 4458
+      },
+      {
+        "id": 56,
+        "name": "Rate Limiting",
+        "value": "abuse-prevention",
+        "method": "user-input",
+        "reasoning": "O limite de requisições por hora protege contra abuso do serviço de e-mail, uma ameaça de abuso.",
+        "confidence": 0.8776,
+        "context_element_id": 4502
+      },
+      {
+        "id": 61,
+        "name": "Momento de Aplicação",
+        "value": "reinício obrigatório",
+        "method": "user-input",
+        "reasoning": "A aplicação exige reinicialização para aplicar mudanças de configuração, caracterizando uma estratégia de reinicialização exigida.",
+        "confidence": 0.8309,
+        "context_element_id": 5018
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 5,
+  "active": true,
+  "sourceId": 23707,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T14:58:49.768Z",
+  "updatedAt": null
+}

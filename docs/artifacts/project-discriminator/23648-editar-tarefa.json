@@ -1,0 +1,97 @@
+{
+  "id": 23648,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 4,
+        "name": "Elementos de interface e funcionalidades que podem ser personalizados",
+        "value": [
+          "field-labels"
+        ],
+        "method": "user-input",
+        "reasoning": "O campo de descrição da tarefa é exibido no formulário de edição, permitindo ao usuário modificar ou adicionar o detalhamento do contexto, objetivo ou instruções da atividade.",
+        "confidence": 0.7915,
+        "context_element_id": 2683
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 13,
+        "name": "Implemente rastreamento de mudanças e fluxos de aprovação com versionamento automático, aprovações multinível e notificações em tempo real para mudanças críticas",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Atualizar a interface sem que o próximo usuário veja o mesmo estado é uma falha de integração que não pode ser corrigida depois.",
+        "confidence": 0.7335,
+        "context_element_id": 3020
+      },
+      {
+        "id": 14,
+        "name": "Implemente funcionalidade de cancelamento para operações de longa duração com feedback visual de progresso e a capacidade de interromper com segurança",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem salvar, o usuário pode cancelar sem perder nada, e a tarefa retorna ao estado anterior sem alteração persistida.",
+        "confidence": 0.9373,
+        "context_element_id": 3041
+      },
+      {
+        "id": 15,
+        "name": "Implemente funcionalidade de desfazer para ações críticas com um histórico de estados anteriores e a capacidade de reverter mudanças granulares",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem salvar, o usuário pode cancelar sem perder nada, e a tarefa retorna ao estado anterior sem alteração persistida.",
+        "confidence": 0.8118,
+        "context_element_id": 3042
+      },
+      {
+        "id": 16,
+        "name": "Implemente funcionalidade de pausar e retomar para operações longas, preservando o estado da sessão e permitindo a continuação após interrupções",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Reabrir a tarefa é a única saída para editar seus demais atributos; qualquer tentativa imediata de alteração é bloqueada.",
+        "confidence": 0.7296,
+        "context_element_id": 3043
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 22,
+        "name": "Modo de Execução",
+        "value": "orientado a eventos",
+        "method": "user-input",
+        "reasoning": "A atualização em tempo real é propagaída via WebSocket ou Server-Sent Events (SSE), um modelo de execução de execução real-time.",
+        "confidence": 0.766,
+        "context_element_id": 4208
+      },
+      {
+        "id": 24,
+        "name": "Momento de Execução",
+        "value": "tempo real",
+        "method": "user-input",
+        "reasoning": "A atualização em tempo real é propagaída para todos os usuários visualizando o mesmo quadro ou lista simultaneamente.",
+        "confidence": 0.7039,
+        "context_element_id": 4325
+      },
+      {
+        "id": 35,
+        "name": "Personalização Visual",
+        "value": "customização total da UI",
+        "method": "user-input",
+        "reasoning": "O seletor de data limite é personalizado com calendário visual, caracterizando uma visualização completa de interface.",
+        "confidence": 0.7744,
+        "context_element_id": 5057
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 2,
+  "active": true,
+  "sourceId": 23618,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-10T23:51:51.061Z",
+  "updatedAt": null
+}

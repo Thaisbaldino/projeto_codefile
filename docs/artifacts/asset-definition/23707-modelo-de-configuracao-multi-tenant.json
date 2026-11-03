@@ -1,0 +1,916 @@
+{
+  "id": 23707,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 49,
+          "name": "Contexto de Autenticação",
+          "format": "{ token: JWT, tenant_id: uuid, user_id: uuid, user_profile: enum }",
+          "origin": "Middleware de Autenticação (ASSET-007)",
+          "trigger": "Toda requisição HTTP autenticada à plataforma"
+        },
+        {
+          "id": 50,
+          "name": "Identificador de Tenant",
+          "format": "uuid ou slug (string)",
+          "origin": "Parâmetro de Requisição ou Token JWT",
+          "trigger": "Requisição HTTP contendo tenant_id ou slug na URL, headers ou corpo"
+        },
+        {
+          "id": 51,
+          "name": "Dados de Usuário",
+          "format": "{ id: uuid, email: string, status: enum, tenant_id: uuid, perfil: enum, nivel_hierarquico_id: uuid }",
+          "origin": "Tabela de Usuários (ASSET-044)",
+          "trigger": "Resolução de contexto de autenticação"
+        },
+        {
+          "id": 52,
+          "name": "Dados de Tenant",
+          "format": "{ id: uuid, slug: string, status: enum, nome: string }",
+          "origin": "Tabela de Tenants (ASSET-045)",
+          "trigger": "Resolução de contexto de autenticação"
+        },
+        {
+          "id": 53,
+          "name": "Definição de Variante de Permissão",
+          "format": "{ selector: function, variants: [{ name: string, condition: string, applies_to: [...] }] }",
+          "origin": "Variante de Permissão por Perfil (ASSET-060)",
+          "trigger": "Resolução de contexto de autenticação"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 62,
+          "name": "Configuração Resolvida",
+          "format": "ConfigurationResolved { tenant_id, user_id, user_profile, permission_variant, config_values, resolved_at, valid_until }",
+          "destination": "Contexto de Execução da Requisição"
+        },
+        {
+          "id": 63,
+          "name": "Variante de Permissão Ativa",
+          "format": "PermissionVariant { endpoints_acessíveis, campos_visíveis, ações_permitidas, módulos_ativos }",
+          "destination": "Middleware de Autorização (ASSET-007)"
+        },
+        {
+          "id": 64,
+          "name": "Erro de Resolução",
+          "format": "{ error_type: enum[TenantNotFound|TenantInactive|UserNotFound|UserInactive|PermissionVariantResolutionFailed|ConfigurationKeyNotFound|ConfigurationValidationFailed], message: string, timestamp: timestamp }",
+          "destination": "Middleware de Tratamento de Erros"
+        }
+      ],
+      "processing": [
+        {
+          "id": 54,
+          "step": "Validar Tenant",
+          "description": "Verifica se o tenant identificado existe na base de dados e se seu status é 'ativo'. Lança TenantNotFound se não existir ou TenantInactive se estiver desativado."
+        },
+        {
+          "id": 55,
+          "step": "Validar Usuário",
+          "description": "Verifica se o usuário existe na base de dados, se pertence ao tenant correto e se seu status é 'ativo'. Lança UserNotFound ou UserInactive conforme aplicável."
+        },
+        {
+          "id": 56,
+          "step": "Resolver Variante de Permissão",
+          "description": "Invoca o selector da Variante de Permissão por Perfil (ASSET-060) passando o usuário e tenant resolvidos. Retorna a variante correspondente ao perfil do usuário ou lança PermissionVariantResolutionFailed se nenhuma variante se aplicar."
+        },
+        {
+          "id": 57,
+          "step": "Carregar Chaves de Configuração",
+          "description": "Consulta a tabela de configuração para obter todas as chaves aplicáveis ao tenant. Filtra por scope (global ou per_tenant) e aplica valores padrão para chaves não configuradas explicitamente."
+        },
+        {
+          "id": 58,
+          "step": "Validar Valores de Configuração",
+          "description": "Para cada chave carregada, valida o valor contra seu tipo, range (se numérico), regex (se string) e restrições de sensibilidade. Lança ConfigurationValidationFailed se alguma validação falhar."
+        },
+        {
+          "id": 59,
+          "step": "Resolver Valores Sensíveis",
+          "description": "Para chaves marcadas como sensíveis (sensitive: true), resolve referências a vault de segurança (secret_resolution: vault_reference) em vez de retornar valores em texto simples. Garante que senhas, chaves criptográficas e tokens não sejam expostos."
+        },
+        {
+          "id": 60,
+          "step": "Construir ConfigurationResolved",
+          "description": "Monta a estrutura de retorno ConfigurationResolved contendo tenant_id, user_id, user_profile, tenant_status, user_status, permission_variant, isolation_level, todos os config_values resolvidos, timestamp de resolução e timestamp de validade (baseado em session_timeout_minutes)."
+        },
+        {
+          "id": 61,
+          "step": "Armazenar em Contexto de Requisição",
+          "description": "Armazena o ConfigurationResolved no contexto de execução da requisição (request context ou thread-local storage) para acesso rápido por componentes downstream sem necessidade de recarregar a configuração."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 65,
+        "category": "authorization",
+        "description": "Toda requisição autenticada deve ter seu contexto de tenant e perfil de usuário resolvido através do loader de configuração antes de qualquer operação de negócio ser executada. Requisições sem contexto válido são rejeitadas com erro 401 Unauthorized ou 403 Forbidden.",
+        "enforcement": "code",
+        "verification": "Middleware de autenticação valida presença de ConfigurationResolved no contexto antes de passar a requisição para handlers de negócio. Testes de integração verificam que requisições sem token ou com token inválido retornam 401."
+      },
+      {
+        "id": 66,
+        "category": "invariant",
+        "description": "Isolamento de dados por tenant é garantido em todas as operações: cada tenant acessa exclusivamente suas próprias configurações, usuários, tarefas e históricos. Nenhuma operação pode acessar dados de outro tenant mesmo com manipulação de parâmetros.",
+        "enforcement": "code",
+        "verification": "Todas as consultas ao banco de dados incluem filtro WHERE tenant_id = ? com o tenant_id resolvido do contexto. Testes de segurança tentam acessar dados de outro tenant e verificam que acesso é negado."
+      },
+      {
+        "id": 67,
+        "category": "validation",
+        "description": "Valores de configuração numéricos (ranges) e textuais (regex) são validados no momento do carregamento. Valores fora do range ou que não correspondem ao padrão são rejeitados com erro ConfigurationValidationFailed.",
+        "enforcement": "code",
+        "verification": "Testes unitários verificam que valores inválidos (ex: session_timeout_minutes = 1000) são rejeitados. Testes de integração verificam que configurações inválidas impedem o carregamento da página."
+      },
+      {
+        "id": 68,
+        "category": "compliance",
+        "description": "Dados pessoais de usuários (email, nome) são tratados em conformidade com LGPD: minimização de dados (lgpd_data_minimization_enabled = true), retenção limitada (audit_log_retention_days = 365), e proteção de informações sensíveis (senhas em hash argon2id, JWT em HTTPS).",
+        "enforcement": "code",
+        "verification": "Auditoria de código verifica que senhas nunca são armazenadas em texto simples. Testes verificam que HTTPS é obrigatório (https_only = true). Logs de auditoria são retidos por no máximo 365 dias."
+      },
+      {
+        "id": 69,
+        "category": "idempotency",
+        "description": "Carregamento de configuração é idempotente: múltiplas invocações do loader com os mesmos parâmetros (tenant_id, user_id) retornam o mesmo ConfigurationResolved dentro do período de validade (session_timeout_minutes).",
+        "enforcement": "code",
+        "verification": "Testes verificam que duas invocações consecutivas do loader retornam o mesmo objeto (ou equivalente). Cache em nível de aplicação garante que recarregar a configuração dentro da mesma sessão não executa validações redundantes."
+      },
+      {
+        "id": 70,
+        "category": "rate_limit",
+        "description": "Requisições de login são limitadas a rate_limit_login_requests_per_minute (padrão 10) por IP. Requisições de recuperação de senha são limitadas a rate_limit_password_recovery_per_hour (padrão 5) por email. Excesso de requisições resulta em bloqueio temporário.",
+        "enforcement": "network",
+        "verification": "API gateway ou middleware de rate limiting bloqueia requisições que excedem o limite. Testes de carga verificam que o limite é aplicado corretamente."
+      },
+      {
+        "id": 71,
+        "category": "observability",
+        "description": "Toda resolução de configuração é registrada em log de auditoria com timestamp, tenant_id, user_id, resultado (sucesso ou erro) e valores de configuração sensíveis mascarados. Logs são retidos por audit_log_retention_days.",
+        "enforcement": "code",
+        "verification": "Logs de auditoria contêm entrada para cada invocação do loader. Testes verificam que valores sensíveis (jwt_secret_key, senhas) não aparecem em logs em texto simples."
+      },
+      {
+        "id": 72,
+        "category": "invariant",
+        "description": "Variante de permissão resolvida deve corresponder exatamente ao perfil do usuário autenticado. Nenhuma variante pode ser ativada sem que o usuário tenha o perfil correspondente e o tenant esteja ativo.",
+        "enforcement": "code",
+        "verification": "Testes verificam que um usuário com perfil 'colaborador' não pode acessar endpoints de administrador mesmo manipulando tokens. Testes de autorização verificam que cada perfil acessa apenas suas funcionalidades."
+      },
+      {
+        "id": 73,
+        "category": "validation",
+        "description": "Chaves de configuração sensíveis (jwt_secret_key, senhas) nunca são retornadas em texto simples. Quando solicitadas, são substituídas por referências a vault (vault_reference) ou omitidas do ConfigurationResolved.",
+        "enforcement": "code",
+        "verification": "Testes verificam que ConfigurationResolved não contém valores sensíveis em texto simples. Inspeção de logs verifica que senhas nunca são registradas."
+      },
+      {
+        "id": 74,
+        "category": "retention",
+        "description": "Logs de auditoria de resolução de configuração são retidos por audit_log_retention_days (padrão 365 dias). Após este período, registros antigos podem ser arquivados ou excluídos conforme política de governança de dados.",
+        "enforcement": "infra",
+        "verification": "Job de limpeza de logs executa diariamente e remove registros com mais de 365 dias. Testes verificam que logs antigos são removidos e logs recentes são preservados."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "O Modelo de Configuração Multi-Tenant é uma estrutura de definição de esquema que estabelece como as configurações, variações comportamentais e personalizações são organizadas, validadas e aplicadas de forma isolada para cada tenant na plataforma. Encapsula a resolução de contexto multi-tenant (identificação do tenant, seleção de variantes de permissão por perfil, aplicação de regras de isolamento), a definição de chaves de configuração com tipos, valores padrão, ranges, validações e sensibilidade, e o carregamento/resolução de valores em tempo de execução. Serve como contrato central entre a camada de configuração (armazenamento e persistência) e a camada de aplicação (consumo de valores), garantindo que cada tenant acesse exclusivamente suas próprias configurações e que variações estruturais (como permissões por perfil) sejam ativadas conforme o contexto autenticado."
+    },
+    "definition": {
+      "loader": {
+        "id": 2,
+        "throws": [
+          {
+            "id": 3,
+            "error_name": "TenantNotFound"
+          },
+          {
+            "id": 4,
+            "error_name": "TenantInactive"
+          },
+          {
+            "id": 5,
+            "error_name": "UserNotFound"
+          },
+          {
+            "id": 6,
+            "error_name": "UserInactive"
+          },
+          {
+            "id": 7,
+            "error_name": "PermissionVariantResolutionFailed"
+          },
+          {
+            "id": 8,
+            "error_name": "ConfigurationKeyNotFound"
+          },
+          {
+            "id": 9,
+            "error_name": "ConfigurationValidationFailed"
+          }
+        ],
+        "signature": "loadTenantConfiguration(tenantId: uuid, userId: uuid, context: ExecutionContext) -> ConfigurationResolved",
+        "description": "Carrega e resolve a configuração completa para um tenant e usuário específicos no contexto de uma requisição. Executa em sequência: (1) validação de tenant (existência e status ativo), (2) validação de usuário (existência, status ativo, vínculo com tenant), (3) resolução de variante de permissão por perfil do usuário, (4) carregamento de chaves de configuração aplicáveis ao tenant, (5) aplicação de valores padrão e validação de ranges/regex, (6) retorno de ConfigurationResolved contendo todas as chaves resolvidas e a variante de permissão ativa. Lança exceção se qualquer etapa falhar, impedindo o prosseguimento da requisição sem configuração válida."
+      },
+      "params": [
+        {
+          "id": 10,
+          "name": "resolution_order",
+          "value": "tenant_override > default_value"
+        },
+        {
+          "id": 11,
+          "name": "validation_mode",
+          "value": "strict"
+        },
+        {
+          "id": 12,
+          "name": "hot_reload",
+          "value": "false"
+        },
+        {
+          "id": 13,
+          "name": "secret_resolution",
+          "value": "vault_reference"
+        }
+      ],
+      "config_keys": [
+        {
+          "id": 14,
+          "name": "tenant_id",
+          "type": "uuid",
+          "scope": "global",
+          "default": "null",
+          "sensitive": false,
+          "description": "Identificador único do tenant (UUID) resolvido a partir do contexto de autenticação ou do slug informado na requisição. Serve como raiz de isolamento de dados para todas as operações subsequentes.",
+          "tenant_override_allowed": false
+        },
+        {
+          "id": 15,
+          "name": "user_id",
+          "type": "uuid",
+          "scope": "global",
+          "default": "null",
+          "sensitive": false,
+          "description": "Identificador único do usuário autenticado (UUID) resolvido a partir do token de sessão ou credenciais de autenticação. Utilizado para determinar o perfil e as permissões aplicáveis.",
+          "tenant_override_allowed": false
+        },
+        {
+          "id": 16,
+          "name": "user_profile",
+          "type": "enum[colaborador|gestor|administrador_tenant|administrador_plataforma]",
+          "scope": "per_tenant",
+          "default": "colaborador",
+          "sensitive": false,
+          "description": "Perfil do usuário autenticado (colaborador, gestor, administrador_tenant, administrador_plataforma) resolvido a partir do registro de usuário no tenant. Determina qual variante de permissão é ativada e quais funcionalidades são acessíveis.",
+          "tenant_override_allowed": false
+        },
+        {
+          "id": 17,
+          "name": "tenant_status",
+          "type": "enum[ativo|inativo]",
+          "scope": "per_tenant",
+          "default": "ativo",
+          "sensitive": false,
+          "description": "Status de ativação do tenant (ativo ou inativo) resolvido a partir da tabela de tenants. Se inativo, bloqueia todas as operações e login de usuários pertencentes ao tenant.",
+          "tenant_override_allowed": false
+        },
+        {
+          "id": 18,
+          "name": "user_status",
+          "type": "enum[ativo|inativo]",
+          "scope": "per_tenant",
+          "default": "ativo",
+          "sensitive": false,
+          "description": "Status de ativação do usuário (ativo ou inativo) resolvido a partir da tabela de usuários. Se inativo, impede login e acesso a qualquer funcionalidade da plataforma.",
+          "tenant_override_allowed": false
+        },
+        {
+          "id": 19,
+          "name": "permission_variant",
+          "type": "PermissionVariant",
+          "scope": "per_tenant",
+          "default": "null",
+          "sensitive": false,
+          "description": "Variante de permissão resolvida a partir do perfil do usuário e status do tenant. Contém o conjunto de endpoints acessíveis, campos de formulário visíveis, ações permitidas e módulos ativados para o usuário no contexto do tenant.",
+          "tenant_override_allowed": false
+        },
+        {
+          "id": 20,
+          "name": "isolation_level",
+          "type": "enum[strict|soft]",
+          "scope": "per_tenant",
+          "default": "strict",
+          "sensitive": false,
+          "description": "Nível de isolamento de dados aplicado ao tenant (strict ou soft). Strict garante segregação completa de dados em todas as operações; soft permite compartilhamento controlado de dados entre tenants (não aplicável nesta versão).",
+          "tenant_override_allowed": false
+        },
+        {
+          "id": 21,
+          "name": "hierarchical_levels",
+          "type": "array[{ id: uuid, name: string, order: integer }]",
+          "scope": "per_tenant",
+          "default": "[]",
+          "sensitive": false,
+          "description": "Lista de níveis hierárquicos configurados para o tenant, resolvida a partir da tabela de níveis hierárquicos. Utilizada para validação de atribuição de usuários e exibição em formulários de cadastro.",
+          "tenant_override_allowed": true
+        },
+        {
+          "id": 22,
+          "name": "task_priority_levels",
+          "type": "array[{ id: integer, name: string, value: string }]",
+          "scope": "global",
+          "default": "[{id: 1, name: 'Baixa', value: 'baixa'}, {id: 2, name: 'Média', value: 'média'}, {id: 3, name: 'Alta', value: 'alta'}, {id: 4, name: 'Urgente', value: 'urgente'}]",
+          "sensitive": false,
+          "description": "Lista de níveis de prioridade disponíveis para tarefas no tenant. Valores fixos no sistema: baixa, média, alta, urgente. Utilizada para validação e exibição em formulários de criação e edição de tarefas.",
+          "tenant_override_allowed": false
+        },
+        {
+          "id": 23,
+          "name": "task_status_values",
+          "type": "array[{ id: integer, name: string, value: string }]",
+          "scope": "global",
+          "default": "[{id: 1, name: 'A Fazer', value: 'a_fazer'}, {id: 2, name: 'Em Andamento', value: 'em_andamento'}, {id: 3, name: 'Concluído', value: 'concluido'}]",
+          "sensitive": false,
+          "description": "Lista de status fixos disponíveis para tarefas no tenant. Valores fixos no sistema: A Fazer, Em Andamento, Concluído. Utilizada para validação e exibição em formulários de alteração de status e visualizações Kanban.",
+          "tenant_override_allowed": false
+        },
+        {
+          "id": 24,
+          "name": "session_timeout_minutes",
+          "type": "integer",
+          "range": {
+            "id": 111,
+            "max": 480,
+            "min": 5
+          },
+          "scope": "per_tenant",
+          "default": "30",
+          "sensitive": false,
+          "description": "Tempo de expiração da sessão de autenticação em minutos. Define o período de inatividade após o qual a sessão é automaticamente encerrada e o usuário é desconectado.",
+          "tenant_override_allowed": true
+        },
+        {
+          "id": 25,
+          "name": "password_hash_algorithm",
+          "type": "string",
+          "scope": "global",
+          "default": "argon2id(m=64MiB, t=3, p=4)",
+          "sensitive": false,
+          "description": "Algoritmo de hash utilizado para armazenar senhas de usuários. Valor fixo: argon2id com parâmetros m=64MiB, t=3, p=4 para resistência a ataques de força bruta.",
+          "tenant_override_allowed": false
+        },
+        {
+          "id": 26,
+          "name": "password_min_length",
+          "type": "integer",
+          "range": {
+            "id": 112,
+            "max": 128,
+            "min": 6
+          },
+          "scope": "per_tenant",
+          "default": "8",
+          "sensitive": false,
+          "description": "Comprimento mínimo obrigatório para senhas de usuários. Aplicado na criação e redefinição de senha.",
+          "tenant_override_allowed": true
+        },
+        {
+          "id": 27,
+          "name": "password_complexity_regex",
+          "type": "string",
+          "regex": "^.{1,500}$",
+          "scope": "per_tenant",
+          "default": "^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$",
+          "sensitive": false,
+          "description": "Expressão regular que define os requisitos de complexidade de senha. Padrão: pelo menos uma letra maiúscula, uma minúscula, um número e um caractere especial.",
+          "tenant_override_allowed": true
+        },
+        {
+          "id": 28,
+          "name": "login_max_attempts",
+          "type": "integer",
+          "range": {
+            "id": 113,
+            "max": 20,
+            "min": 3
+          },
+          "scope": "per_tenant",
+          "default": "5",
+          "sensitive": false,
+          "description": "Número máximo de tentativas de login malsucedidas consecutivas permitidas antes de bloquear temporariamente a conta.",
+          "tenant_override_allowed": true
+        },
+        {
+          "id": 29,
+          "name": "login_lockout_duration_minutes",
+          "type": "integer",
+          "range": {
+            "id": 114,
+            "max": 120,
+            "min": 5
+          },
+          "scope": "per_tenant",
+          "default": "15",
+          "sensitive": false,
+          "description": "Duração do bloqueio temporário de login após atingir o número máximo de tentativas malsucedidas, em minutos.",
+          "tenant_override_allowed": true
+        },
+        {
+          "id": 30,
+          "name": "password_recovery_token_expiry_minutes",
+          "type": "integer",
+          "range": {
+            "id": 115,
+            "max": 1440,
+            "min": 15
+          },
+          "scope": "per_tenant",
+          "default": "60",
+          "sensitive": false,
+          "description": "Tempo de expiração do token de recuperação de senha em minutos. Define o período durante o qual o link de redefinição de senha permanece válido.",
+          "tenant_override_allowed": true
+        },
+        {
+          "id": 31,
+          "name": "email_service_provider",
+          "type": "string",
+          "scope": "global",
+          "default": "transactional_email_service",
+          "sensitive": false,
+          "description": "Identificador do provedor de serviço de envio de e-mail integrado à plataforma. Valor fixo: transactional_email_service (integração com serviço de e-mail transacional conforme escopo).",
+          "tenant_override_allowed": false
+        },
+        {
+          "id": 32,
+          "name": "email_from_address",
+          "type": "string",
+          "regex": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
+          "scope": "per_tenant",
+          "default": "noreply@plataforma.local",
+          "sensitive": false,
+          "description": "Endereço de e-mail de origem para envio de mensagens transacionais (recuperação de senha, notificações). Configurável por tenant para permitir personalização de marca.",
+          "tenant_override_allowed": true
+        },
+        {
+          "id": 33,
+          "name": "audit_log_retention_days",
+          "type": "integer",
+          "range": {
+            "id": 116,
+            "max": 2555,
+            "min": 30
+          },
+          "scope": "per_tenant",
+          "default": "365",
+          "sensitive": false,
+          "description": "Período de retenção de logs de auditoria em dias. Após este período, registros antigos podem ser arquivados ou excluídos conforme política de governança de dados.",
+          "tenant_override_allowed": true
+        },
+        {
+          "id": 34,
+          "name": "lgpd_data_minimization_enabled",
+          "type": "boolean",
+          "scope": "per_tenant",
+          "default": "true",
+          "sensitive": false,
+          "description": "Flag que ativa o modo de minimização de dados conforme LGPD. Quando ativo, restringe a coleta e armazenamento de dados pessoais ao mínimo necessário para operação da plataforma.",
+          "tenant_override_allowed": false
+        },
+        {
+          "id": 35,
+          "name": "task_title_max_length",
+          "type": "integer",
+          "range": {
+            "id": 117,
+            "max": 1000,
+            "min": 50
+          },
+          "scope": "per_tenant",
+          "default": "255",
+          "sensitive": false,
+          "description": "Comprimento máximo permitido para o título de uma tarefa em caracteres.",
+          "tenant_override_allowed": true
+        },
+        {
+          "id": 36,
+          "name": "task_description_max_length",
+          "type": "integer",
+          "range": {
+            "id": 118,
+            "max": 10000,
+            "min": 100
+          },
+          "scope": "per_tenant",
+          "default": "2000",
+          "sensitive": false,
+          "description": "Comprimento máximo permitido para a descrição de uma tarefa em caracteres.",
+          "tenant_override_allowed": true
+        },
+        {
+          "id": 37,
+          "name": "hierarchical_level_name_max_length",
+          "type": "integer",
+          "range": {
+            "id": 119,
+            "max": 500,
+            "min": 10
+          },
+          "scope": "per_tenant",
+          "default": "100",
+          "sensitive": false,
+          "description": "Comprimento máximo permitido para o nome de um nível hierárquico em caracteres.",
+          "tenant_override_allowed": true
+        },
+        {
+          "id": 38,
+          "name": "tenant_slug_format_regex",
+          "type": "string",
+          "regex": "^.{1,500}$",
+          "scope": "global",
+          "default": "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$",
+          "sensitive": false,
+          "description": "Expressão regular que define o formato permitido para o slug (identificador textual) de um tenant. Padrão: apenas letras minúsculas, números e hífens.",
+          "tenant_override_allowed": false
+        },
+        {
+          "id": 39,
+          "name": "rate_limit_login_requests_per_minute",
+          "type": "integer",
+          "range": {
+            "id": 120,
+            "max": 100,
+            "min": 1
+          },
+          "scope": "global",
+          "default": "10",
+          "sensitive": false,
+          "description": "Limite de requisições de login permitidas por minuto por endereço IP. Utilizado para proteção contra ataques de força bruta e enumeração de usuários.",
+          "tenant_override_allowed": false
+        },
+        {
+          "id": 40,
+          "name": "rate_limit_password_recovery_per_hour",
+          "type": "integer",
+          "range": {
+            "id": 121,
+            "max": 50,
+            "min": 1
+          },
+          "scope": "global",
+          "default": "5",
+          "sensitive": false,
+          "description": "Limite de requisições de recuperação de senha permitidas por hora por endereço de e-mail. Utilizado para proteção contra abuso do serviço de e-mail.",
+          "tenant_override_allowed": false
+        },
+        {
+          "id": 41,
+          "name": "api_request_timeout_seconds",
+          "type": "integer",
+          "range": {
+            "id": 122,
+            "max": 300,
+            "min": 5
+          },
+          "scope": "global",
+          "default": "30",
+          "sensitive": false,
+          "description": "Tempo máximo de espera para conclusão de uma requisição de API em segundos. Requisições que excedem este tempo são abortadas e retornam erro de timeout.",
+          "tenant_override_allowed": false
+        },
+        {
+          "id": 42,
+          "name": "database_connection_pool_size",
+          "type": "integer",
+          "range": {
+            "id": 123,
+            "max": 100,
+            "min": 5
+          },
+          "scope": "global",
+          "default": "20",
+          "sensitive": false,
+          "description": "Tamanho do pool de conexões com o banco de dados. Define o número máximo de conexões simultâneas mantidas abertas.",
+          "tenant_override_allowed": false
+        },
+        {
+          "id": 43,
+          "name": "cache_ttl_seconds",
+          "type": "integer",
+          "range": {
+            "id": 124,
+            "max": 3600,
+            "min": 60
+          },
+          "scope": "per_tenant",
+          "default": "300",
+          "sensitive": false,
+          "description": "Tempo de vida (TTL) dos itens armazenados em cache em segundos. Após este período, o item é invalidado e recarregado da fonte de dados.",
+          "tenant_override_allowed": true
+        },
+        {
+          "id": 44,
+          "name": "jwt_secret_key",
+          "type": "string",
+          "scope": "global",
+          "source": "vault_reference",
+          "default": "null",
+          "sensitive": true,
+          "description": "Chave secreta utilizada para assinatura e validação de tokens JWT de sessão. Armazenada em vault de segurança, nunca em texto simples no código ou configuração.",
+          "tenant_override_allowed": false
+        },
+        {
+          "id": 45,
+          "name": "jwt_expiry_minutes",
+          "type": "integer",
+          "range": {
+            "id": 125,
+            "max": 1440,
+            "min": 5
+          },
+          "scope": "per_tenant",
+          "default": "30",
+          "sensitive": false,
+          "description": "Tempo de expiração de tokens JWT em minutos. Define o período durante o qual um token de sessão permanece válido.",
+          "tenant_override_allowed": true
+        },
+        {
+          "id": 46,
+          "name": "https_only",
+          "type": "boolean",
+          "scope": "global",
+          "default": "true",
+          "sensitive": false,
+          "description": "Flag que força o uso exclusivo de HTTPS para todas as comunicações. Quando ativo, requisições HTTP são redirecionadas ou rejeitadas.",
+          "tenant_override_allowed": false
+        },
+        {
+          "id": 47,
+          "name": "cors_allowed_origins",
+          "type": "array[string]",
+          "scope": "global",
+          "default": "[]",
+          "sensitive": false,
+          "description": "Lista de origens (domínios) permitidas para requisições CORS. Utilizada para controlar acesso cross-origin à API.",
+          "tenant_override_allowed": false
+        }
+      ],
+      "result_type": {
+        "id": 48,
+        "name": "ConfigurationResolved",
+        "shape": "{ tenant_id: uuid, user_id: uuid, user_profile: enum, tenant_status: enum, user_status: enum, permission_variant: PermissionVariant, isolation_level: enum, config_values: { [key: string]: any }, resolved_at: timestamp, valid_until: timestamp }",
+        "description": "Estrutura de retorno contendo todas as configurações resolvidas para um tenant e usuário específicos. Inclui valores de todas as chaves de configuração aplicáveis, a variante de permissão ativa, metadados de resolução (timestamp, tenant_id, user_id) e flags de validação."
+      }
+    },
+    "pendencies": [
+      {
+        "id": 91,
+        "section": "definition",
+        "description": "Definição de estrutura exata de PermissionVariant não foi fornecida nos inputs. A chave 'permission_variant' no config_keys referencia este tipo, mas sua forma (quais campos, tipos, estrutura aninhada) não está especificada. Necessário para implementação do loader e validação de retorno.",
+        "resolutionOptions": [
+          {
+            "id": 92,
+            "text": "Consultar a definição de PermissionVariant do ASSET-060 (Variante de Permissão por Perfil) e incorporar sua estrutura exata como tipo de config_key 'permission_variant'"
+          },
+          {
+            "id": 93,
+            "text": "Definir PermissionVariant como um tipo genérico { endpoints: string[], fields: string[], actions: string[], modules: string[] } e deixar a estrutura detalhada para implementação"
+          },
+          {
+            "id": 94,
+            "text": "Criar um pendency separado no ASSET-060 para especificar a estrutura de PermissionVariant e referenciar esse pendency aqui"
+          }
+        ],
+        "recommendedOptionId": 92
+      },
+      {
+        "id": 95,
+        "section": "definition",
+        "description": "Mecanismo de hot_reload está definido como 'false' no params, mas não há especificação de como configurações são atualizadas em tempo de execução quando mudanças são feitas no banco de dados. Necessário para suportar atualizações de configuração sem reinicialização da aplicação.",
+        "resolutionOptions": [
+          {
+            "id": 96,
+            "text": "Implementar polling periódico (ex: a cada 5 minutos) para recarregar configurações do banco de dados e invalidar cache"
+          },
+          {
+            "id": 97,
+            "text": "Implementar event-driven reload: quando configuração é alterada, um evento é publicado e subscribers recarregam a configuração"
+          },
+          {
+            "id": 98,
+            "text": "Manter hot_reload = false e exigir reinicialização da aplicação para aplicar mudanças de configuração (mais simples, menos flexível)"
+          }
+        ],
+        "recommendedOptionId": 96
+      },
+      {
+        "id": 99,
+        "section": "flow",
+        "description": "Fluxo de resolução de configuração não especifica como lidar com falhas de conectividade ao banco de dados ou vault de segurança. Necessário para garantir resiliência e comportamento previsível em cenários de falha.",
+        "resolutionOptions": [
+          {
+            "id": 100,
+            "text": "Implementar retry com backoff exponencial (máx 3 tentativas) para consultas ao banco de dados; se todas falharem, retornar erro 503 Service Unavailable"
+          },
+          {
+            "id": 101,
+            "text": "Implementar fallback para cache local de última configuração conhecida como boa; se banco de dados falhar, usar cache com aviso de que dados podem estar desatualizados"
+          },
+          {
+            "id": 102,
+            "text": "Falhar rápido: se banco de dados ou vault não responder em 5 segundos, retornar erro 503 sem retry"
+          }
+        ],
+        "recommendedOptionId": 100
+      },
+      {
+        "id": 103,
+        "section": "rules",
+        "description": "Regra de isolamento de dados por tenant (id 66) não especifica como validar isolamento em operações de batch ou bulk. Necessário para garantir que operações em massa (ex: importação de dados, limpeza de logs) não violem isolamento.",
+        "resolutionOptions": [
+          {
+            "id": 104,
+            "text": "Todas as operações de batch devem incluir filtro WHERE tenant_id = ? e validar que nenhuma linha de outro tenant é afetada"
+          },
+          {
+            "id": 105,
+            "text": "Operações de batch devem ser executadas por tenant (loop sobre tenants) em vez de uma única operação global"
+          },
+          {
+            "id": 106,
+            "text": "Criar um pendency separado para especificar política de batch operations e referenciar aqui"
+          }
+        ],
+        "recommendedOptionId": 104
+      },
+      {
+        "id": 107,
+        "section": "non_functional_requirements",
+        "description": "Requisito de disponibilidade (id 78) especifica SLA de 99.9%, mas não há especificação de como falhas são detectadas, alertadas e remediadas. Necessário para operacionalizar o SLA.",
+        "resolutionOptions": [
+          {
+            "id": 108,
+            "text": "Implementar health check endpoint que verifica conectividade ao banco de dados e vault; monitoramento contínuo invoca health check a cada 30 segundos; alerta dispara se 2 checks consecutivos falham"
+          },
+          {
+            "id": 109,
+            "text": "Implementar circuit breaker: se taxa de erro do loader excede 5% em janela de 1 minuto, circuit abre e requisições são rejeitadas com 503 até que taxa de erro normalize"
+          },
+          {
+            "id": 110,
+            "text": "Criar runbook de operações especificando procedimentos de detecção, alerta e remediação de falhas do loader"
+          }
+        ],
+        "recommendedOptionId": 108
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 81,
+        "then": "Uma exceção ConfigurationValidationFailed é lançada com mensagem indicando que o valor está fora do range permitido",
+        "type": "unit",
+        "when": "O loader tenta carregar a configuração com valor 1000 (fora do range)",
+        "given": "Uma chave de configuração 'session_timeout_minutes' com range [5, 480] e valor padrão 30",
+        "scenario": "Validação de chave de configuração numérica com range",
+        "target_section": "definition"
+      },
+      {
+        "id": 82,
+        "then": "O slug é aceito como válido e a configuração é carregada com sucesso",
+        "type": "unit",
+        "when": "O loader valida o slug contra o regex",
+        "given": "Uma chave de configuração 'tenant_slug_format_regex' com padrão ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$ e valor 'meu-tenant'",
+        "scenario": "Validação de chave de configuração textual com regex",
+        "target_section": "definition"
+      },
+      {
+        "id": 83,
+        "then": "ConfigurationResolved é retornado contendo tenant_id, user_id, user_profile='colaborador', permission_variant correspondente ao perfil colaborador, e todas as chaves de configuração aplicáveis ao tenant",
+        "type": "integration",
+        "when": "O loader é invocado com o contexto de autenticação do usuário",
+        "given": "Um tenant ativo com id 'abc123', um usuário ativo com perfil 'colaborador' e token JWT válido",
+        "scenario": "Resolução completa de configuração para usuário colaborador",
+        "target_section": "flow"
+      },
+      {
+        "id": 84,
+        "then": "Uma exceção TenantInactive é lançada e a requisição é rejeitada com erro 403 Forbidden",
+        "type": "integration",
+        "when": "O loader tenta resolver a configuração para o usuário",
+        "given": "Um tenant com status 'inativo' e um usuário pertencente a este tenant",
+        "scenario": "Rejeição de requisição com tenant inativo",
+        "target_section": "flow"
+      },
+      {
+        "id": 85,
+        "then": "O valor de jwt_secret_key não aparece em texto simples no ConfigurationResolved; em seu lugar, uma referência a vault é incluída ou o campo é omitido",
+        "type": "security",
+        "when": "O loader carrega a configuração e monta o ConfigurationResolved",
+        "given": "Uma chave de configuração 'jwt_secret_key' marcada como sensível (sensitive: true)",
+        "scenario": "Proteção de valores sensíveis em ConfigurationResolved",
+        "target_section": "definition"
+      },
+      {
+        "id": 86,
+        "then": "A requisição é rejeitada com erro 403 Forbidden; o usuário acessa exclusivamente as configurações de seu próprio tenant",
+        "type": "security",
+        "when": "Um usuário de tenant_a tenta acessar configurações de tenant_b manipulando parâmetros de requisição",
+        "given": "Dois tenants diferentes (tenant_a e tenant_b) com configurações distintas",
+        "scenario": "Isolamento de dados entre tenants",
+        "target_section": "rules"
+      },
+      {
+        "id": 87,
+        "then": "p99 de latência permanece <= 50ms; nenhuma requisição excede 100ms; taxa de erro é 0%",
+        "type": "performance",
+        "when": "O loader processa 100 requisições de resolução em paralelo",
+        "given": "Um tenant com 100 usuários ativos simultâneos, cada um requisitando resolução de configuração",
+        "scenario": "Latência de resolução de configuração sob carga",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 88,
+        "then": "O retorno contém exatamente os campos esperados: tenant_id, user_id, user_profile, tenant_status, user_status, permission_variant, isolation_level, config_values (map de chaves para valores), resolved_at (timestamp), valid_until (timestamp)",
+        "type": "contract",
+        "when": "O loader retorna ConfigurationResolved",
+        "given": "Uma invocação bem-sucedida do loader com parâmetros válidos",
+        "scenario": "Contrato de retorno do loader de configuração",
+        "target_section": "definition"
+      },
+      {
+        "id": 89,
+        "then": "O valor 300 é utilizado como padrão e incluído no ConfigurationResolved",
+        "type": "unit",
+        "when": "O loader carrega a configuração",
+        "given": "Uma chave de configuração 'cache_ttl_seconds' com valor padrão 300 e nenhuma configuração explícita para o tenant",
+        "scenario": "Aplicação de valor padrão para chave de configuração não configurada",
+        "target_section": "definition"
+      },
+      {
+        "id": 90,
+        "then": "A variante 'Administrador do Tenant' é ativada, contendo endpoints de gerenciamento de usuários, tarefas e níveis hierárquicos, e campos de formulário correspondentes",
+        "type": "integration",
+        "when": "O loader resolve a variante de permissão",
+        "given": "Um usuário com perfil 'administrador_tenant' autenticado em um tenant ativo",
+        "scenario": "Resolução de variante de permissão para administrador de tenant",
+        "target_section": "flow"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 75,
+        "target": "p99 <= 50ms para resolução completa de configuração, mesmo em tenants com até 5.000 usuários ativos",
+        "category": "performance",
+        "requirement": "Carregamento e resolução de configuração deve ser concluído em tempo adequado para não impactar a latência de requisições HTTP.",
+        "verification": "Testes de performance medem latência do loader com diferentes tamanhos de tenant. Monitoramento em produção rastreia p99 de latência de resolução."
+      },
+      {
+        "id": 76,
+        "target": "Suportar até 50 tenants, 5.000 usuários totais, 100 usuários por tenant no primeiro ano de operação, com tempo de resolução mantido em p99 <= 50ms",
+        "category": "scalability",
+        "requirement": "Modelo de configuração deve suportar crescimento de tenants e usuários sem degradação de performance.",
+        "verification": "Testes de carga simulam 50 tenants com 100 usuários cada. Monitoramento em produção rastreia performance conforme volume cresce."
+      },
+      {
+        "id": 77,
+        "target": "100% de valores sensíveis armazenados em vault de segurança com acesso controlado. Transmissão exclusivamente via HTTPS com TLS 1.2+. Nenhum valor sensível em logs ou respostas de API.",
+        "category": "security",
+        "requirement": "Valores sensíveis de configuração (chaves criptográficas, senhas) devem ser armazenados e transmitidos de forma segura, nunca em texto simples.",
+        "verification": "Auditoria de código verifica que sensitive: true é aplicado a todas as chaves sensíveis. Testes de segurança verificam que valores sensíveis não aparecem em logs ou respostas. Scanning de segurança verifica conformidade com OWASP."
+      },
+      {
+        "id": 78,
+        "target": "99.9% de disponibilidade (SLA de 43 minutos de downtime por mês). Tempo de recuperação de falha <= 5 minutos.",
+        "category": "availability",
+        "requirement": "Serviço de resolução de configuração deve estar disponível com alta disponibilidade, pois sua indisponibilidade bloqueia acesso de todos os usuários à plataforma.",
+        "verification": "Monitoramento contínuo rastreia disponibilidade do loader. Testes de failover verificam que falha de um nó não impacta disponibilidade geral. Alertas disparam se disponibilidade cai abaixo de 99.9%."
+      },
+      {
+        "id": 79,
+        "target": "100% de invocações do loader registradas em log com tenant_id, user_id, resultado, timestamp. Métricas de latência, taxa de erro e taxa de sucesso coletadas e expostas em dashboard.",
+        "category": "observability",
+        "requirement": "Todas as operações de resolução de configuração devem ser rastreáveis através de logs estruturados e métricas de observabilidade.",
+        "verification": "Logs estruturados contêm todos os campos obrigatórios. Dashboard de observabilidade exibe métricas em tempo real. Alertas disparam se taxa de erro excede 1%."
+      },
+      {
+        "id": 80,
+        "target": "Cache em nível de aplicação reduz consultas ao banco de dados em 80%. Índices de banco de dados otimizam consultas de resolução. Sem necessidade de infraestrutura adicional além do banco de dados existente.",
+        "category": "cost",
+        "requirement": "Modelo de configuração deve ser otimizado para minimizar custos de armazenamento e processamento.",
+        "verification": "Monitoramento rastreia taxa de cache hit. Análise de planos de execução SQL verifica que índices são utilizados. Custo de infraestrutura é rastreado e comparado com baseline."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 10,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T02:11:22.686Z",
+  "updatedAt": null
+}

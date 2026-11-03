@@ -1,0 +1,285 @@
+{
+  "id": 23592,
+  "projectId": 4118,
+  "type": "feature_definition",
+  "content": {
+    "pendencies": [
+      {
+        "id": 34,
+        "section": "functional",
+        "description": "Qual deve ser o tempo de expiração do token de sessão após o login bem-sucedido? Deve haver distinção entre sessões com e sem a opção 'Manter conectado' (remember me)?",
+        "resolutionOptions": [
+          {
+            "id": 35,
+            "text": "Definir expiração fixa de 8 horas para o token de sessão, sem suporte à opção de manter conectado nesta versão."
+          },
+          {
+            "id": 36,
+            "text": "Definir expiração de 1 hora para o token de acesso com refresh token de 7 dias, sem opção de manter conectado nesta versão."
+          },
+          {
+            "id": 37,
+            "text": "Implementar opção de manter conectado: token de curta duração (1 hora) com refresh token de 30 dias quando o usuário marcar a opção, e sessão de 8 horas sem refresh quando não marcar."
+          }
+        ],
+        "recommendedOptionId": 36
+      },
+      {
+        "id": 38,
+        "section": "functional",
+        "description": "Qual deve ser o número máximo de tentativas de login malsucedidas consecutivas antes do bloqueio temporário, e qual deve ser a duração desse bloqueio?",
+        "resolutionOptions": [
+          {
+            "id": 39,
+            "text": "Bloquear após 5 tentativas malsucedidas consecutivas, com bloqueio temporário de 15 minutos."
+          },
+          {
+            "id": 40,
+            "text": "Bloquear após 10 tentativas malsucedidas consecutivas, com bloqueio temporário de 30 minutos."
+          },
+          {
+            "id": 41,
+            "text": "Bloquear após 5 tentativas malsucedidas consecutivas, com bloqueio progressivo: 5 minutos na primeira ocorrência, dobrando a cada novo bloqueio até o máximo de 60 minutos."
+          }
+        ],
+        "recommendedOptionId": 39
+      },
+      {
+        "id": 42,
+        "section": "functional",
+        "description": "Como o sistema deve identificar o tenant do usuário no momento do login? O e-mail é suficiente para determinar o tenant (assumindo unicidade global de e-mail), ou o usuário deve informar algum identificador adicional do tenant (como subdomínio ou código da organização)?",
+        "resolutionOptions": [
+          {
+            "id": 43,
+            "text": "O e-mail é suficiente para identificar o tenant, pois o e-mail é único por tenant e o sistema resolve o vínculo automaticamente."
+          },
+          {
+            "id": 44,
+            "text": "O usuário acessa a plataforma por um subdomínio ou URL específico do tenant (ex.: empresa.chronostasks.com), e o tenant é identificado pela URL de acesso, não pelo e-mail."
+          },
+          {
+            "id": 45,
+            "text": "O usuário informa um código ou identificador da organização no formulário de login, além de e-mail e senha."
+          }
+        ],
+        "recommendedOptionId": 44
+      },
+      {
+        "id": 46,
+        "section": "functional",
+        "description": "A tela de login deve exibir link direto para o fluxo de recuperação de senha? Se sim, o link deve redirecionar para uma página separada ou abrir um modal/painel na mesma tela?",
+        "resolutionOptions": [
+          {
+            "id": 47,
+            "text": "Exibir link 'Esqueci minha senha' na tela de login que redireciona para uma página separada de recuperação de senha."
+          },
+          {
+            "id": 48,
+            "text": "Exibir link 'Esqueci minha senha' na tela de login que abre um modal ou painel na mesma tela para iniciar o fluxo de recuperação."
+          },
+          {
+            "id": 49,
+            "text": "Não exibir link de recuperação de senha na tela de login nesta versão; o usuário deve contatar o administrador do tenant."
+          }
+        ],
+        "recommendedOptionId": 47
+      },
+      {
+        "id": 50,
+        "section": "non-functional",
+        "description": "Qual algoritmo e configuração de hash devem ser utilizados para armazenamento seguro das senhas dos usuários (por exemplo, bcrypt com custo 12, argon2id com parâmetros específicos)?",
+        "resolutionOptions": [
+          {
+            "id": 51,
+            "text": "Utilizar bcrypt com fator de custo 12 como algoritmo padrão de hash de senhas."
+          },
+          {
+            "id": 52,
+            "text": "Utilizar argon2id com parâmetros recomendados pelo OWASP (memória mínima de 19 MiB, 2 iterações, 1 thread de paralelismo) como algoritmo padrão de hash de senhas."
+          }
+        ],
+        "recommendedOptionId": 52
+      }
+    ],
+    "functional_requirements": [
+      {
+        "group": {
+          "id": 1,
+          "name": "Formulário de Login",
+          "items": [
+            {
+              "id": 2,
+              "description": "Exibir formulário de login contendo campos de endereço de e-mail e senha para que o usuário possa iniciar o processo de autenticação."
+            },
+            {
+              "id": 3,
+              "description": "Validar o preenchimento dos campos de e-mail e senha antes de submeter o formulário, exibindo mensagem de erro específica para cada campo obrigatório não preenchido."
+            },
+            {
+              "id": 4,
+              "description": "Validar o formato do endereço de e-mail informado no formulário de login, rejeitando entradas que não estejam em formato válido antes de processar a autenticação."
+            },
+            {
+              "id": 5,
+              "description": "Permitir que o usuário visualize ou oculte o conteúdo do campo de senha durante o preenchimento do formulário de login, por meio de controle de alternância dedicado."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 6,
+          "name": "Processamento de Autenticação",
+          "items": [
+            {
+              "id": 7,
+              "description": "Verificar as credenciais informadas (e-mail e senha) contra os registros do tenant correspondente, autenticando o usuário somente quando ambas estiverem corretas e o usuário estiver ativo."
+            },
+            {
+              "id": 8,
+              "description": "Identificar o tenant ao qual o usuário pertence com base no e-mail informado e vincular a sessão autenticada exclusivamente a esse tenant, garantindo o isolamento de dados entre organizações."
+            },
+            {
+              "id": 9,
+              "description": "Impedir o login de usuários com status inativo, retornando mensagem de erro adequada que informe que o acesso está bloqueado sem revelar detalhes internos do sistema."
+            },
+            {
+              "id": 10,
+              "description": "Retornar mensagem de erro genérica e não discriminatória quando as credenciais informadas forem inválidas, sem indicar se o e-mail ou a senha está incorreto individualmente, a fim de evitar enumeração de usuários."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 11,
+          "name": "Gestão de Sessão",
+          "items": [
+            {
+              "id": 12,
+              "description": "Emitir token de sessão autenticada ao usuário após login bem-sucedido, contendo as informações necessárias para identificar o usuário e o tenant em requisições subsequentes."
+            },
+            {
+              "id": 13,
+              "description": "Definir tempo de expiração para o token de sessão, encerrando automaticamente a sessão após o período de inatividade ou expiração configurado."
+            },
+            {
+              "id": 14,
+              "description": "Redirecionar o usuário autenticado para a tela principal da plataforma correspondente ao seu tenant após o login bem-sucedido."
+            },
+            {
+              "id": 15,
+              "description": "Permitir que o usuário encerre sua sessão explicitamente por meio de ação de logout, invalidando o token de sessão ativo imediatamente."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 16,
+          "name": "Controle de Tentativas de Login",
+          "items": [
+            {
+              "id": 17,
+              "description": "Registrar o número de tentativas de login malsucedidas consecutivas por combinação de e-mail e tenant, aplicando mecanismo de proteção após atingir o limite definido."
+            },
+            {
+              "id": 18,
+              "description": "Bloquear temporariamente novas tentativas de login para o usuário após atingir o número máximo de tentativas malsucedidas consecutivas, exibindo mensagem informativa sobre o bloqueio e o tempo de espera."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 19,
+          "name": "Extensibilidade para SSO e OAuth",
+          "items": [
+            {
+              "id": 20,
+              "description": "Estruturar o módulo de autenticação de forma a permitir a adição futura de provedores externos de identidade via SSO/OAuth (como Google e Microsoft) sem necessidade de reestruturação significativa da arquitetura."
+            },
+            {
+              "id": 21,
+              "description": "Abstrair o mecanismo de autenticação por meio de interface ou camada de serviço desacoplada, de modo que a autenticação por e-mail e senha e futuras estratégias externas coexistam sem conflito."
+            }
+          ]
+        }
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "group": {
+          "id": 22,
+          "name": "Segurança e Conformidade",
+          "items": [
+            {
+              "id": 23,
+              "description": "Armazenar senhas dos usuários exclusivamente em formato de hash seguro utilizando algoritmo resistente a ataques de força bruta (por exemplo, bcrypt ou argon2id), nunca em texto simples ou formato reversível."
+            },
+            {
+              "id": 24,
+              "description": "Transmitir todas as comunicações do fluxo de autenticação exclusivamente por meio de protocolo HTTPS, garantindo a confidencialidade das credenciais em trânsito."
+            },
+            {
+              "id": 25,
+              "description": "Registrar em log de auditoria toda tentativa de login, bem-sucedida ou malsucedida, incluindo identificação do usuário, tenant, timestamp e resultado da operação, em conformidade com os requisitos de rastreabilidade da plataforma."
+            },
+            {
+              "id": 26,
+              "description": "Garantir que os dados pessoais do usuário tratados no fluxo de autenticação (e-mail) estejam em conformidade com a LGPD, aplicando princípios de minimização de dados e proteção das informações pessoais."
+            },
+            {
+              "id": 27,
+              "description": "Garantir que a sessão autenticada de um usuário esteja estritamente vinculada ao seu tenant, impedindo qualquer acesso cruzado a dados ou funcionalidades de outras organizações."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 28,
+          "name": "Desempenho",
+          "items": [
+            {
+              "id": 29,
+              "description": "Processar a autenticação do usuário e retornar a resposta (sucesso ou erro) em tempo adequado, mesmo sob carga de até 5.000 usuários ativos simultâneos na plataforma."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 30,
+          "name": "Usabilidade e Responsividade",
+          "items": [
+            {
+              "id": 31,
+              "description": "Renderizar a tela de login de forma responsiva e adaptativa, garantindo usabilidade adequada em dispositivos móveis (smartphones e tablets) e em desktops."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 32,
+          "name": "Disponibilidade",
+          "items": [
+            {
+              "id": 33,
+              "description": "Garantir que o serviço de autenticação esteja disponível com alta disponibilidade, dado que seu indisponibilidade impede o acesso de todos os usuários à plataforma."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 4,
+  "sourceType": "feature",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-10T20:36:41.950Z",
+  "updatedAt": null
+}

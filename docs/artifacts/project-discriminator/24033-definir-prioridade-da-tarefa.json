@@ -1,0 +1,109 @@
+{
+  "id": 24033,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 2,
+        "name": "Domínio funcional ou técnico primário atendido pelo motor de processamento",
+        "value": [
+          "validation"
+        ],
+        "method": "user-input",
+        "reasoning": "O campo de prioridade é obrigatório no formulário de criação de tarefa, impedindo o registro de uma nova tarefa sem que um nível de prioridade seja selecionado, caracterizando validação.",
+        "confidence": 0.7614,
+        "context_element_id": 2679
+      },
+      {
+        "id": 7,
+        "name": "Identidade visual do produto ou marca que o design system materializa",
+        "value": [
+          "diferença visual",
+          "colors, ícones, rótulos textuais ou uma combinação desses elementos"
+        ],
+        "method": "user-input",
+        "reasoning": "A visualização das tarefas em lista, Kanban e detalhe da tarefa usa cor, ícone ou rótulo para distinguir os níveis de prioridade, facilitando a identificação imediata de demandas críticas.\nA visualização dos níveis de prioridade deve ser baseada em cores, ícones, rótulos textuais ou uma combinação desses elementos.",
+        "confidence": 0.8024,
+        "context_element_id": 2731
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 9,
+        "name": "Configurar filas de prioridade para processar eventos críticos primeiro, estabelecendo políticas de priorização baseadas em SLA",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem prioridade definida, a equipe reagiria ao que aparece primeiro, sem saber o que vale mais.",
+        "confidence": 0.8379,
+        "context_element_id": 2861
+      },
+      {
+        "id": 10,
+        "name": "Configurar o escalonamento de recursos com políticas FIFO, de prioridade ou baseadas em deadline conforme a criticidade das operações",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Prioridade definida manualmente não se confunde com a classificação automática, e a ordem crescente garante que a prioridade mais crítica seja processada primeiro.\nO mecanismo de destaque visual de tarefas críticas ou atrasadas é configurado para processar tarefas com prioridade elevada, um uso de scheduling.\nO nível de prioridade atribuído à tarefa é exibido na visualização em lista tabular, permitindo identificar a criticidade da atividade rapidamente.",
+        "confidence": 0.765,
+        "context_element_id": 2870
+      },
+      {
+        "id": 16,
+        "name": "Implemente operações em lote para permitir que os usuários executem múltiplas ações semelhantes simultaneamente com uma única confirmação",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Repetição de confirmação em cada tarefa atinge o limite de 5.000 usuários ativos e 10.000 tarefas por tenant, causando espera e frustração.",
+        "confidence": 0.8791,
+        "context_element_id": 3044
+      },
+      {
+        "id": 17,
+        "name": "Implemente operabilidade por meio de interfaces intuitivas com padrões consistentes, navegação clara e fluxos de trabalho otimizados",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem cores e rótulos visíveis, o usuário com dificuldade de distinção de cores não consegue identificar os níveis de prioridade.",
+        "confidence": 0.889,
+        "context_element_id": 3051
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 22,
+        "name": "Escopo de Toggle",
+        "value": "nível global",
+        "method": "internal-inference",
+        "reasoning": "Os níveis de prioridade são fixos e globais para todos os tenants nesta versão, sem configuração por tenant.",
+        "confidence": 0.9385,
+        "context_element_id": 4459
+      },
+      {
+        "id": 30,
+        "name": "Acesso de Modificação",
+        "value": "autosserviço",
+        "method": "user-input",
+        "reasoning": "Os colaboradores não autorizados não têm permissão para alterar a prioridade da tarefa, o que indica que a alteração é feita por meio de self-service.",
+        "confidence": 0.8666,
+        "context_element_id": 5020
+      },
+      {
+        "id": 32,
+        "name": "Personalização Visual",
+        "value": "somente tema",
+        "method": "user-input",
+        "reasoning": "A cor de destaque usada para diferenciar os níveis de prioridade nos cartões Kanban e na lista é a única interface customizada.",
+        "confidence": 0.7786,
+        "context_element_id": 5057
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 4,
+  "active": true,
+  "sourceId": 23611,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:42:53.755Z",
+  "updatedAt": null
+}

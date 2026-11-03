@@ -1,0 +1,313 @@
+{
+  "id": 23618,
+  "projectId": 4118,
+  "type": "feature_definition",
+  "content": {
+    "pendencies": [
+      {
+        "id": 37,
+        "section": "functional",
+        "description": "Quem tem permissão para editar uma tarefa existente? Qualquer usuário autenticado do tenant pode editar qualquer tarefa, ou apenas o criador da tarefa e o responsável atual têm essa permissão? A definição deve ser consistente com a política de permissões adotada nas features de prioridade, prazo e atribuição.",
+        "resolutionOptions": [
+          {
+            "id": 38,
+            "text": "Qualquer usuário autenticado e ativo do tenant pode editar qualquer tarefa, independentemente de ser o criador ou o responsável, alinhado com a política adotada nas features de prioridade e prazo."
+          },
+          {
+            "id": 39,
+            "text": "Apenas o criador da tarefa ou o responsável atual podem editar a tarefa; outros colaboradores do tenant não têm permissão para modificar seus atributos."
+          },
+          {
+            "id": 40,
+            "text": "Apenas o criador da tarefa pode editar todos os campos; o responsável atual pode editar apenas o status e a descrição."
+          }
+        ],
+        "recommendedOptionId": 38
+      },
+      {
+        "id": 41,
+        "section": "functional",
+        "description": "É permitido editar uma tarefa que já está com status 'Concluído'? Se sim, a edição de uma tarefa concluída deve reabri-la automaticamente (retornar ao status anterior) ou manter o status 'Concluído' mesmo após a edição de outros campos?",
+        "resolutionOptions": [
+          {
+            "id": 42,
+            "text": "Permitir a edição de tarefas concluídas sem alterar o status automaticamente; o usuário deve alterar o status manualmente se desejar reabrir a tarefa."
+          },
+          {
+            "id": 43,
+            "text": "Bloquear a edição de tarefas com status 'Concluído'; o usuário deve primeiro reabrir a tarefa (alterar o status) antes de poder editar seus demais atributos."
+          },
+          {
+            "id": 44,
+            "text": "Permitir a edição de tarefas concluídas, mas exibir aviso informativo ao usuário indicando que a tarefa está concluída antes de abrir o formulário de edição."
+          }
+        ],
+        "recommendedOptionId": 42
+      },
+      {
+        "id": 45,
+        "section": "functional",
+        "description": "Ao editar o prazo de uma tarefa já existente, o sistema deve permitir definir uma data limite anterior à data atual (prazo retroativo)? Por exemplo, ao corrigir o prazo de uma tarefa que já estava em andamento antes de ser cadastrada no sistema.",
+        "resolutionOptions": [
+          {
+            "id": 46,
+            "text": "Permitir a definição de datas retroativas na edição de tarefas existentes, exibindo apenas um aviso informativo ao usuário sem bloquear a operação."
+          },
+          {
+            "id": 47,
+            "text": "Não permitir datas retroativas nem na edição; o prazo deve ser sempre igual ou posterior à data atual em qualquer operação."
+          },
+          {
+            "id": 48,
+            "text": "Permitir datas retroativas na edição sem nenhum aviso adicional, tratando a data como informação histórica válida."
+          }
+        ],
+        "recommendedOptionId": 46
+      },
+      {
+        "id": 49,
+        "section": "functional",
+        "description": "Após a edição bem-sucedida da tarefa, qual deve ser o comportamento de navegação do sistema? O usuário é redirecionado para a visualização detalhada da tarefa editada, retorna à tela anterior (lista ou Kanban) ou permanece no formulário de edição?",
+        "resolutionOptions": [
+          {
+            "id": 50,
+            "text": "Redirecionar o usuário para a visualização detalhada da tarefa editada após a confirmação de sucesso."
+          },
+          {
+            "id": 51,
+            "text": "Retornar o usuário à tela anterior (lista ou Kanban) após a confirmação de sucesso, com as alterações refletidas na listagem."
+          },
+          {
+            "id": 52,
+            "text": "Manter o usuário no formulário de edição após a confirmação de sucesso, exibindo os dados atualizados e a mensagem de sucesso."
+          }
+        ],
+        "recommendedOptionId": 50
+      },
+      {
+        "id": 53,
+        "section": "functional",
+        "description": "Existe um limite máximo de caracteres para o título e para a descrição da tarefa na edição? Os limites devem ser consistentes com os definidos na feature Criar Tarefa.",
+        "resolutionOptions": [
+          {
+            "id": 54,
+            "text": "Definir limite de 150 caracteres para o título e 2.000 caracteres para a descrição, alinhado com os limites da feature Criar Tarefa."
+          },
+          {
+            "id": 55,
+            "text": "Definir limite de 255 caracteres para o título e 5.000 caracteres para a descrição, alinhado com os limites da feature Criar Tarefa."
+          },
+          {
+            "id": 56,
+            "text": "Não definir limite máximo de caracteres para título e descrição nesta versão, deixando a restrição para a camada de banco de dados."
+          }
+        ],
+        "recommendedOptionId": 54
+      },
+      {
+        "id": 57,
+        "section": "non-functional",
+        "description": "A atualização dos dados da tarefa editada deve ser refletida em tempo real na interface de outros usuários que estejam visualizando o mesmo quadro Kanban ou lista simultaneamente? O sistema deve suportar atualização em tempo real (WebSocket/SSE) ou a atualização ocorre apenas no próximo carregamento da página pelo outro usuário?",
+        "resolutionOptions": [
+          {
+            "id": 58,
+            "text": "Não implementar atualização em tempo real para outros usuários nesta versão; a alteração é refletida para o usuário executor imediatamente, e os demais visualizam a mudança no próximo carregamento ou atualização manual da página."
+          },
+          {
+            "id": 59,
+            "text": "Implementar atualização em tempo real via WebSocket ou Server-Sent Events (SSE), propagando as alterações da tarefa editada para todos os usuários que estejam visualizando o mesmo quadro ou lista simultaneamente."
+          }
+        ],
+        "recommendedOptionId": 58
+      }
+    ],
+    "functional_requirements": [
+      {
+        "group": {
+          "id": 1,
+          "name": "Acesso e Exibição do Formulário de Edição",
+          "items": [
+            {
+              "id": 2,
+              "description": "Permitir que o usuário acesse o formulário de edição de uma tarefa existente a partir das visualizações de lista, Kanban e detalhe da tarefa."
+            },
+            {
+              "id": 3,
+              "description": "Exibir o formulário de edição com os valores atuais da tarefa pré-preenchidos em todos os campos editáveis, incluindo título, descrição, responsável, prioridade, status e data limite."
+            },
+            {
+              "id": 4,
+              "description": "Exibir campo editável de título da tarefa no formulário de edição, permitindo ao usuário modificar o texto identificador da atividade."
+            },
+            {
+              "id": 5,
+              "description": "Exibir campo editável de descrição da tarefa no formulário de edição, permitindo ao usuário modificar ou adicionar o detalhamento do contexto, objetivo ou instruções da atividade."
+            },
+            {
+              "id": 6,
+              "description": "Exibir campo editável de responsável pela tarefa no formulário de edição, permitindo ao usuário selecionar um colaborador ativo do tenant como novo responsável pela execução."
+            },
+            {
+              "id": 7,
+              "description": "Exibir campo editável de prioridade da tarefa no formulário de edição, apresentando os níveis de prioridade disponíveis no sistema para alteração pelo usuário."
+            },
+            {
+              "id": 8,
+              "description": "Exibir campo editável de data limite para conclusão da tarefa no formulário de edição, permitindo ao usuário modificar, definir ou remover o prazo da atividade."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 9,
+          "name": "Validações do Formulário de Edição",
+          "items": [
+            {
+              "id": 10,
+              "description": "Validar o preenchimento de todos os campos obrigatórios antes de permitir o salvamento da edição, exibindo mensagens de erro específicas por campo não preenchido ou inválido."
+            },
+            {
+              "id": 11,
+              "description": "Validar que o título da tarefa não esteja em branco e não exceda o limite máximo de caracteres definido pelo sistema, exibindo mensagem de erro específica em caso de violação."
+            },
+            {
+              "id": 12,
+              "description": "Validar que o responsável selecionado na edição é um colaborador ativo pertencente ao mesmo tenant do usuário que está editando a tarefa, impedindo a atribuição a usuários inativos ou de outras organizações."
+            },
+            {
+              "id": 13,
+              "description": "Validar que a prioridade selecionada na edição corresponde a um dos valores válidos definidos pelo sistema, rejeitando entradas fora do conjunto permitido."
+            },
+            {
+              "id": 14,
+              "description": "Validar que a data limite informada na edição é uma data válida no calendário, rejeitando entradas em formato inválido ou datas inexistentes antes de processar o salvamento."
+            },
+            {
+              "id": 15,
+              "description": "Exibir mensagem de erro clara e descritiva ao usuário quando a edição não puder ser concluída por falha de validação ou erro do sistema."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 16,
+          "name": "Persistência e Confirmação da Edição",
+          "items": [
+            {
+              "id": 17,
+              "description": "Persistir as alterações realizadas na tarefa vinculada ao tenant do usuário editor, garantindo o isolamento de dados entre organizações e que as modificações não sejam acessíveis por outros tenants."
+            },
+            {
+              "id": 18,
+              "description": "Registrar automaticamente a data e hora da última edição da tarefa no momento da persistência, sem necessidade de intervenção do usuário."
+            },
+            {
+              "id": 19,
+              "description": "Registrar o usuário executor da edição no momento da persistência, associando a autoria da modificação ao colaborador que realizou a alteração."
+            },
+            {
+              "id": 20,
+              "description": "Exibir mensagem de confirmação de sucesso ao usuário após a edição da tarefa ser concluída com êxito."
+            },
+            {
+              "id": 21,
+              "description": "Refletir imediatamente as alterações salvas em todas as visualizações da plataforma (lista, Kanban e detalhe da tarefa) após a conclusão bem-sucedida da edição, sem necessidade de recarregar a página manualmente."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 22,
+          "name": "Controle de Acesso à Edição",
+          "items": [
+            {
+              "id": 23,
+              "description": "Permitir que qualquer usuário autenticado e ativo do tenant, independentemente do nível hierárquico, acesse e utilize a funcionalidade de edição de tarefas."
+            },
+            {
+              "id": 24,
+              "description": "Impedir que usuários não autenticados ou pertencentes a tenants inativos acessem ou executem a edição de tarefas na plataforma."
+            },
+            {
+              "id": 25,
+              "description": "Impedir que um usuário de um tenant edite tarefas pertencentes a outro tenant, garantindo o isolamento de dados entre organizações."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 26,
+          "name": "Cancelamento da Edição",
+          "items": [
+            {
+              "id": 27,
+              "description": "Permitir que o usuário cancele a edição em andamento sem salvar as alterações, retornando ao estado anterior da tarefa sem nenhuma modificação persistida."
+            },
+            {
+              "id": 28,
+              "description": "Exibir solicitação de confirmação ao usuário quando ele tentar cancelar a edição após ter modificado algum campo, prevenindo a perda acidental de alterações não salvas."
+            }
+          ]
+        }
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "group": {
+          "id": 29,
+          "name": "Segurança e Conformidade",
+          "items": [
+            {
+              "id": 30,
+              "description": "Registrar em log de auditoria toda operação de edição de tarefa, incluindo identificação do usuário executor, tenant, timestamp, identificação da tarefa e os campos alterados com seus valores anteriores e novos, em conformidade com os requisitos de rastreabilidade da plataforma."
+            },
+            {
+              "id": 31,
+              "description": "Garantir que os dados da tarefa editada em um tenant não sejam visíveis, acessíveis ou interferentes nos dados de nenhum outro tenant, respeitando o isolamento multi-tenant."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 32,
+          "name": "Usabilidade e Responsividade",
+          "items": [
+            {
+              "id": 33,
+              "description": "Renderizar o formulário de edição de tarefa de forma responsiva e adaptativa, garantindo usabilidade adequada em dispositivos móveis (smartphones e tablets) e em desktops."
+            },
+            {
+              "id": 34,
+              "description": "Apresentar o seletor de data limite em formato de calendário visual (date picker) compatível com os principais navegadores e dispositivos, facilitando a seleção intuitiva da data pelo usuário durante a edição."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 35,
+          "name": "Desempenho",
+          "items": [
+            {
+              "id": 36,
+              "description": "Concluir a operação de persistência das alterações da tarefa e retornar a confirmação ao usuário em tempo adequado, mesmo sob carga de até 5.000 usuários ativos e 10.000 tarefas por tenant na plataforma."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 13,
+  "sourceType": "feature",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-10T21:26:53.412Z",
+  "updatedAt": null
+}

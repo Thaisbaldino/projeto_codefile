@@ -1,0 +1,297 @@
+{
+  "id": 23930,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 31,
+        "name": "Validação de Entrada e Injeção",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "A consulta ao banco de dados é executada com prepared statements, e o campo de pesquisa com valor ''; DROP TABLE users; --' é tratado como string literal, sem tabela deletada.",
+        "confidence": 0.8459,
+        "context_element_id": 2825
+      },
+      {
+        "id": 32,
+        "name": "Configuração de Segurança",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem limite de origem, qualquer script externo poderia ser executado, permitindo que o site se espalhe por rede e atinja dados sensíveis.",
+        "confidence": 0.7345,
+        "context_element_id": 2828
+      }
+    ],
+    "attributes": [
+      {
+        "id": 16,
+        "name": "Profundidade esperada da estrutura hierárquica",
+        "value": [
+          "5-or-more-levels",
+          "3 levels"
+        ],
+        "method": "user-input",
+        "reasoning": "A estrutura hierárquica de níveis de carga é de 5 ou mais níveis.\nO status de pipeline é organizado em três níveis: A Fazer, Em Andamento e Concluído.",
+        "confidence": 0.7837,
+        "context_element_id": 2712
+      },
+      {
+        "id": 17,
+        "name": "Entidade de dados primária manipulada ou exibida na página",
+        "value": [
+          "tickets"
+        ],
+        "method": "user-input",
+        "reasoning": "A página de tarefas exibe o título e a descrição de tickets, o entidade principal manipulada.",
+        "confidence": 0.7801,
+        "context_element_id": 2720
+      },
+      {
+        "id": 18,
+        "name": "Perfil ou papel de usuário que é o principal público-alvo da página",
+        "value": [
+          "admin-user"
+        ],
+        "method": "user-input",
+        "reasoning": "A página de gerenciamento de usuários é visível a usuários administradores.",
+        "confidence": 0.7689,
+        "context_element_id": 2721
+      },
+      {
+        "id": 19,
+        "name": "Profundidade máxima esperada da hierarquia de navegação",
+        "value": [
+          "5-or-more-levels",
+          "4-levels"
+        ],
+        "method": "user-input",
+        "reasoning": "Os níveis de nível de carga são 5, indicando uma hierarquia de 5 ou mais níveis.\nO nível de hierarquia é de 4 níveis: Baixa, Média, Alta e Urgente.",
+        "confidence": 0.786,
+        "context_element_id": 2725
+      },
+      {
+        "id": 21,
+        "name": "Nome ou identificador único da API dentro do contexto do sistema",
+        "value": [
+          "user-api"
+        ],
+        "method": "user-input",
+        "reasoning": "O endpoint PUT /api/users/:id é o identificador único do API de edição de usuário.",
+        "confidence": 0.7142,
+        "context_element_id": 2751
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 36,
+        "name": "Definir timeouts configuráveis para todas as operações críticas e monitorar orçamentos de tempo por transação/endpoint",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Uma regra de 900 segundos para bloqueio de conta é uma configuração definida, não um valor fixo ou regra derivada.",
+        "confidence": 0.8014,
+        "context_element_id": 2863
+      },
+      {
+        "id": 38,
+        "name": "Projetar para escalabilidade horizontal, aumentando a disponibilidade agregada por meio da distribuição de carga",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Uma instância de Redis em cada servidor é uma instância separada, cada uma sobrecarregada com metas diferentes, e a carga é distribuída entre elas.",
+        "confidence": 0.9418,
+        "context_element_id": 2914
+      },
+      {
+        "id": 46,
+        "name": "Implementar não repúdio para ações críticas usando assinaturas digitais e timestamps criptográficos auditáveis",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem confirmação de autenticidade e integridade, o token de sessão é usado por qualquer usuário que entrou corretamente, e não por quem realmente o gerou.",
+        "confidence": 0.8365,
+        "context_element_id": 2941
+      },
+      {
+        "id": 53,
+        "name": "Use feature flags e toggles para habilitar/desabilitar funcionalidades dinamicamente",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem escapamento, o conteúdo exibido pode ser interpretado como código, o que resulta em erro de renderização e perda de dados.",
+        "confidence": 0.8986,
+        "context_element_id": 2988
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 1,
+        "name": "Paradigma de Armazenamento",
+        "value": "relacional",
+        "method": "user-input",
+        "reasoning": "O banco de dados é relacional, com schema explicito e ACID, caracterizando o paradigma de armazenamento.",
+        "confidence": 0.8384,
+        "context_element_id": 1283
+      },
+      {
+        "id": 2,
+        "name": "Propósito Operacional",
+        "value": "cache",
+        "method": "user-input",
+        "reasoning": "O armazenamento de contadores de rate limit é definido como memória local, Redis distribuído ou banco de dados, caracterizando um cache operacional.",
+        "confidence": 0.7098,
+        "context_element_id": 1284
+      },
+      {
+        "id": 3,
+        "name": "Construção Dinâmica de Consultas",
+        "value": "true",
+        "method": "user-input",
+        "reasoning": "TypeORM com prepared statements é uma característica dinâmica de construção de queries.",
+        "confidence": 0.8632,
+        "context_element_id": 1360
+      },
+      {
+        "id": 8,
+        "name": "Escopo de Exposição de API",
+        "value": "interno",
+        "method": "internal-inference",
+        "reasoning": "Todos os endpoints da API interna da plataforma são consumidos internamente, sem acesso público.",
+        "confidence": 0.8431,
+        "context_element_id": 1937
+      },
+      {
+        "id": 9,
+        "name": "Protocolo de Comunicação",
+        "value": "REST",
+        "method": "internal-inference",
+        "reasoning": "A resposta de erro de validação é feita por meio de HTTP 400 Bad Request, com mensagens de erro específicas por campo, protocolo REST.",
+        "confidence": 0.7746,
+        "context_element_id": 2020
+      },
+      {
+        "id": 10,
+        "name": "Padrão Temporal",
+        "value": "assíncrono",
+        "method": "internal-inference",
+        "reasoning": "A validação de entrada é executada no cliente e no servidor, com sincronização entre as partes, caracterizando um padrão de integração asincrônico.",
+        "confidence": 0.768,
+        "context_element_id": 2021
+      },
+      {
+        "id": 11,
+        "name": "Direção da Comunicação",
+        "value": "bidirecional",
+        "method": "internal-inference",
+        "reasoning": "A validação de entrada é executada tanto no cliente (frontend) quanto no servidor (backend), com sincronização entre as duas partes.",
+        "confidence": 0.8302,
+        "context_element_id": 2026
+      },
+      {
+        "id": 12,
+        "name": "Padrão de Isolamento",
+        "value": "anticorrupção",
+        "method": "user-input",
+        "reasoning": "O middleware de isolamento de tenant protege internamente os sistemas dos modelos externos, caracterizando uma camada de isolamento anti-corruption.",
+        "confidence": 0.859,
+        "context_element_id": 2058
+      },
+      {
+        "id": 62,
+        "name": "Nível de Segurança",
+        "value": "alta segurança",
+        "method": "user-input",
+        "reasoning": "A segurança é elevada, com nível de aplicação e row-level security aplicados no banco de dados, recomendado para produção.",
+        "confidence": 0.9376,
+        "context_element_id": 4122
+      },
+      {
+        "id": 63,
+        "name": "Prioridade de Ameaça",
+        "value": "prevenção de fraude",
+        "method": "user-input",
+        "reasoning": "A detecção de padrão de fraude é uma prioridade de segurança.",
+        "confidence": 0.8929,
+        "context_element_id": 4127
+      },
+      {
+        "id": 65,
+        "name": "Tipo de Saída",
+        "value": "geração de documentos",
+        "method": "user-input",
+        "reasoning": "A renderização de cartões do Painel Kanban gera um documento visual.",
+        "confidence": 0.8333,
+        "context_element_id": 4324
+      },
+      {
+        "id": 66,
+        "name": "Complexidade do Algoritmo",
+        "value": "baseado em machine learning",
+        "method": "internal-inference",
+        "reasoning": "A análise de anomalias com ML é baseada em modelos de machine learning.",
+        "confidence": 0.8271,
+        "context_element_id": 4326
+      },
+      {
+        "id": 67,
+        "name": "Página de Status Pública",
+        "value": "4",
+        "method": "user-input",
+        "reasoning": "O status é dividido em 4 categorias: A Fazer, Em Andamento, Em Revisão e Concluído.",
+        "confidence": 0.8287,
+        "context_element_id": 4377
+      },
+      {
+        "id": 68,
+        "name": "Idempotência Necessária",
+        "value": "true",
+        "method": "user-input",
+        "reasoning": "A requisição POST de criação de tarefa é idempotente, com a segunda requisição retornando o resultado da primeira sem criar duplicata.",
+        "confidence": 0.9606,
+        "context_element_id": 4421
+      },
+      {
+        "id": 69,
+        "name": "Prioridade de Otimização",
+        "value": "equilibrado",
+        "method": "internal-inference",
+        "reasoning": "A performance é otimizada para suportar até 500 RPS, mantendo latência e taxa de erro dentro dos requisitos de SLA.",
+        "confidence": 0.7379,
+        "context_element_id": 4495
+      },
+      {
+        "id": 71,
+        "name": "Testes de Performance",
+        "value": "desempenho abrangente",
+        "method": "user-input",
+        "reasoning": "O teste de performance é realizado sob carga de 500 requisições por segundo com validação de entrada, caracterizando um teste comprehensive-performance.",
+        "confidence": 0.7127,
+        "context_element_id": 4537
+      },
+      {
+        "id": 73,
+        "name": "Escopo de Validação",
+        "value": "nenhum",
+        "method": "user-input",
+        "reasoning": "A validação é feita apenas no cliente, sem cobertura de entrada ou saída, o que torna a segurança menos segura e não recomendado.",
+        "confidence": 0.9052,
+        "context_element_id": 4625
+      },
+      {
+        "id": 75,
+        "name": "Foco de Computação",
+        "value": "computação numérica",
+        "method": "user-input",
+        "reasoning": "O sistema usa um sistema numérico de 1-5 para computação, indicando que a fórmula é computacional numérica.",
+        "confidence": 0.8697,
+        "context_element_id": 5141
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 6,
+  "active": true,
+  "sourceId": 23645,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T14:58:49.768Z",
+  "updatedAt": null
+}

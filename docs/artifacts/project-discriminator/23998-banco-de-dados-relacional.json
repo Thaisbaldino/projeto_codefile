@@ -1,0 +1,184 @@
+{
+  "id": 23998,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 36,
+        "name": "Inconsistência de Regras e Estrutura",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Regras de negócio divergentes em diferentes partes do sistema causam comportamento imprevisível e dificuldade para auditoria e compliance.",
+        "confidence": 0.7297,
+        "context_element_id": 2832
+      }
+    ],
+    "attributes": [
+      {
+        "id": 18,
+        "name": "Identificador único que representa uma organização ou cliente no sistema multi-tenant",
+        "value": [
+          "tenant-uuid",
+          "slug",
+          "tenant-slug",
+          "tenant-id, email",
+          "tenant-id, responsavel-id",
+          "tenant-id, nivel_hierarquico_id",
+          "tenant-id, status"
+        ],
+        "method": "user-input",
+        "reasoning": "O identificador único do tenant na plataforma é o uuid gerado automaticamente no momento do provisionamento.\nO identificador textual de um tenant é o slug, um campo único que representa o identificador de cada entidade.\nO slug é o identificador único textual do tenant, utilizado em URLs e referências internas.\nO identificador único de um usuário dentro de um tenant é composto por tenant_id e email.\nO índice composto sobre (tenant_id, responsavel_id) é um identificador único para cada tenant.\nO índice composto sobre (tenant_id, nivel_hierarquico_id) é definido para otimizar consultas de usuários por nível hierárquico dentro de um tenant.\nO índice composto sobre tenant_id e status é usado para otimizar filtros e listagens de usuários ativos ou inativos por tenant.",
+        "confidence": 0.7592,
+        "context_element_id": 2682
+      },
+      {
+        "id": 19,
+        "name": "Papel ou função do usuário que interage com este conceito",
+        "value": [
+          "tenant-admin",
+          "manager",
+          "administrador"
+        ],
+        "method": "user-input",
+        "reasoning": "O usuário ativo do tenant responsável pela execução da tarefa é o responsável_id, um atributo de usuário do tenant.\nO usuário responsável pela tarefa pertence ao perfil de gerente, garantindo que a relação seja válida.\nO administrador interno da plataforma que realizou o provisionamento do tenant é o usuário responsável pelo papel de administrador.",
+        "confidence": 0.7583,
+        "context_element_id": 2703
+      },
+      {
+        "id": 24,
+        "name": "Profundidade esperada da estrutura hierárquica",
+        "value": [
+          "variable-depth"
+        ],
+        "method": "internal-inference",
+        "reasoning": "A posição relativa do nível hierárquico é uma estrutura de hierarquia com profundidade variável, característica de uma estrutura de árvore.",
+        "confidence": 0.8089,
+        "context_element_id": 2712
+      },
+      {
+        "id": 26,
+        "name": "Perfil primário do usuário ou participante que interage com esta superfície",
+        "value": [
+          "usuarios"
+        ],
+        "method": "user-input",
+        "reasoning": "O usuário editor da tarefa é identificado pela chave primária do campo usuarios.id.",
+        "confidence": 0.7449,
+        "context_element_id": 2728
+      },
+      {
+        "id": 29,
+        "name": "Operação de domínio ou caso de uso que o handler processa",
+        "value": [
+          "create-task, update-task, delete-task, create-user, update-user, delete-user, create-tenant, update-tenant, delete-tenant"
+        ],
+        "method": "user-input",
+        "reasoning": "O handler processa operações de escrita sobre as entidades de domínio Tarefa, Usuário, Tenant, correspondendo a create-task, update-task, delete-task, create-user, update-user, delete-user, create-tenant, update-tenant, delete-tenant.",
+        "confidence": 0.7784,
+        "context_element_id": 2782
+      },
+      {
+        "id": 30,
+        "name": "Entidade de domínio principal tratada pelo handler",
+        "value": [
+          "tenant",
+          "Tarefa, Usuário, Tenant"
+        ],
+        "method": "user-input",
+        "reasoning": "O handler de tarefas processa entidades do domínio tenant, como tenant_id, status, responsavel_id, prioridade e data_limite.\nOs entidades de domínio (Tarefa, Usuário, Tenant) são as entidades principais do domínio acessadas pelo handler.",
+        "confidence": 0.7092,
+        "context_element_id": 2783
+      },
+      {
+        "id": 31,
+        "name": "Domínio funcional no qual o worker opera",
+        "value": [
+          "content-generation"
+        ],
+        "method": "user-input",
+        "reasoning": "O título da tarefa é descritivo e legível, identificando a atividade como geração de conteúdo.",
+        "confidence": 0.773,
+        "context_element_id": 2785
+      },
+      {
+        "id": 32,
+        "name": "Unidade de dados que o worker processa",
+        "value": [
+          "transactions"
+        ],
+        "method": "user-input",
+        "reasoning": "A métrica de tempo de execução de consulta e o número de linhas afetadas são métricas de operação de transação.",
+        "confidence": 0.7391,
+        "context_element_id": 2786
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 41,
+        "name": "Implementar tolerância a falhas garantindo operação contínua mesmo na presença de falhas de componentes",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "A falha de criar uma tarefa com um usuário inativo como responsável é uma falha de execução, não de leitura ou de escrita.",
+        "confidence": 0.7153,
+        "context_element_id": 2900
+      },
+      {
+        "id": 43,
+        "name": "Implementar ressincronização automática de estado entre réplicas após reparo com verificação de consistência",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Reparar um disco danificado ou uma falha de rede só pode recuperar o estado e os dados do momento da falha, não do que já estava.\nA replicação síncrona é executada a cada 15 minutos, com RTO de 1 hora e RPO de 15 minutos.",
+        "confidence": 0.7041,
+        "context_element_id": 2903
+      },
+      {
+        "id": 55,
+        "name": "Implemente versionamento de esquema com numeração sequencial e políticas de compatibilidade para evolução controlada",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem histórico de versão, a mudança de status em um registro já existente não pode ser revertida, e a decisão de quem deve ser ativo ou inativo depende do momento.",
+        "confidence": 0.8252,
+        "context_element_id": 2961
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 5,
+        "name": "Especialização Funcional",
+        "value": "feature store",
+        "method": "internal-inference",
+        "reasoning": "A entidade é traduzida para estruturas de linha relacional, caracterizando um store de recursos de feature.",
+        "confidence": 0.7967,
+        "context_element_id": 1327
+      },
+      {
+        "id": 63,
+        "name": "Nível de Observabilidade",
+        "value": "observabilidade completa",
+        "method": "user-input",
+        "reasoning": "Índices compostos são utilizados para otimizar consultas de filtragem e listagem de tarefas, com medição de tempo de execução e SLA de p99 de 100ms para listagem com até 10.000 tarefas.",
+        "confidence": 0.8669,
+        "context_element_id": 4248
+      },
+      {
+        "id": 67,
+        "name": "Abordagem de Monitoramento",
+        "value": "análise periódica",
+        "method": "user-input",
+        "reasoning": "O monitoramento de desempenho de índices é feito periodicamente, não em tempo real ou em resposta a demanda imediata.",
+        "confidence": 0.9328,
+        "context_element_id": 4501
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 5,
+  "active": true,
+  "sourceId": 23782,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}

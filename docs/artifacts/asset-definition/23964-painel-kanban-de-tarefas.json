@@ -1,0 +1,699 @@
+{
+  "id": 23964,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 44,
+          "name": "Tarefas do Tenant",
+          "format": "JSON array de objetos tarefa com id, titulo, responsavel_id, prioridade, status, data_limite",
+          "origin": "Repositório de Tarefas (ASSET-047)",
+          "trigger": "Carregamento inicial da página ou atualização após alteração de status"
+        },
+        {
+          "id": 45,
+          "name": "Filtros Aplicados pelo Usuário",
+          "format": "JSON objeto com filter_responsible_id (uuid), filter_priority (enum), active_filter_count (integer)",
+          "origin": "Painel de Filtros e Pesquisa de Tarefas (ASSET-021)",
+          "trigger": "Usuário seleciona ou remove filtros no painel de controles"
+        },
+        {
+          "id": 46,
+          "name": "Intenção de Movimentação de Cartão",
+          "format": "Evento de mouse/touch com coordenadas, task_id, coluna_origem, coluna_destino",
+          "origin": "Interação do Usuário (Drag and Drop)",
+          "trigger": "Usuário arrasta cartão entre colunas"
+        },
+        {
+          "id": 47,
+          "name": "Contexto de Autenticação e Tenant",
+          "format": "JWT token contendo user_id, tenant_id, perfil, status",
+          "origin": "Sessão do Usuário Autenticado",
+          "trigger": "Usuário autenticado acessa a página de tarefas"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 58,
+          "name": "Quadro Kanban Renderizado",
+          "format": "HTML/CSS/JavaScript com grid de três colunas, cartões interativos, filtros ativos indicados",
+          "destination": "Navegador do Usuário"
+        },
+        {
+          "id": 59,
+          "name": "Evento de Movimentação de Tarefa",
+          "format": "JSON POST/PATCH com { task_id: uuid, status_novo: string, timestamp: timestamp }",
+          "destination": "Backend (Endpoint de Atualização de Status)"
+        },
+        {
+          "id": 60,
+          "name": "Notificação de Sucesso ou Erro",
+          "format": "Mensagem textual em português com ícone de confirmação ou erro",
+          "destination": "Interface do Usuário (Toast/Snackbar)"
+        },
+        {
+          "id": 61,
+          "name": "Evento de Filtro Aplicado ou Removido",
+          "format": "JSON com { filter_type: string, filter_value: any, timestamp: timestamp, user_id: uuid }",
+          "destination": "Sistema de Rastreamento de Interação"
+        }
+      ],
+      "processing": [
+        {
+          "id": 48,
+          "step": "Carregar tarefas do tenant do usuário autenticado",
+          "description": "Consultar repositório de tarefas filtrando por tenant_id do usuário, retornando todos os registros com seus atributos (id, titulo, responsavel_id, prioridade, status, data_limite, data_criacao)."
+        },
+        {
+          "id": 49,
+          "step": "Organizar tarefas em colunas por status",
+          "description": "Agrupar tarefas retornadas em três colunas fixas: 'A Fazer', 'Em Andamento' e 'Concluído', mantendo ordem de exibição consistente dentro de cada coluna."
+        },
+        {
+          "id": 50,
+          "step": "Aplicar filtros de responsável e prioridade",
+          "description": "Se filtros estão ativos, remover da exibição os cartões que não satisfazem todos os critérios selecionados, mantendo a estrutura de colunas."
+        },
+        {
+          "id": 51,
+          "step": "Identificar e destacar tarefas críticas e atrasadas",
+          "description": "Para cada cartão exibido, verificar se prioridade é 'alta' ou 'urgente' (crítica) ou se data_limite < data_atual E status !== 'Concluído' (atrasada), aplicando estilos visuais diferenciados."
+        },
+        {
+          "id": 52,
+          "step": "Renderizar quadro Kanban com cartões",
+          "description": "Exibir grid de três colunas com cartões de tarefas, cada cartão mostrando titulo, responsavel (nome), prioridade (ícone/cor), data_limite, e indicadores visuais de destaque."
+        },
+        {
+          "id": 53,
+          "step": "Validar movimentação de cartão no cliente",
+          "description": "Quando cartão é solto sobre coluna de destino, validar que coluna corresponde a um status fixo válido, que tarefa pertence ao tenant do usuário, e que executor tem permissão para alterar status."
+        },
+        {
+          "id": 54,
+          "step": "Enviar requisição de atualização de status ao backend",
+          "description": "Se validação no cliente passou, enviar requisição POST/PATCH ao endpoint de atualização de status com task_id, status_novo, e token de autenticação."
+        },
+        {
+          "id": 55,
+          "step": "Atualizar estado local do cartão",
+          "description": "Após confirmação do servidor, mover cartão para coluna de destino, atualizar seu status, registrar timestamp de transição, e remover indicador de carregamento."
+        },
+        {
+          "id": 56,
+          "step": "Exibir feedback de sucesso ou erro",
+          "description": "Se persistência foi bem-sucedida, exibir notificação de confirmação breve. Se falhou, exibir mensagem de erro descritiva e restaurar cartão à coluna de origem."
+        },
+        {
+          "id": 57,
+          "step": "Sincronizar com atualizações em tempo real (quando aplicável)",
+          "description": "Se sistema implementa WebSocket ou SSE, receber eventos de atualização de tarefas de outros usuários e atualizar quadro sem recarregar página."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 62,
+        "category": "authorization",
+        "description": "Apenas usuários autenticados e ativos do tenant podem visualizar e interagir com o quadro Kanban de tarefas. Usuários de tenants inativos ou não autenticados devem ser redirecionados para login.",
+        "enforcement": "code",
+        "verification": "Validar token JWT na requisição de carregamento do quadro; verificar user.authenticated === true, user.status === 'ativo', user.tenant.status === 'ativo'; redirecionar para /login se alguma validação falhar."
+      },
+      {
+        "id": 63,
+        "category": "invariant",
+        "description": "O quadro Kanban deve exibir apenas tarefas pertencentes ao tenant do usuário autenticado. Nenhuma tarefa de outro tenant deve ser visível ou acessível, mesmo através de manipulação de parâmetros.",
+        "enforcement": "db_constraint",
+        "verification": "Todas as consultas de tarefas devem incluir filtro WHERE tenant_id = :user_tenant_id; validar no backend que task_id retornado pertence ao tenant do usuário antes de permitir operações."
+      },
+      {
+        "id": 64,
+        "category": "validation",
+        "description": "Quando um cartão é movido entre colunas, o novo status deve ser um dos valores fixos definidos pelo sistema (A Fazer, Em Andamento, Concluído). Movimentações para status inválidos devem ser rejeitadas.",
+        "enforcement": "code",
+        "verification": "Validar no cliente que coluna_destino corresponde a um status válido; validar novamente no servidor que status_novo está em ['A Fazer', 'Em Andamento', 'Concluído'] antes de persistir."
+      },
+      {
+        "id": 65,
+        "category": "invariant",
+        "description": "Apenas o responsável pela tarefa ou seu criador podem alterar o status da tarefa através do quadro Kanban. Outros usuários devem ter a operação bloqueada.",
+        "enforcement": "code",
+        "verification": "No servidor, validar que user_id === task.responsavel_id OR user_id === task.criador_id antes de permitir atualização de status; retornar erro 403 Forbidden se validação falhar."
+      },
+      {
+        "id": 66,
+        "category": "idempotency",
+        "description": "Se um cartão é movido para a mesma coluna em que já está (status não muda), a operação deve ser tratada como sucesso sem efeitos colaterais, evitando registros duplicados no histórico.",
+        "enforcement": "code",
+        "verification": "Comparar status_anterior com status_novo antes de persistir; se forem iguais, retornar sucesso sem registrar transição no histórico de status."
+      },
+      {
+        "id": 67,
+        "category": "observability",
+        "description": "Toda movimentação de cartão (alteração de status) deve ser registrada em trilha de auditoria com identificação do usuário executor, timestamp, task_id, status anterior e novo, e tenant afetado.",
+        "enforcement": "code",
+        "verification": "Após persistência bem-sucedida de atualização de status, registrar evento em tabela de auditoria com campos: user_id, tenant_id, task_id, status_anterior, status_novo, timestamp, acao='task_status_updated'."
+      },
+      {
+        "id": 68,
+        "category": "compliance",
+        "description": "O quadro Kanban deve respeitar conformidade com LGPD ao exibir dados pessoais de usuários (nomes de responsáveis). Dados devem ser minimizados e protegidos conforme política de governança de dados.",
+        "enforcement": "code",
+        "verification": "Exibir apenas nome do responsável (não e-mail ou outros dados pessoais) nos cartões; garantir que dados pessoais não são expostos em logs ou requisições de rede em texto simples."
+      },
+      {
+        "id": 69,
+        "category": "rate_limit",
+        "description": "Requisições de atualização de status via movimentação de cartão devem estar sujeitas a rate limiting para prevenir abuso. Máximo de 100 requisições por usuário por minuto.",
+        "enforcement": "network",
+        "verification": "Implementar rate limiting no API gateway ou middleware de backend, rastreando requisições por user_id; retornar 429 Too Many Requests se limite for excedido."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "O Painel Kanban de Tarefas é uma superfície interativa especializada que materializa a visualização de tarefas organizadas em colunas fixas representando os status do ciclo de vida (A Fazer, Em Andamento, Concluído), permitindo aos usuários acompanhar o progresso das atividades de forma visual e intuitiva. Compõe-se de um grid de colunas com cartões de tarefas que exibem título, responsável, prioridade e data limite, mecanismos de arrastar e soltar (drag and drop) para movimentação de tarefas entre colunas com atualização imediata de status, filtros combinados por responsável e prioridade que refinam o conjunto de cartões exibidos, indicadores visuais diferenciados para tarefas críticas (alta prioridade) e atrasadas (prazo vencido), e garantias de isolamento de dados por tenant em cada operação. Integra-se ao fluxo de atualização de status de tarefa, ao sistema de destaque de demandas críticas, e aos mecanismos de filtragem, permitindo que usuários gerenciem o progresso de atividades através de interação visual fluida e responsiva em dispositivos móveis e desktops."
+    },
+    "definition": {
+      "emits": [
+        {
+          "id": 2,
+          "name": "task_moved",
+          "payload_shape": "{ task_id: uuid, status_anterior: string, status_novo: string, coluna_destino: string, timestamp: timestamp, usuario_executor_id: uuid }"
+        },
+        {
+          "id": 3,
+          "name": "filter_applied",
+          "payload_shape": "{ filter_responsible_id?: uuid, filter_priority?: string, active_filter_count: integer }"
+        },
+        {
+          "id": 4,
+          "name": "filter_cleared",
+          "payload_shape": "{ cleared_filter?: string, all_cleared: boolean }"
+        }
+      ],
+      "fields": [
+        {
+          "id": 5,
+          "name": "kanban_board",
+          "data_type": "grid",
+          "filled_by": "system_computed",
+          "aria_label": "Quadro Kanban com colunas de status e cartões de tarefas",
+          "input_type": "display",
+          "validation": "grid_must_contain_three_columns: [a_fazer, em_andamento, concluido]",
+          "is_required": true
+        },
+        {
+          "id": 6,
+          "name": "column_a_fazer",
+          "data_type": "string",
+          "filled_by": "system_computed",
+          "aria_label": "Coluna de tarefas a fazer",
+          "input_type": "display",
+          "validation": "column_status_must_equal: 'A Fazer'",
+          "is_required": true
+        },
+        {
+          "id": 7,
+          "name": "column_em_andamento",
+          "data_type": "string",
+          "filled_by": "system_computed",
+          "aria_label": "Coluna de tarefas em andamento",
+          "input_type": "display",
+          "validation": "column_status_must_equal: 'Em Andamento'",
+          "is_required": true
+        },
+        {
+          "id": 8,
+          "name": "column_concluido",
+          "data_type": "string",
+          "filled_by": "system_computed",
+          "aria_label": "Coluna de tarefas concluídas",
+          "input_type": "display",
+          "validation": "column_status_must_equal: 'Concluído'",
+          "is_required": true
+        },
+        {
+          "id": 9,
+          "name": "filter_controls",
+          "data_type": "object",
+          "filled_by": "system_computed",
+          "aria_label": "Controles de filtro por responsável e prioridade",
+          "input_type": "display",
+          "validation": "filter_controls_must_include: [filter_responsible, filter_priority, clear_button]",
+          "is_required": false
+        },
+        {
+          "id": 10,
+          "name": "drag_drop_handler",
+          "data_type": "function",
+          "filled_by": "system_event",
+          "aria_label": "Manipulador de eventos de arrastar e soltar cartões",
+          "input_type": "interaction",
+          "validation": "must_validate_destination_column_and_task_ownership",
+          "is_required": true
+        },
+        {
+          "id": 11,
+          "name": "task_card_renderer",
+          "data_type": "function",
+          "filled_by": "system_computed",
+          "aria_label": "Renderizador de cartões de tarefas com indicadores visuais",
+          "input_type": "display",
+          "validation": "must_display_title_responsible_priority_deadline_and_highlights",
+          "is_required": true
+        },
+        {
+          "id": 12,
+          "name": "critical_task_indicator",
+          "data_type": "boolean",
+          "filled_by": "system_computed",
+          "aria_label": "Indicador visual de tarefa crítica (alta prioridade)",
+          "input_type": "display",
+          "validation": "must_be_true_when_priority_in: [alta, urgente]",
+          "is_required": false
+        },
+        {
+          "id": 13,
+          "name": "overdue_task_indicator",
+          "data_type": "boolean",
+          "filled_by": "system_computed",
+          "aria_label": "Indicador visual de tarefa atrasada (prazo vencido)",
+          "input_type": "display",
+          "validation": "must_be_true_when_data_limite_less_than_today_and_status_not_concluido",
+          "is_required": false
+        }
+      ],
+      "panels": [
+        {
+          "id": 14,
+          "kind": "grid",
+          "name": "kanban_board",
+          "slots": [
+            {
+              "id": 15,
+              "name": "column_a_fazer",
+              "description": "Coluna fixa representando o status 'A Fazer', contendo cartões de tarefas não iniciadas."
+            },
+            {
+              "id": 16,
+              "name": "column_em_andamento",
+              "description": "Coluna fixa representando o status 'Em Andamento', contendo cartões de tarefas em execução."
+            },
+            {
+              "id": 17,
+              "name": "column_concluido",
+              "description": "Coluna fixa representando o status 'Concluído', contendo cartões de tarefas finalizadas."
+            },
+            {
+              "id": 18,
+              "name": "filter_controls",
+              "description": "Área de controles de filtro por responsável e prioridade, com indicadores de filtros ativos e botões de limpeza."
+            }
+          ]
+        }
+      ],
+      "state_machine": {
+        "states": [
+          {
+            "id": 19,
+            "name": "Quadro Carregado",
+            "description": "Estado inicial onde o quadro Kanban foi carregado com todas as colunas e cartões de tarefas do tenant exibidos sem filtros aplicados."
+          },
+          {
+            "id": 20,
+            "name": "Filtro Aplicado",
+            "description": "Um ou mais filtros (responsável, prioridade) foram aplicados e o quadro está exibindo apenas os cartões que satisfazem todos os critérios."
+          },
+          {
+            "id": 21,
+            "name": "Cartão Selecionado para Movimentação",
+            "description": "Um cartão de tarefa foi selecionado (toque longo em mobile ou clique em desktop) e está pronto para ser movido entre colunas."
+          },
+          {
+            "id": 22,
+            "name": "Movimentação em Progresso",
+            "description": "O cartão está sendo arrastado sobre o quadro, com feedback visual indicando a coluna de destino válida."
+          },
+          {
+            "id": 23,
+            "name": "Validando Movimentação",
+            "description": "A movimentação do cartão foi solta e está sendo validada no servidor quanto a permissões, isolamento de tenant e integridade de status."
+          },
+          {
+            "id": 24,
+            "name": "Movimentação Persistida",
+            "description": "A alteração de status foi persistida com sucesso no banco de dados e o cartão foi atualizado na coluna de destino."
+          },
+          {
+            "id": 25,
+            "name": "Erro de Movimentação",
+            "description": "A validação ou persistência da movimentação falhou; cartão foi restaurado à coluna de origem e mensagem de erro foi exibida."
+          },
+          {
+            "id": 26,
+            "name": "Filtro Sendo Removido",
+            "description": "Um filtro ativo está sendo removido individualmente ou todos os filtros estão sendo limpos de uma só vez."
+          },
+          {
+            "id": 27,
+            "name": "Cartão Detalhado Aberto",
+            "description": "Um cartão foi clicado para visualizar ou editar os detalhes completos da tarefa em modal ou página de detalhe."
+          }
+        ],
+        "transitions": [
+          {
+            "id": 28,
+            "to": "Filtro Aplicado",
+            "from": "Quadro Carregado",
+            "guard": "filtro_selecionado !== null AND filtro_valor_valido === true",
+            "trigger": "Usuário seleciona um ou mais filtros (responsável e/ou prioridade)"
+          },
+          {
+            "id": 29,
+            "to": "Quadro Carregado",
+            "from": "Filtro Aplicado",
+            "trigger": "Usuário remove todos os filtros ativos"
+          },
+          {
+            "id": 30,
+            "to": "Filtro Aplicado",
+            "from": "Filtro Aplicado",
+            "trigger": "Usuário altera um filtro ativo para um novo valor"
+          },
+          {
+            "id": 31,
+            "to": "Cartão Selecionado para Movimentação",
+            "from": "Quadro Carregado",
+            "trigger": "Usuário inicia operação de arrastar cartão (mouse down em desktop ou toque longo em mobile)"
+          },
+          {
+            "id": 32,
+            "to": "Cartão Selecionado para Movimentação",
+            "from": "Filtro Aplicado",
+            "trigger": "Usuário inicia operação de arrastar cartão enquanto filtros estão ativos"
+          },
+          {
+            "id": 33,
+            "to": "Movimentação em Progresso",
+            "from": "Cartão Selecionado para Movimentação",
+            "trigger": "Usuário move o mouse/toque sobre o quadro enquanto arrastando o cartão"
+          },
+          {
+            "id": 34,
+            "to": "Validando Movimentação",
+            "from": "Movimentação em Progresso",
+            "trigger": "Usuário solta o cartão sobre uma coluna de destino válida"
+          },
+          {
+            "id": 35,
+            "to": "Movimentação Persistida",
+            "from": "Validando Movimentação",
+            "guard": "validacao_status_valido === true AND executor_autorizado === true AND isolamento_tenant_garantido === true AND persistencia_sucesso === true",
+            "trigger": "Validações passaram e status foi persistido com sucesso no banco de dados"
+          },
+          {
+            "id": 36,
+            "to": "Erro de Movimentação",
+            "from": "Validando Movimentação",
+            "guard": "validacao_falhou === true OR persistencia_falhou === true",
+            "trigger": "Validação ou persistência falhou"
+          },
+          {
+            "id": 37,
+            "to": "Cartão Selecionado para Movimentação",
+            "from": "Movimentação em Progresso",
+            "trigger": "Usuário cancela a movimentação (teclado ESC ou movimento para fora do quadro)"
+          },
+          {
+            "id": 38,
+            "to": "Quadro Carregado",
+            "from": "Cartão Selecionado para Movimentação",
+            "trigger": "Usuário cancela a operação de arrastar sem soltar o cartão"
+          },
+          {
+            "id": 39,
+            "to": "Quadro Carregado",
+            "from": "Erro de Movimentação",
+            "trigger": "Usuário reconhece o erro e o cartão é restaurado à coluna de origem"
+          },
+          {
+            "id": 40,
+            "to": "Quadro Carregado",
+            "from": "Movimentação Persistida",
+            "trigger": "Cartão foi atualizado na coluna de destino e quadro retorna ao estado normal"
+          },
+          {
+            "id": 41,
+            "to": "Cartão Detalhado Aberto",
+            "from": "Quadro Carregado",
+            "trigger": "Usuário clica no cartão para visualizar ou editar detalhes da tarefa"
+          },
+          {
+            "id": 42,
+            "to": "Cartão Detalhado Aberto",
+            "from": "Filtro Aplicado",
+            "trigger": "Usuário clica no cartão para visualizar ou editar detalhes enquanto filtros estão ativos"
+          },
+          {
+            "id": 43,
+            "to": "Quadro Carregado",
+            "from": "Cartão Detalhado Aberto",
+            "trigger": "Usuário fecha o modal ou página de detalhe e retorna ao quadro Kanban"
+          }
+        ]
+      }
+    },
+    "pendencies": [
+      {
+        "id": 86,
+        "section": "definition",
+        "description": "Necessário confirmar a estrutura exata de dados retornada pela API de listagem de tarefas (GET /tasks) para garantir que todos os campos necessários para renderização do quadro Kanban (id, titulo, responsavel_id, prioridade, status, data_limite, data_criacao) estão presentes e em formato esperado.",
+        "resolutionOptions": [
+          {
+            "id": 87,
+            "text": "Consultar especificação de endpoint GET /tasks (ASSET-041) para validar contrato de resposta e confirmar presença de todos os campos necessários."
+          },
+          {
+            "id": 88,
+            "text": "Executar teste de integração contra API real para validar estrutura de resposta e ajustar parsing de dados no cliente conforme necessário."
+          },
+          {
+            "id": 89,
+            "text": "Documentar contrato esperado de resposta neste asset_definition e validar conformidade durante implementação."
+          }
+        ],
+        "recommendedOptionId": 87
+      },
+      {
+        "id": 90,
+        "section": "definition",
+        "description": "Necessário definir o mecanismo exato de sincronização em tempo real quando múltiplos usuários estão visualizando o mesmo quadro Kanban. Atualmente, o asset assume que atualizações são refletidas apenas após requisição do usuário, mas requisitos de responsividade podem exigir WebSocket ou SSE para sincronização automática.",
+        "resolutionOptions": [
+          {
+            "id": 91,
+            "text": "Implementar sincronização baseada em polling: cliente recarrega lista de tarefas a cada 5-10 segundos para detectar mudanças de outros usuários."
+          },
+          {
+            "id": 92,
+            "text": "Implementar sincronização baseada em WebSocket: servidor envia eventos de atualização de tarefas em tempo real para todos os clientes conectados do tenant."
+          },
+          {
+            "id": 93,
+            "text": "Implementar sincronização baseada em SSE (Server-Sent Events): servidor envia eventos unidirecionais de atualização para clientes sem necessidade de upgrade de protocolo."
+          },
+          {
+            "id": 94,
+            "text": "Manter sincronização apenas baseada em requisições do usuário (sem tempo real) e documentar esta limitação como conhecida."
+          }
+        ],
+        "recommendedOptionId": 92
+      },
+      {
+        "id": 95,
+        "section": "flow",
+        "description": "Necessário confirmar se o Painel de Filtros e Pesquisa de Tarefas (ASSET-021) está integrado ao Painel Kanban de Tarefas ou se são componentes separados. Atualmente, o asset assume que filtros são aplicados ao quadro, mas a integração exata entre os dois assets precisa ser clarificada.",
+        "resolutionOptions": [
+          {
+            "id": 96,
+            "text": "Confirmar que ASSET-021 é um componente filho ou integrado ao ASSET-020 (Painel Kanban), compartilhando estado de filtros."
+          },
+          {
+            "id": 97,
+            "text": "Confirmar que ASSET-021 é um componente irmão independente que comunica com ASSET-020 através de eventos ou props compartilhadas."
+          },
+          {
+            "id": 98,
+            "text": "Documentar a arquitetura de integração entre os dois assets e validar durante implementação."
+          }
+        ],
+        "recommendedOptionId": 96
+      },
+      {
+        "id": 99,
+        "section": "non_functional_requirements",
+        "description": "Necessário validar se os targets de performance definidos (carregamento <= 2s, movimentação <= 500ms, filtragem <= 300ms) são realistas dado o volume máximo de 10.000 tarefas por tenant e a arquitetura de backend. Pode ser necessário implementar paginação, virtualização de lista ou cache para atingir targets.",
+        "resolutionOptions": [
+          {
+            "id": 100,
+            "text": "Executar testes de carga com 10.000 tarefas contra API real e medir tempos de resposta; ajustar targets conforme resultados."
+          },
+          {
+            "id": 101,
+            "text": "Implementar paginação ou carregamento incremental de tarefas para reduzir volume de dados transferidos por requisição."
+          },
+          {
+            "id": 102,
+            "text": "Implementar virtualização de lista (renderizar apenas cartões visíveis) para reduzir carga de renderização DOM."
+          },
+          {
+            "id": 103,
+            "text": "Implementar cache em nível de cliente para reduzir requisições ao servidor e melhorar responsividade."
+          }
+        ],
+        "recommendedOptionId": 100
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 78,
+        "then": "Cartão é movido para coluna de destino; requisição PATCH é enviada ao backend; status da tarefa é atualizado no banco de dados; transição é registrada em histórico de status; notificação de sucesso é exibida ao usuário",
+        "type": "integration",
+        "when": "Usuário arrasta cartão da tarefa para coluna 'Em Andamento' e solta",
+        "given": "Usuário autenticado está visualizando quadro Kanban com tarefas do seu tenant; uma tarefa está na coluna 'A Fazer'",
+        "scenario": "Usuário move tarefa entre colunas do Kanban e status é persistido com sucesso",
+        "target_section": "flow"
+      },
+      {
+        "id": 79,
+        "then": "Quadro é atualizado para exibir apenas cartões de tarefas atribuídas ao responsável selecionado; indicador de filtro ativo é exibido; cartões de outros responsáveis são removidos da visualização",
+        "type": "integration",
+        "when": "Usuário seleciona um responsável no painel de filtros",
+        "given": "Usuário autenticado está visualizando quadro Kanban com múltiplas tarefas de diferentes responsáveis",
+        "scenario": "Usuário aplica filtro de responsável e quadro exibe apenas tarefas do responsável selecionado",
+        "target_section": "flow"
+      },
+      {
+        "id": 80,
+        "then": "Sistema retorna erro 403 Forbidden ou lista vazia; nenhuma tarefa do tenant B é exibida; nenhuma operação de movimentação é permitida em tarefas do tenant B",
+        "type": "security",
+        "when": "Usuário tenta acessar quadro Kanban ou manipular parâmetros para visualizar tarefas do tenant B",
+        "given": "Dois tenants diferentes existem no sistema com tarefas próprias; usuário autenticado pertence ao tenant A",
+        "scenario": "Usuário de um tenant não consegue visualizar ou mover tarefas de outro tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 81,
+        "then": "Função retorna false; mensagem de erro é gerada indicando que status é inválido",
+        "type": "unit",
+        "when": "Função é chamada com status_novo = 'Status Inválido'",
+        "given": "Função de validação de status recebe um valor que não está no conjunto fixo (A Fazer, Em Andamento, Concluído)",
+        "scenario": "Validação de status novo rejeita valores inválidos",
+        "target_section": "rules"
+      },
+      {
+        "id": 82,
+        "then": "Cartão da tarefa crítica exibe indicador visual diferenciado (cor, ícone ou rótulo); indicador é consistente em todas as colunas onde a tarefa pode estar",
+        "type": "integration",
+        "when": "Quadro renderiza cartões de tarefas",
+        "given": "Quadro Kanban está carregado; uma tarefa com prioridade 'alta' ou 'urgente' existe no tenant",
+        "scenario": "Tarefa crítica (alta prioridade) é destacada visualmente no quadro Kanban",
+        "target_section": "definition"
+      },
+      {
+        "id": 83,
+        "then": "Cartão da tarefa atrasada exibe indicador visual diferenciado (cor, ícone ou rótulo); indicador é removido automaticamente quando tarefa é concluída ou prazo é atualizado",
+        "type": "integration",
+        "when": "Quadro renderiza cartões de tarefas",
+        "given": "Quadro Kanban está carregado; uma tarefa com data_limite < data_atual e status !== 'Concluído' existe no tenant",
+        "scenario": "Tarefa atrasada (prazo vencido) é destacada visualmente no quadro Kanban",
+        "target_section": "definition"
+      },
+      {
+        "id": 84,
+        "then": "Tempo de carregamento inicial <= 3 segundos; quadro é responsivo e interativo; movimentação de cartão responde em <= 1 segundo",
+        "type": "performance",
+        "when": "Página carrega e quadro Kanban é renderizado",
+        "given": "Tenant possui 10.000 tarefas no banco de dados; usuário autenticado acessa página de tarefas",
+        "scenario": "Quadro Kanban carrega com 10.000 tarefas em tempo aceitável",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 85,
+        "then": "Resposta HTTP 200 OK é retornada com body contendo { id, status_novo, data_transicao, mensagem: 'Status atualizado com sucesso' }; resposta inclui headers de cache apropriados",
+        "type": "contract",
+        "when": "Servidor processa requisição e persiste alteração",
+        "given": "Requisição PATCH /tasks/:id é enviada com body { status_novo: 'Em Andamento' } e token JWT válido",
+        "scenario": "API de atualização de status retorna resposta correta com estrutura esperada",
+        "target_section": "flow"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 70,
+        "target": "Tempo de carregamento inicial <= 2 segundos; tempo de renderização de atualização após movimentação <= 500ms.",
+        "category": "performance",
+        "requirement": "O quadro Kanban deve carregar e renderizar com todas as tarefas do tenant visíveis em tempo adequado, mesmo em tenants com até 10.000 tarefas.",
+        "verification": "Medir tempo de requisição GET /tasks?tenant_id=X e tempo de renderização DOM usando ferramentas de profiling do navegador; executar testes de carga com 10.000 tarefas."
+      },
+      {
+        "id": 71,
+        "target": "Tempo de resposta para aplicação de filtro <= 300ms; debounce de 300ms em entrada de pesquisa textual.",
+        "category": "performance",
+        "requirement": "Operações de filtragem de cartões no quadro Kanban devem ser responsivas, atualizando a visualização sem atrasos perceptíveis.",
+        "verification": "Medir tempo entre seleção de filtro e atualização visual; implementar debounce e validar com testes de interação do usuário."
+      },
+      {
+        "id": 72,
+        "target": "Taxa de atualização de feedback visual >= 60 FPS; latência de resposta do servidor para persistência <= 1 segundo.",
+        "category": "performance",
+        "requirement": "Movimentação de cartão via drag and drop deve ser fluida e responsiva, com feedback visual imediato durante o arrasto.",
+        "verification": "Usar Chrome DevTools Performance tab para medir FPS durante drag and drop; medir latência de rede com Network tab."
+      },
+      {
+        "id": 73,
+        "target": "Tempo de carregamento com 10.000 tarefas <= 3 segundos; tempo de movimentação de cartão <= 1 segundo mesmo com volume máximo.",
+        "category": "scalability",
+        "requirement": "O quadro Kanban deve suportar crescimento de volume de tarefas até 10.000 por tenant sem degradação significativa de desempenho.",
+        "verification": "Executar testes de carga com volume progressivo de tarefas; medir métricas de desempenho em cada nível."
+      },
+      {
+        "id": 74,
+        "target": "Disponibilidade >= 99.5%; RTO <= 5 minutos em caso de falha.",
+        "category": "availability",
+        "requirement": "O quadro Kanban deve estar disponível com alta disponibilidade, dado que é funcionalidade crítica de visualização de tarefas.",
+        "verification": "Implementar health checks; monitorar uptime com ferramentas de observabilidade; testar failover de banco de dados."
+      },
+      {
+        "id": 75,
+        "target": "100% das requisições de atualização de status devem incluir token JWT válido; 100% das requisições devem ser validadas quanto a permissões no servidor.",
+        "category": "security",
+        "requirement": "Todas as requisições de movimentação de cartão devem ser autenticadas e validadas no servidor, prevenindo acesso não autorizado ou manipulação de dados.",
+        "verification": "Validar presença de Authorization header em todas as requisições; testar rejeição de requisições sem token ou com token inválido."
+      },
+      {
+        "id": 76,
+        "target": "100% das movimentações devem ser registradas em log de auditoria com user_id, task_id, status_anterior, status_novo, timestamp.",
+        "category": "observability",
+        "requirement": "Todas as operações de movimentação de cartão devem ser registradas em trilha de auditoria para rastreabilidade completa.",
+        "verification": "Verificar que cada movimentação gera entrada em tabela de auditoria; validar completude e precisão dos dados registrados."
+      },
+      {
+        "id": 77,
+        "target": "Tamanho de payload de requisição GET /tasks <= 500KB; tamanho de payload de requisição PATCH /tasks/:id <= 5KB.",
+        "category": "cost",
+        "requirement": "O quadro Kanban deve ser otimizado para minimizar consumo de banda de rede e processamento de servidor.",
+        "verification": "Medir tamanho de payloads com Network tab do navegador; implementar compressão gzip se necessário."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 20,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T15:30:38.724Z",
+  "updatedAt": null
+}

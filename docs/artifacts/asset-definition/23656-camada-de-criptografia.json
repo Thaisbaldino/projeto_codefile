@@ -1,0 +1,700 @@
+{
+  "id": 23656,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 43,
+          "name": "Credenciais de Usuário (e-mail e senha em texto simples)",
+          "format": "JSON { email: string, password: string }",
+          "origin": "Formulário de login (cliente)",
+          "trigger": "Submissão do formulário de autenticação"
+        },
+        {
+          "id": 44,
+          "name": "Token JWT para Validação",
+          "format": "Bearer <token_jwt>",
+          "origin": "Header Authorization (cliente)",
+          "trigger": "Requisição autenticada a rota protegida"
+        },
+        {
+          "id": 45,
+          "name": "Solicitação de Recuperação de Senha",
+          "format": "JSON { email: string }",
+          "origin": "Formulário de recuperação (cliente)",
+          "trigger": "Submissão do formulário de recuperação"
+        },
+        {
+          "id": 46,
+          "name": "Redefinição de Senha com Token",
+          "format": "JSON { token: string, new_password: string }",
+          "origin": "Formulário de redefinição (cliente)",
+          "trigger": "Submissão do formulário de redefinição"
+        },
+        {
+          "id": 47,
+          "name": "Dados de Usuário para Persistência",
+          "format": "JSON { name: string, email: string, password?: string }",
+          "origin": "Formulário de cadastro ou edição (cliente)",
+          "trigger": "Submissão de formulário de cadastro/edição"
+        },
+        {
+          "id": 48,
+          "name": "Chaves Criptográficas de Sessão",
+          "format": "Chaves RSA privada/pública (PEM) ou chaves simétricas",
+          "origin": "Gerenciador de segredos ou variáveis de ambiente",
+          "trigger": null
+        }
+      ],
+      "outputs": [
+        {
+          "id": 61,
+          "name": "Token JWT Válido",
+          "format": "Bearer <token_jwt_assinado>",
+          "destination": "Cliente (header Authorization)"
+        },
+        {
+          "id": 62,
+          "name": "Erro de Autenticação",
+          "format": "JSON { error: string, code: string }",
+          "destination": "Cliente (resposta HTTP 401)"
+        },
+        {
+          "id": 63,
+          "name": "Senha Criptografada Persistida",
+          "format": "Hash argon2id em coluna password_hash",
+          "destination": "Banco de Dados (Tabela de Usuários)"
+        },
+        {
+          "id": 64,
+          "name": "Token de Recuperação Hasheado",
+          "format": "Hash SHA-256 em coluna password_reset_token_hash com timestamp de expiração",
+          "destination": "Banco de Dados (Tabela de Usuários)"
+        },
+        {
+          "id": 65,
+          "name": "Dados Descriptografados",
+          "format": "Texto simples (apenas durante processamento, nunca persistido)",
+          "destination": "Lógica de Negócio (em memória)"
+        },
+        {
+          "id": 66,
+          "name": "Evento de Violação de Criptografia",
+          "format": "JSON { timestamp, user_id, tenant_id, event_type, details }",
+          "destination": "Trilha de Auditoria"
+        }
+      ],
+      "processing": [
+        {
+          "id": 49,
+          "step": "Validar Integridade de Dados em Trânsito",
+          "description": "Verificar que a comunicação ocorre exclusivamente via HTTPS/TLS 1.2+, validando certificado SSL/TLS e rejeitando conexões inseguras."
+        },
+        {
+          "id": 50,
+          "step": "Extrair Credenciais do Payload",
+          "description": "Decodificar e extrair e-mail e senha do corpo da requisição JSON, preparando para validação e hash."
+        },
+        {
+          "id": 51,
+          "step": "Hash de Senha com Argon2id",
+          "description": "Aplicar algoritmo argon2id (m=64MiB, t=3, p=4) à senha em texto simples, gerando hash seguro com salt aleatório de 16 bytes."
+        },
+        {
+          "id": 52,
+          "step": "Comparar Hash de Senha",
+          "description": "Comparar hash gerado com hash armazenado no banco de dados usando função de comparação segura (timing-safe), sem revelar se e-mail ou senha está incorreto."
+        },
+        {
+          "id": 53,
+          "step": "Gerar Token JWT Assinado",
+          "description": "Criar token JWT contendo claims (user_id, tenant_id, email, roles) e assinar com chave privada RSA, definindo expiração em 3600 segundos."
+        },
+        {
+          "id": 54,
+          "step": "Validar Assinatura de Token JWT",
+          "description": "Verificar assinatura RS256 do token usando chave pública RSA, validar expiração e extrair claims para autorização."
+        },
+        {
+          "id": 55,
+          "step": "Gerar Token de Recuperação de Senha",
+          "description": "Criar token único de 32 bytes usando gerador criptograficamente seguro, fazer hash SHA-256 e armazenar hash no banco com expiração de 30 minutos."
+        },
+        {
+          "id": 56,
+          "step": "Validar Token de Recuperação",
+          "description": "Comparar token fornecido com hash armazenado, verificar expiração e tenant, rejeitando tokens inválidos ou expirados."
+        },
+        {
+          "id": 57,
+          "step": "Criptografar Dados Sensíveis em Repouso",
+          "description": "Aplicar AES-256-GCM a campos sensíveis (e-mail, tokens de recuperação) antes de persistir no banco, usando IV aleatório por registro."
+        },
+        {
+          "id": 58,
+          "step": "Descriptografar Dados Sensíveis em Leitura",
+          "description": "Descriptografar campos criptografados ao recuperar do banco de dados, validando autenticação (GCM tag) e rejeitando dados corrompidos."
+        },
+        {
+          "id": 59,
+          "step": "Rotacionar Chaves Criptográficas",
+          "description": "Implementar mecanismo de rotação de chaves RSA a cada 90 dias, mantendo chaves antigas para validação de tokens emitidos anteriormente."
+        },
+        {
+          "id": 60,
+          "step": "Invalidar Tokens de Sessão Expirados",
+          "description": "Rejeitar tokens JWT com expiração vencida, forçando novo login e impedindo reutilização de credenciais antigas."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 67,
+        "category": "invariant",
+        "description": "Todas as senhas de usuários DEVEM ser armazenadas exclusivamente em formato de hash seguro utilizando argon2id com parâmetros m=64MiB, t=3, p=4 e salt aleatório de 16 bytes. Senhas em texto simples ou formatos reversíveis são PROIBIDOS.",
+        "enforcement": "db_constraint",
+        "verification": "Auditoria de schema de banco de dados verificando tipo de coluna password_hash (CHAR/VARCHAR com comprimento >= 96 para hash argon2id) e testes de integração confirmando que INSERT/UPDATE de senha sem hash falha."
+      },
+      {
+        "id": 68,
+        "category": "invariant",
+        "description": "Todas as comunicações HTTP entre cliente e servidor DEVEM ocorrer exclusivamente via HTTPS com TLS 1.2 ou superior. Conexões HTTP simples DEVEM ser redirecionadas para HTTPS ou rejeitadas.",
+        "enforcement": "infra",
+        "verification": "Teste de segurança verificando que requisições HTTP retornam 301/302 para HTTPS, certificado SSL/TLS é válido e válido por no mínimo 30 dias, e cipher suites incluem apenas algoritmos modernos (ECDHE, AES-256-GCM)."
+      },
+      {
+        "id": 69,
+        "category": "authorization",
+        "description": "Tokens JWT DEVEM ser assinados com algoritmo RS256 (RSA com SHA-256), nunca com HS256 ou algoritmos simétricos. Chaves privadas DEVEM ser armazenadas em variáveis de ambiente ou gerenciador de segredos, NUNCA em código-fonte ou repositório.",
+        "enforcement": "code",
+        "verification": "Análise estática de código verificando que jwt.sign() usa { algorithm: 'RS256' }, inspeção de variáveis de ambiente confirmando presença de PRIVATE_KEY_PATH ou SECRET_MANAGER_URL, e testes de integração validando que tokens assinados com HS256 são rejeitados."
+      },
+      {
+        "id": 70,
+        "category": "invariant",
+        "description": "Tokens de recuperação de senha DEVEM ser gerados com entropia criptográfica suficiente (mínimo 32 bytes), armazenados como hash SHA-256 (nunca em texto simples) e expirar automaticamente após 30 minutos.",
+        "enforcement": "code",
+        "verification": "Teste de integração gerando 1000 tokens e verificando unicidade (zero colisões), inspeção de banco de dados confirmando que coluna password_reset_token_hash contém hashes SHA-256 (comprimento 64 caracteres hex), e teste de expiração confirmando que tokens com timestamp > 30 minutos são rejeitados."
+      },
+      {
+        "id": 71,
+        "category": "invariant",
+        "description": "Dados sensíveis em repouso (e-mail de usuário, tokens de recuperação) DEVEM ser criptografados com AES-256-GCM antes de persistência no banco de dados. Cada registro DEVE usar IV (Initialization Vector) aleatório único, nunca reutilizado.",
+        "enforcement": "code",
+        "verification": "Teste de integração verificando que dados descriptografados diferem de dados criptografados, inspeção de banco de dados confirmando que valores de coluna encrypted_email não são legíveis em texto simples, e teste de integridade confirmando que modificação de ciphertext resulta em falha de autenticação GCM."
+      },
+      {
+        "id": 72,
+        "category": "validation",
+        "description": "Comparação de hashes de senha DEVE utilizar função timing-safe (ex: crypto.timingSafeEqual) para evitar ataques de timing. Mensagens de erro de autenticação DEVEM ser genéricas, sem indicar se e-mail ou senha está incorreto.",
+        "enforcement": "code",
+        "verification": "Análise estática de código verificando uso de crypto.timingSafeEqual ou bcrypt.compare (que é timing-safe), teste de segurança confirmando que mensagens de erro não discriminam entre e-mail inválido e senha inválida, e teste de timing confirmando que tempo de resposta é consistente independentemente do motivo da falha."
+      },
+      {
+        "id": 73,
+        "category": "compliance",
+        "description": "Chaves criptográficas RSA DEVEM ser rotacionadas a cada 90 dias. Chaves antigas DEVEM ser mantidas por no mínimo 7 dias para validação de tokens emitidos antes da rotação. Chaves DEVEM ser armazenadas com permissões de arquivo restritas (0600 ou equivalente).",
+        "enforcement": "infra",
+        "verification": "Auditoria de infraestrutura verificando que chaves RSA têm permissões 0600, inspeção de logs de rotação confirmando que rotação ocorre a cada 90 dias, e teste de integração confirmando que tokens assinados com chave antiga ainda são validados por 7 dias após rotação."
+      },
+      {
+        "id": 74,
+        "category": "observability",
+        "description": "Toda tentativa de descriptografia falhada (ex: GCM tag inválida, IV corrompido) DEVE ser registrada em log de auditoria com timestamp, user_id, tenant_id e tipo de erro. Múltiplas falhas de descriptografia do mesmo usuário em curto período DEVEM gerar alerta de segurança.",
+        "enforcement": "code",
+        "verification": "Teste de integração forçando falha de descriptografia e verificando que evento é registrado em log de auditoria, inspeção de logs confirmando que cada falha inclui timestamp, user_id, tenant_id, e teste de alerta confirmando que 5+ falhas em 5 minutos geram alerta."
+      },
+      {
+        "id": 75,
+        "category": "idempotency",
+        "description": "Operações de hash de senha (argon2id) DEVEM ser determinísticas apenas em relação ao salt fornecido. Cada nova senha DEVE gerar novo salt aleatório, resultando em hash diferente mesmo para a mesma senha em texto simples.",
+        "enforcement": "code",
+        "verification": "Teste de integração hasheando a mesma senha 10 vezes e verificando que todos os 10 hashes são diferentes (salt aleatório), e teste de validação confirmando que todos os 10 hashes validam corretamente contra a senha em texto simples."
+      },
+      {
+        "id": 76,
+        "category": "retention",
+        "description": "Tokens de recuperação de senha DEVEM ser invalidados automaticamente 30 minutos após geração. Tokens DEVEM ser invalidados imediatamente após uso bem-sucedido. Tokens anteriores ainda ativos DEVEM ser invalidados quando novo token é gerado para o mesmo usuário.",
+        "enforcement": "code",
+        "verification": "Teste de integração gerando token, aguardando 31 minutos e verificando que token é rejeitado, teste de integração usando token com sucesso e verificando que reutilização é rejeitada, e teste de integração gerando novo token e verificando que token anterior é invalidado."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "Camada de criptografia que protege dados sensíveis em repouso e em trânsito, implementando algoritmos criptográficos robustos para senhas, tokens de sessão e comunicações HTTPS. Gerencia a geração, armazenamento e validação de chaves criptográficas, integrando-se com a camada de validação de entrada para garantir que dados criptografados sejam processados com segurança. Fornece operações de criptografia/descriptografia de payloads, hash seguro de credenciais e validação de integridade de dados, operando como componente crítico da estratégia de segurança em tempo de execução."
+    },
+    "definition": {
+      "defenses": [
+        {
+          "id": 2,
+          "kind": "encryption_at_rest",
+          "name": "Criptografia de Senhas com Argon2id",
+          "scope": "Armazenamento de senhas de usuários no banco de dados relacional",
+          "settings": [
+            {
+              "id": 3,
+              "name": "algorithm",
+              "value": "argon2id"
+            },
+            {
+              "id": 4,
+              "name": "memory_cost_mib",
+              "value": "64"
+            },
+            {
+              "id": 5,
+              "name": "time_cost_iterations",
+              "value": "3"
+            },
+            {
+              "id": 6,
+              "name": "parallelism_factor",
+              "value": "4"
+            },
+            {
+              "id": 7,
+              "name": "salt_length_bytes",
+              "value": "16"
+            }
+          ],
+          "applies_to": [
+            {
+              "id": 8,
+              "target": "Tabela de Usuários (coluna password_hash)"
+            },
+            {
+              "id": 9,
+              "target": "POST /api/auth/register (persistência de nova senha)"
+            },
+            {
+              "id": 10,
+              "target": "POST /api/auth/password-recovery/reset (redefinição de senha)"
+            }
+          ]
+        },
+        {
+          "id": 11,
+          "kind": "encryption_in_transit",
+          "name": "Criptografia de Dados em Trânsito com TLS",
+          "scope": "Todas as comunicações HTTP entre cliente e servidor, incluindo autenticação, payloads de API e uploads",
+          "settings": [
+            {
+              "id": 12,
+              "name": "protocol",
+              "value": "HTTPS com TLS 1.2 ou superior"
+            },
+            {
+              "id": 13,
+              "name": "cipher_suites",
+              "value": "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+            },
+            {
+              "id": 14,
+              "name": "certificate_validation",
+              "value": "true"
+            },
+            {
+              "id": 15,
+              "name": "hsts_max_age_seconds",
+              "value": "31536000"
+            }
+          ],
+          "applies_to": [
+            {
+              "id": 16,
+              "target": "API Interna da Plataforma (todos os endpoints)"
+            },
+            {
+              "id": 17,
+              "target": "POST /api/auth/login (transmissão de credenciais)"
+            },
+            {
+              "id": 18,
+              "target": "POST /api/users (transmissão de dados pessoais)"
+            }
+          ]
+        },
+        {
+          "id": 19,
+          "kind": "encryption_at_rest",
+          "name": "Criptografia de Tokens de Sessão JWT",
+          "scope": "Geração e validação de tokens de autenticação emitidos após login bem-sucedido",
+          "settings": [
+            {
+              "id": 20,
+              "name": "algorithm",
+              "value": "RS256"
+            },
+            {
+              "id": 21,
+              "name": "token_expiration_seconds",
+              "value": "3600"
+            },
+            {
+              "id": 22,
+              "name": "refresh_token_expiration_days",
+              "value": "7"
+            },
+            {
+              "id": 23,
+              "name": "key_rotation_days",
+              "value": "90"
+            },
+            {
+              "id": 24,
+              "name": "private_key_storage",
+              "value": "Variáveis de ambiente ou gerenciador de segredos (não em código-fonte)"
+            }
+          ],
+          "applies_to": [
+            {
+              "id": 25,
+              "target": "POST /api/auth/login (emissão de token)"
+            },
+            {
+              "id": 26,
+              "target": "Middleware de Autenticação (validação de token em todas as rotas protegidas)"
+            },
+            {
+              "id": 27,
+              "target": "POST /api/auth/refresh (renovação de token)"
+            }
+          ]
+        },
+        {
+          "id": 28,
+          "kind": "encryption_at_rest",
+          "name": "Criptografia de Tokens de Recuperação de Senha",
+          "scope": "Geração e armazenamento seguro de tokens únicos para fluxo de recuperação de senha",
+          "settings": [
+            {
+              "id": 29,
+              "name": "token_generation_method",
+              "value": "Gerador criptograficamente seguro (crypto.randomBytes ou equivalente)"
+            },
+            {
+              "id": 30,
+              "name": "token_length_bytes",
+              "value": "32"
+            },
+            {
+              "id": 31,
+              "name": "token_storage_format",
+              "value": "Hash SHA-256 (nunca em texto simples)"
+            },
+            {
+              "id": 32,
+              "name": "token_expiration_minutes",
+              "value": "30"
+            }
+          ],
+          "applies_to": [
+            {
+              "id": 33,
+              "target": "POST /api/auth/password-recovery (geração de token)"
+            },
+            {
+              "id": 34,
+              "target": "Tabela de Usuários (coluna password_reset_token_hash)"
+            },
+            {
+              "id": 35,
+              "target": "POST /api/auth/password-recovery/reset (validação de token)"
+            }
+          ]
+        },
+        {
+          "id": 36,
+          "kind": "encryption_at_rest",
+          "name": "Criptografia de Dados Sensíveis em Repouso (Extensível)",
+          "scope": "Proteção de dados pessoais e sensíveis armazenados no banco de dados (preparação para conformidade LGPD)",
+          "settings": [
+            {
+              "id": 37,
+              "name": "algorithm",
+              "value": "AES-256-GCM"
+            },
+            {
+              "id": 38,
+              "name": "key_derivation",
+              "value": "PBKDF2 com 100.000 iterações"
+            },
+            {
+              "id": 39,
+              "name": "iv_generation",
+              "value": "Aleatório por registro (nunca reutilizado)"
+            },
+            {
+              "id": 40,
+              "name": "fields_encrypted",
+              "value": "E-mail de usuário (quando aplicável), dados de recuperação de senha"
+            }
+          ],
+          "applies_to": [
+            {
+              "id": 41,
+              "target": "Tabela de Usuários (coluna email)"
+            },
+            {
+              "id": 42,
+              "target": "Tabela de Usuários (coluna password_reset_token_hash)"
+            }
+          ]
+        }
+      ]
+    },
+    "pendencies": [
+      {
+        "id": 96,
+        "section": "definition",
+        "description": "Definição de estratégia de armazenamento de chaves criptográficas RSA (chave privada para assinar tokens JWT). Necessário especificar se será utilizado gerenciador de segredos (AWS Secrets Manager, HashiCorp Vault, Azure Key Vault) ou variáveis de ambiente, e como será implementada a rotação de chaves.",
+        "resolutionOptions": [
+          {
+            "id": 97,
+            "text": "Utilizar AWS Secrets Manager para armazenar chave privada RSA, com rotação automática a cada 90 dias e auditoria de acesso integrada."
+          },
+          {
+            "id": 98,
+            "text": "Utilizar variáveis de ambiente (process.env.PRIVATE_KEY) para armazenar chave privada RSA em base64, com rotação manual via CI/CD a cada 90 dias."
+          },
+          {
+            "id": 99,
+            "text": "Utilizar HashiCorp Vault para armazenar chave privada RSA, com autenticação de aplicação via JWT e rotação automática a cada 90 dias."
+          }
+        ],
+        "recommendedOptionId": 97
+      },
+      {
+        "id": 100,
+        "section": "definition",
+        "description": "Definição de campos específicos que serão criptografados em repouso com AES-256-GCM. Atualmente, a especificação menciona e-mail de usuário e tokens de recuperação, mas é necessário confirmar se outros campos sensíveis (ex: dados de perfil, histórico de ações) também serão criptografados.",
+        "resolutionOptions": [
+          {
+            "id": 101,
+            "text": "Criptografar apenas e-mail de usuário e password_reset_token_hash com AES-256-GCM; outros campos não sensíveis permanecem em texto simples."
+          },
+          {
+            "id": 102,
+            "text": "Criptografar e-mail, password_reset_token_hash, e nome completo do usuário com AES-256-GCM para conformidade LGPD mais rigorosa."
+          },
+          {
+            "id": 103,
+            "text": "Implementar criptografia seletiva por tenant: tenants com requisitos LGPD rigorosos criptografam todos os dados pessoais; tenants padrão criptografam apenas e-mail e tokens."
+          }
+        ],
+        "recommendedOptionId": 102
+      },
+      {
+        "id": 104,
+        "section": "rules",
+        "description": "Definição de política de expiração de refresh tokens. Atualmente, especifica-se que refresh tokens expiram em 7 dias, mas é necessário definir se refresh tokens podem ser revogados manualmente (ex: logout) e como será implementada a revogação.",
+        "resolutionOptions": [
+          {
+            "id": 105,
+            "text": "Refresh tokens expiram em 7 dias e não podem ser revogados manualmente; logout apenas invalida access token em memória (sem persistência)."
+          },
+          {
+            "id": 106,
+            "text": "Refresh tokens expiram em 7 dias e podem ser revogados manualmente via blacklist em Redis; logout adiciona refresh token à blacklist."
+          },
+          {
+            "id": 107,
+            "text": "Refresh tokens expiram em 7 dias e são armazenados no banco de dados com status 'active'/'revoked'; logout marca refresh token como revoked."
+          }
+        ],
+        "recommendedOptionId": 106
+      },
+      {
+        "id": 108,
+        "section": "non_functional_requirements",
+        "description": "Definição de requisitos de conformidade com padrões de criptografia (ex: FIPS 140-2, Common Criteria). Necessário especificar se a implementação deve atender a padrões de certificação específicos ou se conformidade com boas práticas de segurança é suficiente.",
+        "resolutionOptions": [
+          {
+            "id": 109,
+            "text": "Implementação deve atender a boas práticas de segurança (OWASP, NIST) sem certificação FIPS 140-2; adequado para MVP."
+          },
+          {
+            "id": 110,
+            "text": "Implementação deve atender a FIPS 140-2 Level 1 (algoritmos aprovados, sem requisitos de hardware específico); adequado para conformidade regulatória."
+          },
+          {
+            "id": 111,
+            "text": "Implementação deve atender a Common Criteria EAL2 ou superior; adequado para ambientes de alta segurança (governo, financeiro)."
+          }
+        ],
+        "recommendedOptionId": 109
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 84,
+        "then": "O hash é válido, diferente a cada execução (salt aleatório), e a comparação retorna true",
+        "type": "unit",
+        "when": "A senha é hasheada com argon2id (m=64MiB, t=3, p=4) e o hash é comparado com a mesma senha",
+        "given": "Uma senha em texto simples 'MySecurePassword123!'",
+        "scenario": "Validação de hash de senha com argon2id",
+        "target_section": "definition"
+      },
+      {
+        "id": 85,
+        "then": "Token é válido, claims são extraídos corretamente, e token com assinatura inválida é rejeitado",
+        "type": "unit",
+        "when": "Um token JWT é gerado com RS256 e assinado com chave privada, então validado com chave pública",
+        "given": "Claims { user_id: 123, tenant_id: 456, email: 'user@example.com' }",
+        "scenario": "Geração e validação de token JWT",
+        "target_section": "definition"
+      },
+      {
+        "id": 86,
+        "then": "Validação imediata retorna true, validação após expiração retorna erro 'token expired'",
+        "type": "unit",
+        "when": "O token é validado imediatamente (válido) e novamente após 2 segundos (expirado)",
+        "given": "Um token JWT com expiração em 1 segundo",
+        "scenario": "Expiração de token JWT",
+        "target_section": "definition"
+      },
+      {
+        "id": 87,
+        "then": "Token é único (zero colisões em 1000 gerações), hash é armazenado (nunca token em texto simples), e token expira após 30 minutos",
+        "type": "unit",
+        "when": "Um token de 32 bytes é gerado com gerador criptograficamente seguro e hasheado com SHA-256",
+        "given": "Um usuário solicita recuperação de senha",
+        "scenario": "Geração de token de recuperação de senha",
+        "target_section": "definition"
+      },
+      {
+        "id": 88,
+        "then": "Login bem-sucedido retorna token JWT válido, token pode ser usado em requisições subsequentes, e token expira após 3600 segundos",
+        "type": "integration",
+        "when": "O usuário faz login enviando credenciais via HTTPS, a senha é hasheada e comparada, e um token JWT é gerado",
+        "given": "Um usuário com e-mail 'user@example.com' e senha 'MySecurePassword123!' cadastrado no banco",
+        "scenario": "Fluxo completo de autenticação com criptografia",
+        "target_section": "flow"
+      },
+      {
+        "id": 89,
+        "then": "Token é válido por 30 minutos, token anterior é invalidado, nova senha é hasheada com argon2id e armazenada, e login com nova senha funciona",
+        "type": "integration",
+        "when": "Um token de recuperação é gerado, hasheado e armazenado no banco, e-mail é enviado com link contendo token, usuário acessa link e redefine senha",
+        "given": "Um usuário solicita recuperação de senha para 'user@example.com'",
+        "scenario": "Fluxo de recuperação de senha com token criptografado",
+        "target_section": "flow"
+      },
+      {
+        "id": 90,
+        "then": "Tempo de comparação é consistente independentemente de qual caractere está incorreto, prevenindo ataques de timing",
+        "type": "security",
+        "when": "Ambas são comparadas com o hash armazenado usando função timing-safe",
+        "given": "Uma senha incorreta 'WrongPassword' e a senha correta 'MySecurePassword123!'",
+        "scenario": "Proteção contra ataque de timing em comparação de hash",
+        "target_section": "rules"
+      },
+      {
+        "id": 91,
+        "then": "Segunda tentativa é rejeitada com erro 'token already used' ou 'token invalid'",
+        "type": "security",
+        "when": "O mesmo token é usado novamente em uma segunda tentativa de redefinição",
+        "given": "Um token de recuperação de senha foi usado com sucesso para redefinir senha",
+        "scenario": "Proteção contra reutilização de token de recuperação",
+        "target_section": "rules"
+      },
+      {
+        "id": 92,
+        "then": "Token é rejeitado com erro 'invalid token' ou 'token does not belong to this tenant'",
+        "type": "security",
+        "when": "Um usuário do tenant A tenta usar token de recuperação gerado para usuário do tenant B",
+        "given": "Dois tenants diferentes com usuários diferentes",
+        "scenario": "Isolamento de tenant em operações criptográficas",
+        "target_section": "rules"
+      },
+      {
+        "id": 93,
+        "then": "p99 do tempo de hash <= 1000ms, sem timeout ou erro de recurso",
+        "type": "performance",
+        "when": "Cada requisição executa hash argon2id com m=64MiB, t=3, p=4",
+        "given": "1000 requisições de login simultâneas",
+        "scenario": "Desempenho de hash de senha sob carga",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 94,
+        "then": "p99 do tempo de validação <= 10ms, sem impacto perceptível em latência de requisição",
+        "type": "performance",
+        "when": "Cada requisição valida assinatura RS256 do token",
+        "given": "1000 requisições autenticadas com token JWT válido",
+        "scenario": "Desempenho de validação de token JWT",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 95,
+        "then": "Resposta contém access_token (JWT válido), token_type é 'Bearer', expires_in é 3600, e header Content-Type é 'application/json'",
+        "type": "contract",
+        "when": "Cliente faz requisição POST /api/auth/login com credenciais válidas",
+        "given": "Contrato esperado: POST /api/auth/login retorna { access_token: string, token_type: 'Bearer', expires_in: 3600 }",
+        "scenario": "Contrato de API de autenticação com criptografia",
+        "target_section": "flow"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 77,
+        "target": "Tempo de hash argon2id: 500ms a 1000ms por tentativa de login",
+        "category": "security",
+        "requirement": "Operações de hash de senha com argon2id DEVEM ser computacionalmente custosas o suficiente para resistir a ataques de força bruta, mas não tão custosas que degradem a experiência do usuário durante login.",
+        "verification": "Teste de desempenho medindo tempo de execução de argon2id com parâmetros m=64MiB, t=3, p=4 em hardware padrão, confirmando que está entre 500ms e 1000ms."
+      },
+      {
+        "id": 78,
+        "target": "Tempo de validação de assinatura RS256: <= 10ms por requisição",
+        "category": "security",
+        "requirement": "Validação de assinatura de token JWT DEVE ser rápida o suficiente para não impactar latência de requisições autenticadas.",
+        "verification": "Teste de desempenho medindo tempo de jwt.verify() com RS256 em 1000 requisições, confirmando que p99 <= 10ms."
+      },
+      {
+        "id": 79,
+        "target": "Tempo de criptografia/descriptografia AES-256-GCM: <= 5ms por operação",
+        "category": "security",
+        "requirement": "Operações de criptografia/descriptografia AES-256-GCM DEVEM ser rápidas o suficiente para não impactar latência de persistência e leitura de dados.",
+        "verification": "Teste de desempenho medindo tempo de encrypt/decrypt de 1000 registros com AES-256-GCM, confirmando que p99 <= 5ms."
+      },
+      {
+        "id": 80,
+        "target": "Disponibilidade >= 99.9% (máximo 43 minutos de downtime por mês)",
+        "category": "availability",
+        "requirement": "Gerenciador de chaves criptográficas DEVE estar disponível com alta disponibilidade, dado que sua indisponibilidade impede autenticação de todos os usuários.",
+        "verification": "Monitoramento contínuo de disponibilidade do gerenciador de chaves, alertas quando disponibilidade cai abaixo de 99.9%, e relatório mensal de SLA."
+      },
+      {
+        "id": 81,
+        "target": "Acesso a chaves privadas restrito a no máximo 3 operadores internos, com auditoria de cada acesso",
+        "category": "security",
+        "requirement": "Chaves criptográficas DEVEM ser protegidas contra acesso não autorizado, com controle de acesso baseado em papel (RBAC) e auditoria de acesso.",
+        "verification": "Inspeção de configuração de gerenciador de segredos confirmando RBAC, auditoria de logs de acesso a chaves confirmando que apenas operadores autorizados acessam, e teste de segurança tentando acesso não autorizado e verificando que é bloqueado."
+      },
+      {
+        "id": 82,
+        "target": "100% das operações de geração de token, validação de token, hash de senha e descriptografia registradas em log",
+        "category": "observability",
+        "requirement": "Operações criptográficas críticas DEVEM ser registradas em log de auditoria para rastreabilidade e conformidade.",
+        "verification": "Teste de integração executando operações criptográficas e verificando que cada operação gera entrada em log de auditoria com timestamp, user_id, tenant_id, tipo de operação e resultado."
+      },
+      {
+        "id": 83,
+        "target": "100% das operações criptográficas utilizando bibliotecas de terceiros auditadas",
+        "category": "security",
+        "requirement": "Implementação de criptografia DEVE utilizar bibliotecas criptográficas bem estabelecidas e mantidas (ex: libsodium, OpenSSL, bcrypt), nunca implementações caseiras.",
+        "verification": "Análise estática de código verificando que crypto.*, bcrypt, jsonwebtoken, e outras operações criptográficas usam bibliotecas padrão, nunca implementações customizadas."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 52,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-10T23:57:05.956Z",
+  "updatedAt": null
+}

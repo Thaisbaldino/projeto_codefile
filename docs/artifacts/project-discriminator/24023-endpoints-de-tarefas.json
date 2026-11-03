@@ -1,0 +1,90 @@
+{
+  "id": 24023,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 13,
+        "name": "Entidade primária que o registro representa ou documenta",
+        "value": [
+          "asset_definition",
+          "asset"
+        ],
+        "method": "user-input",
+        "reasoning": "O contrato esperado da regra de negócio é documentado no asset_definition de Endpoints de Tarefas.\nO asset 48 representa o Repositório de Usuários e Tenants, o principal entidade do registro.",
+        "confidence": 0.7582,
+        "context_element_id": 2706
+      },
+      {
+        "id": 14,
+        "name": "Domínio de conhecimento que será processado e recuperado pelo pipeline",
+        "value": [
+          "technical-documentation"
+        ],
+        "method": "internal-inference",
+        "reasoning": "O contrato esperado do repositório é documentado no asset_definition de Endpoints de Tarefas como interface esperada, pertencendo ao domínio de conhecimento técnico.",
+        "confidence": 0.7842,
+        "context_element_id": 2742
+      },
+      {
+        "id": 15,
+        "name": "SLA ou tolerância a falhas esperada",
+        "value": [
+          "99.9% uptime",
+          "p95 <= 500ms e p99 <= 1000ms",
+          "p95 <= 500ms, p99 <= 1000ms"
+        ],
+        "method": "user-input",
+        "reasoning": "A disponibilidade do serviço é exigida com 99.9% de disponibilidade.\nO requisito de SLA de p95 <= 500ms e p99 <= 1000ms para a criação de tarefa em tenant com até 10.000 tarefas existentes é o SLA exigido.\nOs targets de desempenho requisitados são p95 <= 500ms e p99 <= 1000ms.",
+        "confidence": 0.8555,
+        "context_element_id": 2772
+      },
+      {
+        "id": 17,
+        "name": "Operação de domínio ou caso de uso que o handler processa",
+        "value": [
+          "Consultar responsável no repositório de usuários",
+          "create-task"
+        ],
+        "method": "user-input",
+        "reasoning": "O handler processa a consulta do responsável no repositório de usuários.\nA resposta 201 Created é enviada com dados completos da tarefa criada, incluindo id gerado, data_criacao, criador_id e tenant_id do tenant A, correspondendo ao domínio de operação de criar-tarefa.",
+        "confidence": 0.75,
+        "context_element_id": 2782
+      },
+      {
+        "id": 18,
+        "name": "Contexto ou evento que dispara a execução do workflow",
+        "value": [
+          "system-event"
+        ],
+        "method": "user-input",
+        "reasoning": "O evento de domínio TarefaCriada é disparado por sistema, não por solicitação do usuário ou evento externo.",
+        "confidence": 0.7288,
+        "context_element_id": 2791
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 26,
+        "name": "Implemente operações idempotentes que podem ser executadas múltiplas vezes sem efeitos colaterais",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Repetir a mesma requisição idêntica em um sistema de tarefas resulta em múltiplas tarefas com IDs diferentes, não em uma única tarefa repetida.",
+        "confidence": 0.8953,
+        "context_element_id": 2968
+      }
+    ],
+    "discriminators": [],
+    "business_questions": []
+  },
+  "version": 2,
+  "active": true,
+  "sourceId": 23990,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}

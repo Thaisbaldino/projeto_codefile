@@ -1,0 +1,97 @@
+{
+  "id": 23867,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 16,
+        "name": "Principal entidade de domínio acessada por meio deste padrão",
+        "value": [
+          "users"
+        ],
+        "method": "internal-inference",
+        "reasoning": "O entidade central acessada por meio da Tabela de Usuários é o usuário, caracterizando o domínio principal do registro.",
+        "confidence": 0.7405,
+        "context_element_id": 2694
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 32,
+        "name": "Projetar para recuperabilidade com restauração rápida de estado e dados por meio de snapshots e replicação",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Reparo de falha só chega em 10 minutos, então qualquer falha que não chega nesse prazo deixa o sistema parado por 10 minutos.",
+        "confidence": 0.7541,
+        "context_element_id": 2901
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 2,
+        "name": "Paradigma de Armazenamento da Estrutura Lógica",
+        "value": "relacional",
+        "method": "internal-inference",
+        "reasoning": "Os índices ocupam <= 30% do tamanho da tabela e são otimizados para minimizar o overhead de armazenamento, caracterizando um paradigma de estrutura lógica relacional.",
+        "confidence": 0.8447,
+        "context_element_id": 1321
+      },
+      {
+        "id": 3,
+        "name": "Modo de Ciclo de Vida",
+        "value": "baseado em TTL",
+        "method": "user-input",
+        "reasoning": "A data_ultima_desativacao é definida como timestamp, indicando um ciclo de vida baseado em tempo limite.",
+        "confidence": 0.8019,
+        "context_element_id": 1326
+      },
+      {
+        "id": 48,
+        "name": "Estratégia de Sessão",
+        "value": "tokens sem estado",
+        "method": "internal-inference",
+        "reasoning": "O token de sessão é stateless-tokens, sem armazenamento persistente.",
+        "confidence": 0.8507,
+        "context_element_id": 4084
+      },
+      {
+        "id": 52,
+        "name": "Replicação de Dados",
+        "value": "replicação síncrona",
+        "method": "user-input",
+        "reasoning": "A replicação é síncrona, com RPO de 1 minuto e RTO de 5 minutos.",
+        "confidence": 0.8403,
+        "context_element_id": 4420
+      },
+      {
+        "id": 57,
+        "name": "Escopo de Validação",
+        "value": "somente saída",
+        "method": "user-input",
+        "reasoning": "A validação de nome_completo é feita apenas no output, com um limite de comprimento definido.",
+        "confidence": 0.836,
+        "context_element_id": 4625
+      },
+      {
+        "id": 59,
+        "name": "Suporte a Hierarquia",
+        "value": "hierarchical",
+        "method": "internal-inference",
+        "reasoning": "O nível hierárquico é representado por uma hierarquia de níveis, caracterizando um modelo hierárquico.",
+        "confidence": 0.7707,
+        "context_element_id": 5056
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 4,
+  "active": true,
+  "sourceId": 23683,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T08:24:33.228Z",
+  "updatedAt": null
+}

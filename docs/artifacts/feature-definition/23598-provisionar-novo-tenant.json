@@ -1,0 +1,253 @@
+{
+  "id": 23598,
+  "projectId": 4118,
+  "type": "feature_definition",
+  "content": {
+    "pendencies": [
+      {
+        "id": 30,
+        "section": "functional",
+        "description": "Quais campos devem compor o formulário de provisionamento do tenant além do nome da organização e do identificador único? Por exemplo, devem ser coletados dados como nome do administrador inicial do tenant, e-mail do administrador, domínio de acesso (subdomínio), plano contratado ou outras configurações iniciais?",
+        "resolutionOptions": [
+          {
+            "id": 31,
+            "text": "Coletar apenas nome da organização e identificador único (slug); o administrador do tenant e demais configurações são definidos posteriormente via funcionalidade de cadastro de usuários."
+          },
+          {
+            "id": 32,
+            "text": "Coletar nome da organização, identificador único (slug) e e-mail do primeiro administrador do tenant, criando automaticamente o perfil de administrador inicial no momento do provisionamento."
+          },
+          {
+            "id": 33,
+            "text": "Coletar nome da organização, identificador único (slug), e-mail do administrador inicial e subdomínio de acesso personalizado para o tenant."
+          }
+        ],
+        "recommendedOptionId": 32
+      },
+      {
+        "id": 34,
+        "section": "functional",
+        "description": "Após o provisionamento do tenant, o sistema deve enviar alguma comunicação automática ao administrador do tenant recém-criado (por exemplo, e-mail de boas-vindas com instruções de acesso ou link para definição de senha)?",
+        "resolutionOptions": [
+          {
+            "id": 35,
+            "text": "Enviar e-mail de boas-vindas ao administrador do tenant com link para definição da própria senha no primeiro acesso, utilizando o serviço de e-mail transacional integrado."
+          },
+          {
+            "id": 36,
+            "text": "Não enviar nenhuma comunicação automática; o administrador interno é responsável por informar o administrador do tenant manualmente sobre o acesso."
+          }
+        ],
+        "recommendedOptionId": 35
+      },
+      {
+        "id": 37,
+        "section": "functional",
+        "description": "O identificador único do tenant (slug) deve ser utilizado como subdomínio de acesso à plataforma (ex.: empresa.chronostasks.com), ou é apenas um código interno sem impacto na URL de acesso?",
+        "resolutionOptions": [
+          {
+            "id": 38,
+            "text": "O slug é utilizado como subdomínio de acesso, compondo a URL personalizada do tenant na plataforma (ex.: empresa.chronostasks.com)."
+          },
+          {
+            "id": 39,
+            "text": "O slug é apenas um código interno de identificação; todos os tenants acessam a plataforma pela mesma URL base, com o tenant sendo identificado por outro mecanismo no login."
+          }
+        ],
+        "recommendedOptionId": 38
+      },
+      {
+        "id": 40,
+        "section": "functional",
+        "description": "O administrador interno deve poder editar os dados de um tenant já provisionado (como nome da organização ou identificador) por meio desta funcionalidade, ou a edição de tenants é responsabilidade exclusiva da funcionalidade Ativar e Desativar Tenant?",
+        "resolutionOptions": [
+          {
+            "id": 41,
+            "text": "A edição de dados do tenant (nome, identificador) é responsabilidade desta funcionalidade de provisionamento, que deve incluir tela de edição além do formulário de criação."
+          },
+          {
+            "id": 42,
+            "text": "Esta funcionalidade cobre apenas a criação do tenant; a edição de dados e o controle de ciclo de vida (ativar/desativar) são tratados em funcionalidades separadas."
+          }
+        ],
+        "recommendedOptionId": 42
+      },
+      {
+        "id": 43,
+        "section": "non-functional",
+        "description": "Existe algum limite máximo de tenants que podem ser provisionados na plataforma (por exemplo, limite técnico ou de licenciamento), e o sistema deve bloquear ou alertar o administrador interno ao se aproximar desse limite?",
+        "resolutionOptions": [
+          {
+            "id": 44,
+            "text": "Não há limite máximo de tenants nesta versão; o sistema aceita provisionamentos até o limite operacional estimado de 50 tenants no primeiro ano, sem bloqueio automático."
+          },
+          {
+            "id": 45,
+            "text": "Definir um limite máximo configurável de tenants na plataforma, exibindo alerta ao administrador interno quando o número de tenants ativos se aproximar do teto definido."
+          }
+        ],
+        "recommendedOptionId": 44
+      }
+    ],
+    "functional_requirements": [
+      {
+        "group": {
+          "id": 1,
+          "name": "Formulário de Provisionamento",
+          "items": [
+            {
+              "id": 2,
+              "description": "Exibir formulário dedicado para que o administrador interno da plataforma registre uma nova organização (tenant) no sistema."
+            },
+            {
+              "id": 3,
+              "description": "Exibir campos obrigatórios de nome da organização e identificador único do tenant (slug ou código) no formulário de provisionamento."
+            },
+            {
+              "id": 4,
+              "description": "Validar o preenchimento de todos os campos obrigatórios antes de permitir o envio do formulário, exibindo mensagens de erro específicas por campo não preenchido."
+            },
+            {
+              "id": 5,
+              "description": "Validar a unicidade do identificador do tenant (slug ou código) na plataforma antes de persistir o provisionamento, impedindo o registro de dois tenants com o mesmo identificador."
+            },
+            {
+              "id": 6,
+              "description": "Validar que o identificador do tenant respeita o formato permitido (por exemplo, apenas letras minúsculas, números e hífens, sem espaços ou caracteres especiais), exibindo mensagem de erro específica em caso de violação."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 7,
+          "name": "Criação e Configuração do Tenant",
+          "items": [
+            {
+              "id": 8,
+              "description": "Persistir o novo tenant na plataforma com os dados informados no formulário, garantindo o isolamento completo de dados em relação a outros tenants existentes."
+            },
+            {
+              "id": 9,
+              "description": "Atribuir status inicial ativo ao tenant recém-provisionado, habilitando imediatamente o acesso da organização à plataforma."
+            },
+            {
+              "id": 10,
+              "description": "Criar automaticamente a estrutura de dados isolada para o novo tenant no momento do provisionamento, garantindo que nenhum dado de outros tenants seja acessível ou compartilhado."
+            },
+            {
+              "id": 11,
+              "description": "Registrar os metadados do tenant provisionado, incluindo data e hora de criação e identificação do administrador interno responsável pelo provisionamento."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 12,
+          "name": "Confirmação e Feedback",
+          "items": [
+            {
+              "id": 13,
+              "description": "Exibir mensagem de confirmação de sucesso ao administrador interno após a conclusão do provisionamento do tenant, apresentando os dados principais do tenant criado."
+            },
+            {
+              "id": 14,
+              "description": "Exibir mensagem de erro clara e descritiva ao administrador interno quando o provisionamento não puder ser concluído por falha de validação ou erro do sistema."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 15,
+          "name": "Controle de Acesso ao Provisionamento",
+          "items": [
+            {
+              "id": 16,
+              "description": "Restringir o acesso à funcionalidade de provisionamento de novos tenants exclusivamente a usuários com perfil de administrador interno da plataforma."
+            },
+            {
+              "id": 17,
+              "description": "Impedir que administradores de tenant, gestores ou colaboradores acessem ou executem o provisionamento de novas organizações."
+            },
+            {
+              "id": 18,
+              "description": "Garantir que o processo de provisionamento de tenants não seja acessível por nenhuma interface voltada ao cliente final, sendo disponível apenas em área administrativa interna da plataforma."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 19,
+          "name": "Listagem de Tenants",
+          "items": [
+            {
+              "id": 20,
+              "description": "Exibir a lista de todos os tenants provisionados na plataforma para o administrador interno, apresentando ao menos nome da organização, identificador do tenant, status e data de criação."
+            },
+            {
+              "id": 21,
+              "description": "Permitir ao administrador interno acessar os detalhes de um tenant específico a partir da listagem de organizações."
+            }
+          ]
+        }
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "group": {
+          "id": 22,
+          "name": "Segurança e Conformidade",
+          "items": [
+            {
+              "id": 23,
+              "description": "Registrar em log de auditoria toda operação de provisionamento de tenant, incluindo identificação do administrador interno executor, timestamp e dados do tenant criado, em conformidade com os requisitos de rastreabilidade da plataforma."
+            },
+            {
+              "id": 24,
+              "description": "Garantir que os dados de configuração de um tenant recém-provisionado não sejam visíveis, acessíveis ou interferentes nos dados de nenhum outro tenant, respeitando o isolamento multi-tenant desde o momento da criação."
+            },
+            {
+              "id": 25,
+              "description": "Garantir que apenas administradores internos autenticados e autorizados possam invocar as operações de provisionamento, aplicando controle de acesso baseado em papel (RBAC) com verificação em cada requisição."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 26,
+          "name": "Usabilidade e Responsividade",
+          "items": [
+            {
+              "id": 27,
+              "description": "Renderizar a interface de provisionamento de tenants de forma responsiva e adaptativa, garantindo usabilidade adequada em dispositivos móveis (smartphones e tablets) e em desktops."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 28,
+          "name": "Desempenho",
+          "items": [
+            {
+              "id": 29,
+              "description": "Concluir a operação de provisionamento do tenant e retornar a confirmação ao administrador interno em tempo adequado, suportando o crescimento progressivo de até 50 tenants no primeiro ano de operação."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 6,
+  "sourceType": "feature",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-10T20:46:27.259Z",
+  "updatedAt": null
+}

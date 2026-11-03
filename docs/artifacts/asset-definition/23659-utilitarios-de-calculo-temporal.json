@@ -1,0 +1,387 @@
+{
+  "id": 23659,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 10,
+          "name": "Data de prazo de tarefa",
+          "format": "ISO 8601 (YYYY-MM-DDTHH:mm:ssZ)",
+          "origin": "Atributo de tarefa persistido",
+          "trigger": null
+        },
+        {
+          "id": 11,
+          "name": "Data de expiração de sessão",
+          "format": "ISO 8601 (YYYY-MM-DDTHH:mm:ssZ)",
+          "origin": "Token de sessão autenticada",
+          "trigger": null
+        },
+        {
+          "id": 12,
+          "name": "Duração de sessão em minutos",
+          "format": "Inteiro positivo",
+          "origin": "Configuração de parâmetro",
+          "trigger": null
+        },
+        {
+          "id": 13,
+          "name": "Localização do usuário",
+          "format": "Código de localização (ex: pt-BR, en-US)",
+          "origin": "Preferência de usuário ou header Accept-Language",
+          "trigger": null
+        }
+      ],
+      "outputs": [
+        {
+          "id": 18,
+          "name": "Indicador de data vencida",
+          "format": "Booleano (true = vencida, false = válida)",
+          "destination": "Lógica de validação de tarefa ou destaque visual"
+        },
+        {
+          "id": 19,
+          "name": "Data formatada para exibição",
+          "format": "String formatada de acordo com localização",
+          "destination": "Interface do usuário (lista, Kanban, detalhe de tarefa)"
+        },
+        {
+          "id": 20,
+          "name": "Tempo de expiração de sessão",
+          "format": "ISO 8601 (YYYY-MM-DDTHH:mm:ssZ)",
+          "destination": "Token de sessão ou cookie de autenticação"
+        },
+        {
+          "id": 21,
+          "name": "Indicador de sessão expirada",
+          "format": "Booleano (true = expirada, false = válida)",
+          "destination": "Middleware de autenticação ou validação de token"
+        }
+      ],
+      "processing": [
+        {
+          "id": 14,
+          "step": "Comparar data alvo com data de referência",
+          "description": "Compara a data alvo com a data de referência (padrão: data/hora atual do servidor) para determinar se está vencida"
+        },
+        {
+          "id": 15,
+          "step": "Formatar data para localização",
+          "description": "Aplica regras de formatação de data de acordo com a localização especificada (ex: DD/MM/YYYY para pt-BR)"
+        },
+        {
+          "id": 16,
+          "step": "Calcular tempo de expiração",
+          "description": "Adiciona a duração da sessão à data/hora atual para determinar o momento de expiração"
+        },
+        {
+          "id": 17,
+          "step": "Validar expiração de sessão",
+          "description": "Compara o tempo de expiração com a data/hora atual para determinar se a sessão ainda é válida"
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 22,
+        "category": "validation",
+        "description": "A função isDateOverdue deve comparar a data alvo com a data de referência do servidor (não do cliente) para garantir consistência independente do fuso horário do usuário.",
+        "enforcement": "code",
+        "verification": "Teste unitário que valida isDateOverdue com datas em diferentes fusos horários, confirmando que a comparação é realizada no servidor"
+      },
+      {
+        "id": 23,
+        "category": "validation",
+        "description": "A função formatDateForDisplay deve respeitar o código de localização fornecido, aplicando regras de formatação específicas (ex: DD/MM/YYYY para pt-BR, MM/DD/YYYY para en-US).",
+        "enforcement": "code",
+        "verification": "Teste unitário que valida formatDateForDisplay com múltiplas localidades, confirmando que o formato de saída corresponde à localização especificada"
+      },
+      {
+        "id": 24,
+        "category": "validation",
+        "description": "A função calculateSessionExpirationTime deve adicionar a duração da sessão à data/hora atual do servidor, nunca ao tempo do cliente.",
+        "enforcement": "code",
+        "verification": "Teste unitário que valida calculateSessionExpirationTime, confirmando que o resultado é sempre baseado na data/hora do servidor"
+      },
+      {
+        "id": 25,
+        "category": "validation",
+        "description": "A função isSessionExpired deve validar que o tempo de expiração fornecido é uma instância válida de Date antes de realizar a comparação.",
+        "enforcement": "code",
+        "verification": "Teste unitário que valida isSessionExpired com entradas inválidas, confirmando que erros são lançados ou valores padrão são retornados"
+      },
+      {
+        "id": 26,
+        "category": "observability",
+        "description": "Todas as funções de cálculo temporal devem ser invocadas apenas sob demanda, sem execução autônoma ou agendada, mantendo a natureza passiva do toolkit.",
+        "enforcement": "code",
+        "verification": "Análise estática do código confirmando que nenhuma função de cálculo temporal possui lógica de auto-invocação ou agendamento"
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "Utilitários de Cálculo Temporal é um conjunto passivo e reutilizável de funções especializadas em operações temporais, incluindo validação de datas vencidas, formatação de datas para exibição, cálculo de expiração de sessões e validação de tokens expirados. Essas funções são invocadas sob demanda por handlers, fluxos de negócio e regras de validação, sem possuir ciclo de vida autônomo próprio, servindo como camada de suporte técnico compartilhada para manipulações de data e hora em toda a plataforma."
+    },
+    "definition": {
+      "params": [
+        {
+          "id": 74,
+          "name": "session_duration_minutes",
+          "value": "480"
+        },
+        {
+          "id": 83,
+          "name": "password_reset_token_expiration_minutes",
+          "value": "60"
+        }
+      ],
+      "exports": [
+        {
+          "id": 2,
+          "name": "isDateOverdue",
+          "signature": "isDateOverdue(targetDate: Date, referenceDate?: Date): boolean",
+          "preconditions": [
+            {
+              "id": 3,
+              "condition": "targetDate deve ser uma instância válida de Date ou string em formato ISO 8601"
+            },
+            {
+              "id": 4,
+              "condition": "referenceDate, se fornecida, deve ser uma instância válida de Date ou string em formato ISO 8601"
+            }
+          ],
+          "postconditions": [
+            {
+              "id": 5,
+              "condition": "retorna true se targetDate é anterior à data de referência (padrão: data/hora atual do servidor), false caso contrário"
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "name": "formatDateForDisplay",
+          "signature": "formatDateForDisplay(date: Date, locale: string): string",
+          "preconditions": [
+            {
+              "id": 7,
+              "condition": "date deve ser uma instância válida de Date"
+            },
+            {
+              "id": 8,
+              "condition": "locale deve ser um código de localização válido (ex: 'pt-BR', 'en-US')"
+            }
+          ],
+          "postconditions": [
+            {
+              "id": 9,
+              "condition": "retorna string formatada da data de acordo com a localização especificada"
+            }
+          ]
+        },
+        {
+          "id": 53,
+          "name": "calculateSessionExpirationTime",
+          "signature": "calculateSessionExpirationTime(sessionDurationMinutes: number): Date",
+          "preconditions": [
+            {
+              "id": 54,
+              "condition": "sessionDurationMinutes deve ser um inteiro positivo representando a duração da sessão em minutos"
+            }
+          ],
+          "postconditions": [
+            {
+              "id": 55,
+              "condition": "retorna objeto Date representando o momento de expiração da sessão (data/hora atual + duração)"
+            }
+          ]
+        },
+        {
+          "id": 56,
+          "name": "isSessionExpired",
+          "signature": "isSessionExpired(expirationTime: Date, currentTime?: Date): boolean",
+          "preconditions": [
+            {
+              "id": 57,
+              "condition": "expirationTime deve ser uma instância válida de Date"
+            },
+            {
+              "id": 58,
+              "condition": "currentTime, se fornecida, deve ser uma instância válida de Date"
+            }
+          ],
+          "postconditions": [
+            {
+              "id": 59,
+              "condition": "retorna true se a sessão expirou (expirationTime é anterior à data/hora atual), false caso contrário"
+            }
+          ]
+        }
+      ]
+    },
+    "pendencies": [
+      {
+        "id": 40,
+        "section": "definition",
+        "description": "Necessário definir o comportamento exato de formatDateForDisplay para diferentes localidades além de pt-BR e en-US. Qual é o conjunto completo de localidades suportadas pela plataforma?",
+        "resolutionOptions": [
+          {
+            "id": 41,
+            "text": "Suportar apenas pt-BR e en-US inicialmente, com arquitetura extensível para adicionar mais localidades no futuro"
+          },
+          {
+            "id": 42,
+            "text": "Suportar todas as localidades do padrão CLDR (Common Locale Data Repository) via biblioteca como date-fns ou moment.js"
+          },
+          {
+            "id": 43,
+            "text": "Consultar project_scope para identificar quais localidades são necessárias para os usuários da plataforma"
+          }
+        ],
+        "recommendedOptionId": 43
+      },
+      {
+        "id": 44,
+        "section": "definition",
+        "description": "Necessário confirmar se as funções de cálculo temporal devem incluir suporte a fusos horários específicos ou se sempre devem utilizar UTC do servidor. Qual é a estratégia de fuso horário da plataforma?",
+        "resolutionOptions": [
+          {
+            "id": 45,
+            "text": "Sempre utilizar UTC do servidor para todas as comparações, sem conversão de fuso horário"
+          },
+          {
+            "id": 46,
+            "text": "Suportar conversão de fuso horário do usuário para exibição, mas manter comparações em UTC do servidor"
+          },
+          {
+            "id": 47,
+            "text": "Consultar project_discriminator ou project_scope para identificar a estratégia de fuso horário definida"
+          }
+        ],
+        "recommendedOptionId": 47
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 31,
+        "then": "A função retorna true, indicando que a tarefa está vencida",
+        "type": "unit",
+        "when": "A função isDateOverdue é invocada com a data de prazo",
+        "given": "Uma data de prazo de tarefa definida para 2024-01-15 e a data atual do servidor é 2024-01-20",
+        "scenario": "Validação de data vencida com prazo no passado",
+        "target_section": "definition"
+      },
+      {
+        "id": 32,
+        "then": "A função retorna false, indicando que a tarefa não está vencida",
+        "type": "unit",
+        "when": "A função isDateOverdue é invocada com a data de prazo",
+        "given": "Uma data de prazo de tarefa definida para 2024-12-31 e a data atual do servidor é 2024-01-20",
+        "scenario": "Validação de data não vencida com prazo no futuro",
+        "target_section": "definition"
+      },
+      {
+        "id": 33,
+        "then": "A função retorna string '15/01/2024' ou '15 de janeiro de 2024' de acordo com o padrão português",
+        "type": "unit",
+        "when": "A função formatDateForDisplay é invocada com a data e localização",
+        "given": "Uma data 2024-01-15T14:30:00Z e localização 'pt-BR'",
+        "scenario": "Formatação de data para localização portuguesa",
+        "target_section": "definition"
+      },
+      {
+        "id": 34,
+        "then": "A função retorna Date representando 2024-01-20T18:00:00Z (8 horas após a data atual)",
+        "type": "unit",
+        "when": "A função calculateSessionExpirationTime é invocada com a duração",
+        "given": "Uma duração de sessão de 480 minutos (8 horas) e data/hora atual do servidor 2024-01-20T10:00:00Z",
+        "scenario": "Cálculo de expiração de sessão",
+        "target_section": "definition"
+      },
+      {
+        "id": 35,
+        "then": "A função retorna true, indicando que a sessão expirou",
+        "type": "unit",
+        "when": "A função isSessionExpired é invocada com o tempo de expiração",
+        "given": "Um tempo de expiração de sessão definido para 2024-01-20T10:00:00Z e data/hora atual do servidor 2024-01-20T11:00:00Z",
+        "scenario": "Validação de sessão expirada",
+        "target_section": "definition"
+      },
+      {
+        "id": 36,
+        "then": "A função retorna false, indicando que a sessão ainda é válida",
+        "type": "unit",
+        "when": "A função isSessionExpired é invocada com o tempo de expiração",
+        "given": "Um tempo de expiração de sessão definido para 2024-01-20T18:00:00Z e data/hora atual do servidor 2024-01-20T10:00:00Z",
+        "scenario": "Validação de sessão ainda válida",
+        "target_section": "definition"
+      },
+      {
+        "id": 37,
+        "then": "A função retorna true e a tarefa é marcada para destaque visual como atrasada na interface",
+        "type": "integration",
+        "when": "O sistema de destaque de tarefas invoca isDateOverdue para determinar se a tarefa está atrasada",
+        "given": "Uma tarefa com prazo definido para 2024-01-15 e data atual do servidor 2024-01-20, e a função isDateOverdue está disponível",
+        "scenario": "Integração de cálculo temporal com destaque de tarefas críticas",
+        "target_section": "definition"
+      },
+      {
+        "id": 38,
+        "then": "A função retorna true e a sessão é invalidada, forçando novo login",
+        "type": "integration",
+        "when": "O middleware de autenticação invoca isSessionExpired para validar o token",
+        "given": "Um token de sessão com tempo de expiração calculado por calculateSessionExpirationTime e data/hora atual do servidor posterior ao tempo de expiração",
+        "scenario": "Integração de cálculo temporal com validação de sessão",
+        "target_section": "definition"
+      },
+      {
+        "id": 39,
+        "then": "Todas as invocações completam em menos de 1ms cada, sem degradação de performance",
+        "type": "performance",
+        "when": "As funções são executadas em paralelo",
+        "given": "10.000 invocações simultâneas de isDateOverdue com datas variadas",
+        "scenario": "Performance de cálculo temporal sob carga",
+        "target_section": "non_functional_requirements"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 27,
+        "target": "< 1ms por invocação em condições normais",
+        "category": "performance",
+        "requirement": "Todas as operações de cálculo temporal devem ser executadas em tempo constante O(1), sem iterações ou operações de banco de dados.",
+        "verification": "Teste de performance que mede o tempo de execução de cada função com múltiplas invocações, confirmando que o tempo permanece consistente"
+      },
+      {
+        "id": 28,
+        "target": "Tempo de execução constante independente do resultado da comparação",
+        "category": "security",
+        "requirement": "As funções de validação de expiração (isSessionExpired, isDateOverdue) devem utilizar comparações seguras que não são vulneráveis a ataques de timing.",
+        "verification": "Teste de segurança que mede o tempo de execução com diferentes cenários de expiração, confirmando que o tempo não varia"
+      },
+      {
+        "id": 29,
+        "target": "100% de disponibilidade local",
+        "category": "availability",
+        "requirement": "As funções de cálculo temporal devem estar disponíveis em todas as instâncias da aplicação, sem dependência de serviços externos ou banco de dados.",
+        "verification": "Teste de integração confirmando que as funções funcionam sem conectividade de rede ou banco de dados"
+      },
+      {
+        "id": 30,
+        "target": "100% de determinismo",
+        "category": "observability",
+        "requirement": "As funções de cálculo temporal devem ser determinísticas e reproduzíveis, retornando sempre o mesmo resultado para as mesmas entradas.",
+        "verification": "Teste que invoca cada função múltiplas vezes com as mesmas entradas, confirmando que os resultados são idênticos"
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 57,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T00:05:06.253Z",
+  "updatedAt": null
+}

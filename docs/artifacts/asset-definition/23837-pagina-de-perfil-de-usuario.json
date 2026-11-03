@@ -1,0 +1,761 @@
+{
+  "id": 23837,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 38,
+          "name": "Contexto de Usuário Autenticado",
+          "format": "JWT Token com identificação de usuário e tenant",
+          "origin": "Sessão do Navegador",
+          "trigger": "Usuário acessa a rota /users/profile"
+        },
+        {
+          "id": 39,
+          "name": "Dados Cadastrais Atuais do Usuário",
+          "format": "JSON { id, nome_completo, email, nivel_hierarquico, status, data_criacao }",
+          "origin": "API Backend - Endpoint GET /api/v1/users/profile",
+          "trigger": "Página é carregada ou recarregada"
+        },
+        {
+          "id": 40,
+          "name": "Dados Modificados do Formulário de Edição",
+          "format": "JSON { nome_completo, email, nivel_hierarquico_id }",
+          "origin": "Entrada do Usuário - Formulário de Edição",
+          "trigger": "Usuário submete o formulário de edição de dados"
+        },
+        {
+          "id": 41,
+          "name": "Dados de Alteração de Senha",
+          "format": "JSON { senha_atual, senha_nova, confirmacao_senha_nova }",
+          "origin": "Entrada do Usuário - Formulário de Alteração de Senha",
+          "trigger": "Usuário submete o formulário de alteração de senha"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 63,
+          "name": "Interface de Perfil Renderizada",
+          "format": "HTML/CSS/JavaScript com painel de visualização e formulários de edição",
+          "destination": "Navegador do Usuário"
+        },
+        {
+          "id": 64,
+          "name": "Evento de Edição de Perfil",
+          "format": "JSON { usuario_id, tenant_id, timestamp, campos_alterados, executor_id }",
+          "destination": "Sistema de Auditoria"
+        },
+        {
+          "id": 65,
+          "name": "Evento de Alteração de Senha",
+          "format": "JSON { usuario_id, tenant_id, timestamp, executor_id }",
+          "destination": "Sistema de Auditoria"
+        },
+        {
+          "id": 66,
+          "name": "Mensagem de Confirmação ou Erro",
+          "format": "Notificação Toast ou Modal com texto descritivo",
+          "destination": "Interface do Usuário"
+        },
+        {
+          "id": 67,
+          "name": "Redirecionamento para Login",
+          "format": "Redirecionamento HTTP para /login após alteração de senha",
+          "destination": "Navegador do Usuário"
+        }
+      ],
+      "processing": [
+        {
+          "id": 42,
+          "step": "Validar Autenticação e Acesso",
+          "description": "Verificar que o usuário está autenticado, ativo e que seu tenant está ativo; validar que está acessando seu próprio perfil."
+        },
+        {
+          "id": 43,
+          "step": "Carregar Dados do Perfil",
+          "description": "Buscar no backend os dados cadastrais atuais do usuário autenticado, incluindo nome, e-mail, nível hierárquico e status."
+        },
+        {
+          "id": 44,
+          "step": "Renderizar Painel de Visualização",
+          "description": "Exibir os dados carregados em painel de visualização com indicação clara do status de ativação e informações pessoais."
+        },
+        {
+          "id": 45,
+          "step": "Abrir Formulário de Edição",
+          "description": "Quando usuário clica em 'Editar', pré-preencher o formulário com dados atuais e exibir campos editáveis."
+        },
+        {
+          "id": 46,
+          "step": "Validar Campos Obrigatórios",
+          "description": "Verificar que nome completo e e-mail estão preenchidos e não estão em branco antes de submeter."
+        },
+        {
+          "id": 47,
+          "step": "Validar Formato de E-mail",
+          "description": "Validar que o endereço de e-mail informado segue o formato válido conforme padrão RFC 5322."
+        },
+        {
+          "id": 48,
+          "step": "Validar Unicidade de E-mail por Tenant",
+          "description": "Se o e-mail foi alterado, verificar que o novo e-mail não está duplicado em outro usuário do mesmo tenant."
+        },
+        {
+          "id": 49,
+          "step": "Exibir Confirmação de Alteração de E-mail",
+          "description": "Se o e-mail foi modificado, exibir modal de confirmação antes de persistir a alteração."
+        },
+        {
+          "id": 50,
+          "step": "Persistir Alterações de Dados",
+          "description": "Enviar dados validados para o backend via POST/PUT para atualizar o perfil do usuário no banco de dados."
+        },
+        {
+          "id": 51,
+          "step": "Registrar Auditoria de Edição",
+          "description": "Registrar em log de auditoria a operação de edição de perfil, incluindo timestamp e campos alterados."
+        },
+        {
+          "id": 52,
+          "step": "Exibir Confirmação de Sucesso",
+          "description": "Mostrar mensagem de confirmação ao usuário informando que a edição foi concluída com sucesso."
+        },
+        {
+          "id": 53,
+          "step": "Abrir Formulário de Alteração de Senha",
+          "description": "Quando usuário clica em 'Alterar Senha', exibir formulário com campos de senha atual, nova senha e confirmação."
+        },
+        {
+          "id": 54,
+          "step": "Validar Senha Atual",
+          "description": "Verificar que a senha atual informada corresponde à senha do usuário autenticado."
+        },
+        {
+          "id": 55,
+          "step": "Validar Complexidade de Nova Senha",
+          "description": "Aplicar regras de complexidade mínima à nova senha, rejeitando senhas fracas e exibindo mensagem explicativa."
+        },
+        {
+          "id": 56,
+          "step": "Validar Confirmação de Senha",
+          "description": "Verificar que os campos de nova senha e confirmação são idênticos antes de processar a alteração."
+        },
+        {
+          "id": 57,
+          "step": "Persistir Nova Senha",
+          "description": "Enviar nova senha para o backend para ser armazenada em formato de hash seguro (argon2id ou bcrypt)."
+        },
+        {
+          "id": 58,
+          "step": "Invalidar Sessões Anteriores",
+          "description": "Após alteração de senha bem-sucedida, invalidar todas as sessões ativas do usuário, forçando novo login."
+        },
+        {
+          "id": 59,
+          "step": "Registrar Auditoria de Alteração de Senha",
+          "description": "Registrar em log de auditoria a operação de alteração de senha, incluindo timestamp e identificação do usuário."
+        },
+        {
+          "id": 60,
+          "step": "Exibir Confirmação de Alteração de Senha",
+          "description": "Mostrar mensagem de confirmação ao usuário e orientar para realizar novo login com a nova senha."
+        },
+        {
+          "id": 61,
+          "step": "Tratar Erro de Validação",
+          "description": "Capturar erros de validação e retornar mensagem de erro específica ao usuário indicando qual campo falhou."
+        },
+        {
+          "id": 62,
+          "step": "Tratar Erro de Persistência",
+          "description": "Capturar erros de banco de dados ou falhas de persistência e retornar mensagem de erro clara ao usuário."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 68,
+        "category": "authorization",
+        "description": "Um usuário pode visualizar e editar exclusivamente seu próprio perfil; não pode acessar ou modificar perfis de outros usuários, mesmo que seja administrador do tenant.",
+        "enforcement": "code",
+        "verification": "Validar no backend que o user_id da requisição corresponde ao user_id do token JWT autenticado; rejeitar requisições que tentem acessar perfil de outro usuário com status HTTP 403 Forbidden."
+      },
+      {
+        "id": 69,
+        "category": "validation",
+        "description": "O campo de nome completo é obrigatório e não pode estar em branco ou conter apenas espaços em branco.",
+        "enforcement": "code",
+        "verification": "Validar no cliente e servidor que nome_completo.trim().length > 0; exibir mensagem de erro específica 'Nome completo é obrigatório' se validação falhar."
+      },
+      {
+        "id": 70,
+        "category": "validation",
+        "description": "O campo de e-mail é obrigatório e deve seguir o formato válido de endereço de correio eletrônico conforme padrão RFC 5322.",
+        "enforcement": "code",
+        "verification": "Validar no cliente e servidor usando regex ou biblioteca de validação de e-mail; rejeitar formatos inválidos com mensagem 'Endereço de e-mail inválido'."
+      },
+      {
+        "id": 71,
+        "category": "validation",
+        "description": "O endereço de e-mail deve ser único dentro do tenant; não pode haver dois usuários com o mesmo e-mail na mesma organização.",
+        "enforcement": "db_constraint",
+        "verification": "Implementar constraint UNIQUE (tenant_id, email) na tabela de usuários; ao tentar persistir e-mail duplicado, banco de dados rejeita com erro de constraint violation; aplicação captura erro e exibe mensagem 'Este e-mail já está cadastrado nesta organização'."
+      },
+      {
+        "id": 72,
+        "category": "validation",
+        "description": "A senha atual informada no formulário de alteração de senha deve corresponder exatamente à senha armazenada do usuário autenticado.",
+        "enforcement": "code",
+        "verification": "Comparar hash da senha atual informada com hash armazenado no banco de dados usando algoritmo de comparação seguro (bcrypt.compare ou argon2id.verify); rejeitar se não corresponder com mensagem 'Senha atual incorreta'."
+      },
+      {
+        "id": 73,
+        "category": "validation",
+        "description": "A nova senha deve atender a requisitos mínimos de complexidade: mínimo 8 caracteres, contendo ao menos uma letra maiúscula, uma letra minúscula, um número e um caractere especial.",
+        "enforcement": "code",
+        "verification": "Validar no cliente e servidor usando regex ou função de validação de complexidade; rejeitar senhas fracas com mensagem descritiva listando requisitos não atendidos."
+      },
+      {
+        "id": 74,
+        "category": "validation",
+        "description": "Os campos de nova senha e confirmação de senha no formulário de alteração de senha devem ser idênticos.",
+        "enforcement": "code",
+        "verification": "Comparar valor de senha_nova com confirmacao_senha_nova no cliente e servidor; rejeitar se divergirem com mensagem 'As senhas não correspondem'."
+      },
+      {
+        "id": 75,
+        "category": "idempotency",
+        "description": "A alteração de dados cadastrais (nome, e-mail, nível hierárquico) é idempotente; submeter a mesma edição múltiplas vezes resulta no mesmo estado final sem efeitos colaterais duplicados.",
+        "enforcement": "code",
+        "verification": "Implementar lógica de comparação de valores antes e depois; se nenhum campo foi realmente alterado, retornar sucesso sem persistir; se campos foram alterados, persistir uma única vez e registrar auditoria uma única vez."
+      },
+      {
+        "id": 76,
+        "category": "compliance",
+        "description": "Todos os dados pessoais do usuário (nome completo, endereço de e-mail) tratados nesta página devem estar em conformidade com a Lei Geral de Proteção de Dados (LGPD), aplicando princípios de minimização de dados e proteção das informações pessoais.",
+        "enforcement": "code",
+        "verification": "Garantir que dados pessoais são transmitidos exclusivamente via HTTPS; armazenar senhas em formato de hash irreversível; não registrar dados pessoais em logs de erro ou debug; implementar mecanismos de consentimento e direito ao esquecimento conforme LGPD."
+      },
+      {
+        "id": 77,
+        "category": "observability",
+        "description": "Toda operação de edição de perfil, alteração de senha ou acesso à página de perfil deve ser registrada em log de auditoria com identificação do usuário, timestamp, tenant, e tipo de operação realizada.",
+        "enforcement": "code",
+        "verification": "Registrar em tabela de auditoria cada ação: acesso à página, abertura de formulário, submissão de edição, submissão de alteração de senha, com campos: usuario_id, tenant_id, timestamp, tipo_operacao, campos_alterados (para edições), resultado (sucesso/erro)."
+      },
+      {
+        "id": 78,
+        "category": "retention",
+        "description": "Os registros de auditoria de operações de perfil devem ser retidos por no mínimo 90 dias conforme requisitos de rastreabilidade da plataforma.",
+        "enforcement": "infra",
+        "verification": "Implementar política de retenção de dados na tabela de auditoria; executar job de limpeza mensal que remove registros com mais de 90 dias; monitorar volume de dados de auditoria para garantir conformidade."
+      },
+      {
+        "id": 79,
+        "category": "authorization",
+        "description": "Após alteração bem-sucedida de senha, todas as sessões ativas do usuário devem ser invalidadas imediatamente, forçando novo login com a nova credencial.",
+        "enforcement": "code",
+        "verification": "Ao persistir nova senha, executar query que marca todas as sessões ativas do usuário como inválidas; no próximo acesso, validar token JWT contra lista de sessões válidas; rejeitar tokens de sessões invalidadas com erro 401 Unauthorized."
+      },
+      {
+        "id": 80,
+        "category": "invariant",
+        "description": "O nível hierárquico de um usuário não pode ser alterado pelo próprio usuário através da página de perfil; apenas administradores do tenant podem modificar este atributo.",
+        "enforcement": "code",
+        "verification": "No formulário de edição de perfil, exibir o nível hierárquico como campo somente leitura (disabled); se requisição POST/PUT tentar alterar nivel_hierarquico_id, validar no servidor que o executor é administrador do tenant; rejeitar alteração de nível hierárquico realizada por usuário comum com erro 403 Forbidden."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "A Página de Perfil de Usuário é uma superfície de interface especializada que permite ao usuário autenticado visualizar e gerenciar seus próprios dados cadastrais, incluindo nome completo, endereço de e-mail e nível hierárquico dentro da organização. Compõe-se de um painel de visualização de dados pessoais com indicação clara do status de ativação, um formulário de edição com validação de campos obrigatórios e unicidade de e-mail por tenant, controles de alteração de senha com fluxo seguro de confirmação, e mecanismos de isolamento de dados que garantem que cada usuário visualize e edite exclusivamente seus próprios dados. Integra-se ao fluxo de gerenciamento de perfil de usuário, aplicando regras de validação de negócio, conformidade com LGPD, rastreabilidade de auditoria, e invalidação de sessões quando a senha é alterada. Funciona como o ponto de entrada para operações de auto-gerenciamento de perfil, permitindo que colaboradores mantenham seus dados cadastrais atualizados e seguros."
+    },
+    "definition": {
+      "route": "/users/profile",
+      "renders": [
+        {
+          "id": 2,
+          "kind": "panel",
+          "name": "Painel de Visualização de Dados Pessoais",
+          "source": "user_profile_display_panel"
+        },
+        {
+          "id": 3,
+          "kind": "form",
+          "name": "Formulário de Edição de Dados Cadastrais",
+          "source": "user_profile_edit_form_component"
+        },
+        {
+          "id": 4,
+          "kind": "form",
+          "name": "Formulário de Alteração de Senha",
+          "source": "password_change_form_component"
+        },
+        {
+          "id": 5,
+          "kind": "interactive_surface",
+          "name": "Modal de Confirmação de Alteração de E-mail",
+          "source": "email_change_confirmation_modal"
+        },
+        {
+          "id": 6,
+          "kind": "card",
+          "name": "Indicador de Status de Ativação",
+          "source": "activation_status_indicator"
+        }
+      ],
+      "state_machine": {
+        "states": [
+          {
+            "id": 7,
+            "name": "Perfil Carregado",
+            "description": "Estado inicial onde os dados do perfil do usuário autenticado foram carregados e exibidos com sucesso."
+          },
+          {
+            "id": 8,
+            "name": "Modo de Visualização",
+            "description": "Usuário está visualizando seus dados pessoais sem edição ativa."
+          },
+          {
+            "id": 9,
+            "name": "Formulário de Edição Aberto",
+            "description": "O formulário de edição de dados cadastrais foi aberto com os dados atuais do usuário pré-preenchidos."
+          },
+          {
+            "id": 10,
+            "name": "Validando Edição de Dados",
+            "description": "Os dados do formulário de edição estão sendo validados no cliente e servidor."
+          },
+          {
+            "id": 11,
+            "name": "Edição de Dados Persistida",
+            "description": "As alterações de dados cadastrais foram persistidas com sucesso no banco de dados."
+          },
+          {
+            "id": 12,
+            "name": "Formulário de Alteração de Senha Aberto",
+            "description": "O formulário de alteração de senha foi aberto para que o usuário defina uma nova credencial."
+          },
+          {
+            "id": 13,
+            "name": "Validando Alteração de Senha",
+            "description": "A nova senha está sendo validada quanto a complexidade e conformidade com políticas de segurança."
+          },
+          {
+            "id": 14,
+            "name": "Alteração de Senha Persistida",
+            "description": "A nova senha foi persistida com sucesso e sessões anteriores foram invalidadas."
+          },
+          {
+            "id": 15,
+            "name": "Confirmação de Alteração de E-mail Exibida",
+            "description": "Modal de confirmação foi exibido antes de alterar o endereço de e-mail do usuário."
+          },
+          {
+            "id": 16,
+            "name": "Erro de Validação",
+            "description": "Validação falhou e mensagem de erro foi exibida ao usuário."
+          },
+          {
+            "id": 17,
+            "name": "Erro de Persistência",
+            "description": "Falha ao persistir alterações no banco de dados; mensagem de erro foi exibida."
+          }
+        ],
+        "transitions": [
+          {
+            "id": 18,
+            "to": "Modo de Visualização",
+            "from": "Perfil Carregado",
+            "trigger": "Página de perfil é carregada com sucesso"
+          },
+          {
+            "id": 19,
+            "to": "Formulário de Edição Aberto",
+            "from": "Modo de Visualização",
+            "trigger": "Usuário clica em botão 'Editar Dados Pessoais'"
+          },
+          {
+            "id": 20,
+            "to": "Validando Edição de Dados",
+            "from": "Formulário de Edição Aberto",
+            "trigger": "Usuário submete o formulário com dados modificados"
+          },
+          {
+            "id": 21,
+            "to": "Edição de Dados Persistida",
+            "from": "Validando Edição de Dados",
+            "guard": "validacao_passou AND persistencia_sucesso",
+            "trigger": "Todas as validações passaram e dados foram persistidos com sucesso"
+          },
+          {
+            "id": 22,
+            "to": "Erro de Validação",
+            "from": "Validando Edição de Dados",
+            "guard": "validacao_falhou",
+            "trigger": "Validação falhou em um ou mais campos"
+          },
+          {
+            "id": 23,
+            "to": "Modo de Visualização",
+            "from": "Edição de Dados Persistida",
+            "trigger": "Usuário retorna à visualização após edição bem-sucedida"
+          },
+          {
+            "id": 24,
+            "to": "Formulário de Alteração de Senha Aberto",
+            "from": "Modo de Visualização",
+            "trigger": "Usuário clica em botão 'Alterar Senha'"
+          },
+          {
+            "id": 25,
+            "to": "Validando Alteração de Senha",
+            "from": "Formulário de Alteração de Senha Aberto",
+            "trigger": "Usuário submete o formulário com nova senha"
+          },
+          {
+            "id": 26,
+            "to": "Alteração de Senha Persistida",
+            "from": "Validando Alteração de Senha",
+            "guard": "validacao_senha_passou AND persistencia_sucesso",
+            "trigger": "Validação de senha passou e nova credencial foi persistida"
+          },
+          {
+            "id": 27,
+            "to": "Erro de Validação",
+            "from": "Validando Alteração de Senha",
+            "guard": "validacao_senha_falhou",
+            "trigger": "Validação de senha falhou"
+          },
+          {
+            "id": 28,
+            "to": "Modo de Visualização",
+            "from": "Alteração de Senha Persistida",
+            "trigger": "Usuário retorna à visualização após alteração de senha bem-sucedida"
+          },
+          {
+            "id": 29,
+            "to": "Confirmação de Alteração de E-mail Exibida",
+            "from": "Formulário de Edição Aberto",
+            "guard": "email_foi_alterado",
+            "trigger": "Usuário modificou o endereço de e-mail no formulário"
+          },
+          {
+            "id": 30,
+            "to": "Validando Edição de Dados",
+            "from": "Confirmação de Alteração de E-mail Exibida",
+            "trigger": "Usuário confirma a alteração de e-mail no modal"
+          },
+          {
+            "id": 31,
+            "to": "Formulário de Edição Aberto",
+            "from": "Confirmação de Alteração de E-mail Exibida",
+            "trigger": "Usuário cancela a alteração de e-mail no modal"
+          },
+          {
+            "id": 32,
+            "to": "Modo de Visualização",
+            "from": "Formulário de Edição Aberto",
+            "trigger": "Usuário cancela a edição sem salvar"
+          },
+          {
+            "id": 33,
+            "to": "Modo de Visualização",
+            "from": "Formulário de Alteração de Senha Aberto",
+            "trigger": "Usuário cancela a alteração de senha"
+          },
+          {
+            "id": 34,
+            "to": "Erro de Persistência",
+            "from": "Validando Edição de Dados",
+            "guard": "persistencia_falhou",
+            "trigger": "Falha ao persistir dados no banco de dados"
+          },
+          {
+            "id": 35,
+            "to": "Erro de Persistência",
+            "from": "Validando Alteração de Senha",
+            "guard": "persistencia_falhou",
+            "trigger": "Falha ao persistir nova senha no banco de dados"
+          },
+          {
+            "id": 36,
+            "to": "Formulário de Edição Aberto",
+            "from": "Erro de Validação",
+            "trigger": "Usuário corrige os erros e resubmete o formulário"
+          },
+          {
+            "id": 37,
+            "to": "Formulário de Edição Aberto",
+            "from": "Erro de Persistência",
+            "trigger": "Usuário tenta novamente após erro de persistência"
+          }
+        ]
+      }
+    },
+    "pendencies": [
+      {
+        "id": 102,
+        "section": "definition",
+        "description": "Não foi fornecida informação sobre quais campos do nível hierárquico devem ser exibidos na página de perfil (apenas id ou também nome/descrição do nível). Atualmente, a definição assume que apenas o id é armazenado, mas a interface pode precisar exibir o nome descritivo do nível.",
+        "resolutionOptions": [
+          {
+            "id": 103,
+            "text": "Exibir apenas o id do nível hierárquico como texto (ex: 'Nível: 3') sem nome descritivo"
+          },
+          {
+            "id": 104,
+            "text": "Carregar e exibir o nome descritivo do nível hierárquico (ex: 'Nível: Gerente') fazendo join com tabela de níveis hierárquicos"
+          },
+          {
+            "id": 105,
+            "text": "Exibir ambos: id e nome descritivo do nível hierárquico (ex: 'Nível: 3 - Gerente')"
+          }
+        ],
+        "recommendedOptionId": 104
+      },
+      {
+        "id": 106,
+        "section": "definition",
+        "description": "Não foi especificado se a página de perfil deve permitir que o usuário visualize seu histórico de alterações de dados cadastrais (ex: quando foi a última edição, quem editou). Atualmente, a definição não inclui um painel de histórico.",
+        "resolutionOptions": [
+          {
+            "id": 107,
+            "text": "Não incluir histórico de alterações; exibir apenas dados atuais do perfil"
+          },
+          {
+            "id": 108,
+            "text": "Incluir painel de histórico mostrando últimas 5 alterações com timestamp e identificação de quem editou"
+          },
+          {
+            "id": 109,
+            "text": "Incluir painel de histórico completo com paginação, permitindo visualizar todas as alterações realizadas"
+          }
+        ],
+        "recommendedOptionId": 107
+      },
+      {
+        "id": 110,
+        "section": "rules",
+        "description": "Não foi especificado o tempo de expiração de sessão após alteração de senha. A regra 79 menciona invalidação de sessões, mas não define se o usuário é redirecionado imediatamente para login ou se tem um período de graça.",
+        "resolutionOptions": [
+          {
+            "id": 111,
+            "text": "Invalidar sessões imediatamente; usuário é redirecionado para login na próxima ação"
+          },
+          {
+            "id": 112,
+            "text": "Invalidar sessões imediatamente; exibir modal informando que deve fazer login novamente e redirecionar para /login após 3 segundos"
+          },
+          {
+            "id": 113,
+            "text": "Manter sessão ativa por 5 minutos após alteração de senha, depois invalidar automaticamente"
+          }
+        ],
+        "recommendedOptionId": 112
+      },
+      {
+        "id": 114,
+        "section": "non_functional_requirements",
+        "description": "Não foi especificado o comportamento esperado quando o usuário tenta alterar sua senha enquanto está usando a plataforma em múltiplas abas/janelas. Não está claro se todas as abas devem ser desconectadas simultaneamente ou se há sincronização de sessão.",
+        "resolutionOptions": [
+          {
+            "id": 115,
+            "text": "Invalidar todas as sessões do usuário em todos os navegadores/dispositivos; usuário deve fazer login novamente em todas as abas"
+          },
+          {
+            "id": 116,
+            "text": "Invalidar apenas a sessão da aba onde a alteração foi realizada; outras abas continuam ativas até expiração natural"
+          },
+          {
+            "id": 117,
+            "text": "Implementar sincronização de sessão entre abas; quando uma aba invalida sessão, todas as outras abas são notificadas e redirecionadas para login"
+          }
+        ],
+        "recommendedOptionId": 115
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 91,
+        "then": "O sistema exibe mensagem de erro 'Endereço de e-mail é obrigatório' e não permite submissão",
+        "type": "unit",
+        "when": "O usuário tenta submeter o formulário sem preencher o e-mail",
+        "given": "Um usuário está no formulário de edição de perfil com campo de e-mail vazio",
+        "scenario": "Validação de formato de e-mail",
+        "target_section": "rules"
+      },
+      {
+        "id": 92,
+        "then": "O sistema exibe mensagem de erro 'Endereço de e-mail inválido' e não permite submissão",
+        "type": "unit",
+        "when": "O usuário tenta submeter o formulário com e-mail em formato inválido",
+        "given": "Um usuário está no formulário de edição de perfil com campo de e-mail preenchido com 'usuario@invalido'",
+        "scenario": "Validação de formato de e-mail inválido",
+        "target_section": "rules"
+      },
+      {
+        "id": 93,
+        "then": "Os dados são persistidos no banco de dados, mensagem de confirmação é exibida, e a página reflete os novos dados sem recarregar",
+        "type": "integration",
+        "when": "O usuário clica em 'Editar', modifica o nome completo, submete o formulário e confirma a alteração",
+        "given": "Um usuário autenticado está na página de perfil com dados atuais carregados",
+        "scenario": "Edição bem-sucedida de dados cadastrais",
+        "target_section": "flow"
+      },
+      {
+        "id": 94,
+        "then": "A nova senha é persistida em hash seguro, todas as sessões anteriores são invalidadas, mensagem de confirmação é exibida, e usuário é redirecionado para login",
+        "type": "integration",
+        "when": "O usuário preenche senha atual correta, nova senha com complexidade válida, confirma a nova senha e submete",
+        "given": "Um usuário autenticado está na página de perfil e clica em 'Alterar Senha'",
+        "scenario": "Alteração de senha com sucesso",
+        "target_section": "flow"
+      },
+      {
+        "id": 95,
+        "then": "O sistema valida a senha atual contra o hash armazenado, rejeita a submissão e exibe mensagem 'Senha atual incorreta'",
+        "type": "security",
+        "when": "O usuário preenche uma senha atual incorreta e tenta submeter",
+        "given": "Um usuário autenticado está no formulário de alteração de senha",
+        "scenario": "Tentativa de alteração de senha com senha atual incorreta",
+        "target_section": "rules"
+      },
+      {
+        "id": 96,
+        "then": "O sistema valida complexidade, rejeita a submissão e exibe mensagem descritiva listando requisitos não atendidos",
+        "type": "security",
+        "when": "O usuário preenche uma nova senha fraca (ex: '123456') que não atende requisitos de complexidade",
+        "given": "Um usuário autenticado está no formulário de alteração de senha",
+        "scenario": "Tentativa de alteração de senha com complexidade insuficiente",
+        "target_section": "rules"
+      },
+      {
+        "id": 97,
+        "then": "O backend valida que o user_id da requisição corresponde ao user_id do token JWT, rejeita com erro 403 Forbidden",
+        "type": "security",
+        "when": "O usuário tenta fazer requisição GET /api/v1/users/profile?user_id=<uuid_tenant_b>",
+        "given": "Um usuário do tenant A está autenticado e tenta acessar perfil de um usuário do tenant B via manipulação de URL",
+        "scenario": "Isolamento multi-tenant na edição de perfil",
+        "target_section": "rules"
+      },
+      {
+        "id": 98,
+        "then": "O servidor retorna status 200 OK com JSON contendo { id, nome_completo, email, nivel_hierarquico, status, data_criacao }",
+        "type": "contract",
+        "when": "O servidor processa a requisição",
+        "given": "Um cliente faz requisição GET /api/v1/users/profile com token JWT válido",
+        "scenario": "Contrato de API para carregamento de perfil",
+        "target_section": "flow"
+      },
+      {
+        "id": 99,
+        "then": "O servidor retorna status 200 OK com JSON contendo dados atualizados e timestamp de última edição",
+        "type": "contract",
+        "when": "O servidor processa a requisição com dados válidos",
+        "given": "Um cliente faz requisição PUT /api/v1/users/profile com token JWT válido e dados modificados",
+        "scenario": "Contrato de API para edição de perfil",
+        "target_section": "flow"
+      },
+      {
+        "id": 100,
+        "then": "p95 de latência é <= 800ms; p99 é <= 1200ms; nenhuma requisição falha por timeout",
+        "type": "performance",
+        "when": "Cada usuário faz requisição GET /api/v1/users/profile",
+        "given": "5.000 usuários simultâneos estão acessando suas páginas de perfil",
+        "scenario": "Carregamento de perfil sob carga",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 101,
+        "then": "Ambas as operações são persistidas com sucesso, auditoria registra ambas as ações, usuário é redirecionado para login após alteração de senha",
+        "type": "e2e",
+        "when": "O usuário edita nome completo, confirma alteração, depois clica em 'Alterar Senha', preenche nova senha e confirma",
+        "given": "Um usuário autenticado acessa a página de perfil",
+        "scenario": "Fluxo completo de edição de perfil e alteração de senha",
+        "target_section": "flow"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 81,
+        "target": "p95 <= 800ms para carregamento inicial; p99 <= 1200ms mesmo em conexões 3G lento",
+        "category": "performance",
+        "requirement": "Carregamento da página de perfil com dados do usuário deve ser concluído e renderizado no navegador em tempo adequado.",
+        "verification": "Medir tempo de requisição GET /api/v1/users/profile + tempo de renderização no navegador usando Web Vitals; executar testes de carga com até 5.000 usuários simultâneos; validar que p95 e p99 estão dentro dos limites."
+      },
+      {
+        "id": 82,
+        "target": "p95 <= 500ms para persistência e retorno de confirmação; p99 <= 800ms",
+        "category": "performance",
+        "requirement": "Submissão de edição de dados cadastrais deve ser processada e confirmada ao usuário em tempo adequado.",
+        "verification": "Medir tempo de requisição PUT /api/v1/users/profile + tempo de exibição de mensagem de confirmação; executar testes de carga; validar latência mesmo sob carga de até 5.000 usuários ativos."
+      },
+      {
+        "id": 83,
+        "target": "p95 <= 800ms para hash de senha + persistência + invalidação de sessões; p99 <= 1200ms",
+        "category": "performance",
+        "requirement": "Submissão de alteração de senha deve ser processada e confirmada ao usuário em tempo adequado.",
+        "verification": "Medir tempo total de operação de alteração de senha incluindo hash criptográfico; executar testes de carga; validar que operação não degrada performance mesmo com múltiplas alterações simultâneas."
+      },
+      {
+        "id": 84,
+        "target": "100% das requisições via HTTPS; certificado TLS válido com cipher suites modernos",
+        "category": "security",
+        "requirement": "Todas as comunicações entre navegador e backend devem ser criptografadas usando protocolo HTTPS com TLS 1.2 ou superior.",
+        "verification": "Configurar servidor web para aceitar apenas HTTPS; rejeitar requisições HTTP com redirecionamento 301 para HTTPS; validar certificado TLS com ferramentas como SSL Labs; executar testes de segurança para verificar ausência de vulnerabilidades de criptografia."
+      },
+      {
+        "id": 85,
+        "target": "Algoritmo argon2id com parâmetros m=64MiB, t=3, p=4 OU bcrypt com cost factor >= 12",
+        "category": "security",
+        "requirement": "Senhas dos usuários devem ser armazenadas exclusivamente em formato de hash seguro utilizando algoritmo resistente a ataques de força bruta.",
+        "verification": "Validar no código que toda senha é hasheada antes de persistência; executar testes de segurança para verificar que senhas não estão armazenadas em texto simples; auditar banco de dados para confirmar que coluna senha_hash contém apenas hashes válidos."
+      },
+      {
+        "id": 86,
+        "target": "Token JWT com exp claim; validação de assinatura e expiração em cada requisição; tempo de expiração configurável (padrão 60 minutos)",
+        "category": "security",
+        "requirement": "Tokens JWT de sessão devem incluir tempo de expiração e ser validados em cada requisição autenticada.",
+        "verification": "Validar que tokens JWT incluem claim 'exp' com timestamp futuro; implementar middleware que valida exp em cada requisição; testar que tokens expirados são rejeitados com erro 401 Unauthorized."
+      },
+      {
+        "id": 87,
+        "target": "Disponibilidade >= 99.5% medida mensalmente; RTO <= 15 minutos em caso de falha",
+        "category": "availability",
+        "requirement": "A página de perfil deve estar disponível com alta disponibilidade, dado que sua indisponibilidade impede usuários de gerenciar suas credenciais.",
+        "verification": "Implementar health checks para endpoint GET /api/v1/users/profile; monitorar disponibilidade com alertas para degradação; executar testes de failover para validar recuperação em tempo aceitável."
+      },
+      {
+        "id": 88,
+        "target": "100% dos erros registrados com stack trace, contexto de requisição e identificação do usuário; logs estruturados em formato JSON",
+        "category": "observability",
+        "requirement": "Erros e exceções ocorridos durante operações de perfil devem ser registrados com contexto suficiente para diagnóstico.",
+        "verification": "Implementar logging estruturado em todas as operações; validar que logs contêm user_id, tenant_id, timestamp, tipo de erro, stack trace; centralizar logs em sistema de observabilidade (ELK, Datadog, etc.); executar testes de erro para verificar qualidade dos logs."
+      },
+      {
+        "id": 89,
+        "target": "Suportar até 5.000 usuários ativos simultâneos com latência p95 <= 800ms para carregamento de perfil",
+        "category": "scalability",
+        "requirement": "A página de perfil deve suportar crescimento de usuários ativos sem degradação de performance.",
+        "verification": "Executar testes de carga com ferramentas como JMeter ou Locust; simular 5.000 usuários acessando perfil simultaneamente; validar que latência p95 permanece <= 800ms; monitorar utilização de CPU, memória e conexões de banco de dados."
+      },
+      {
+        "id": 90,
+        "target": "Requisição GET /api/v1/users/profile consome <= 10 MB de memória; requisição PUT consome <= 20 MB; índices de banco de dados otimizados para evitar full table scans",
+        "category": "cost",
+        "requirement": "Operações de perfil devem ser otimizadas para minimizar consumo de recursos de computação e armazenamento.",
+        "verification": "Monitorar consumo de memória por requisição usando profilers; executar EXPLAIN PLAN em queries de banco de dados para validar uso de índices; otimizar queries que realizam full table scans; implementar caching em nível de aplicação para reduzir consultas ao banco."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 22,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T06:48:32.232Z",
+  "updatedAt": null
+}

@@ -1,0 +1,766 @@
+{
+  "id": 23761,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 26,
+          "name": "Entidade Task do Banco de Dados",
+          "format": "Objeto Task com campos de domínio (id, tenant_id, titulo, descricao, responsavel_id, criador_id, prioridade, status, data_limite, data_criacao, data_ultima_edicao, ultimo_editor_id, data_conclusao)",
+          "origin": "Repositório de Tarefas (ASSET-047)",
+          "trigger": "Invocação de transformTaskToDTO ou transformTasksToListDTO por handlers ou camadas de apresentação"
+        },
+        {
+          "id": 27,
+          "name": "Entidade User do Banco de Dados",
+          "format": "Objeto User com campos de domínio (id, tenant_id, nome_completo, email, nivel_hierarquico_id, status, data_criacao, criador_id, data_ultima_edicao, ultimo_editor_id)",
+          "origin": "Repositório de Usuários e Tenants (ASSET-048)",
+          "trigger": "Invocação de transformUserToDTO ou transformUsersToListDTO por handlers ou camadas de apresentação"
+        },
+        {
+          "id": 28,
+          "name": "Corpo de Requisição HTTP (Criação de Tarefa)",
+          "format": "JSON com campos { titulo: string, descricao?: string, responsavel_id: uuid, prioridade: enum, status?: string, data_limite?: string }",
+          "origin": "Cliente HTTP (navegador ou aplicação)",
+          "trigger": "Submissão de formulário de criação de tarefa ou requisição POST para endpoint de tarefas"
+        },
+        {
+          "id": 29,
+          "name": "Corpo de Requisição HTTP (Criação de Usuário)",
+          "format": "JSON com campos { nome_completo: string, email: string, nivel_hierarquico_id: uuid }",
+          "origin": "Cliente HTTP (navegador ou aplicação)",
+          "trigger": "Submissão de formulário de cadastro de usuário ou requisição POST para endpoint de usuários"
+        },
+        {
+          "id": 30,
+          "name": "Localização do Usuário",
+          "format": "String com código de localização (ex: 'pt-BR', 'en-US')",
+          "origin": "Contexto de Sessão ou Preferências do Usuário",
+          "trigger": "Disponível durante transformação de tarefas para formatação de datas conforme preferência do usuário"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 40,
+          "name": "TaskDTO (Detalhado)",
+          "format": "JSON com campos { id, tenant_id, titulo, descricao?, responsavel_id, responsavel_nome?, criador_id, criador_nome?, prioridade, status, data_limite?, data_limite_formatada?, data_criacao, data_criacao_formatada, data_ultima_edicao?, data_ultima_edicao_formatada?, ultimo_editor_id?, ultimo_editor_nome?, data_conclusao?, data_conclusao_formatada?, esta_atrasada, esta_critica }",
+          "destination": "Handlers de Tarefas, Camadas de Apresentação, APIs"
+        },
+        {
+          "id": 41,
+          "name": "TaskListDTO",
+          "format": "Array de JSON com campos { id, titulo, responsavel_nome, prioridade, status, data_limite_formatada?, esta_atrasada, esta_critica }",
+          "destination": "Visualizações de Lista e Kanban, APIs de Listagem"
+        },
+        {
+          "id": 42,
+          "name": "TaskKanbanDTO",
+          "format": "JSON com campos { id, titulo, responsavel_nome, prioridade, data_limite_formatada?, esta_atrasada, esta_critica }",
+          "destination": "Visualização Kanban de Tarefas"
+        },
+        {
+          "id": 43,
+          "name": "UserDTO (Detalhado)",
+          "format": "JSON com campos { id, tenant_id, nome_completo, email, nivel_hierarquico_id, nivel_hierarquico_nome?, status, data_criacao, data_criacao_formatada, criador_id, criador_nome?, data_ultima_edicao?, data_ultima_edicao_formatada?, ultimo_editor_id?, ultimo_editor_nome? } — sem senha_hash",
+          "destination": "Handlers de Usuários, Camadas de Apresentação, APIs"
+        },
+        {
+          "id": 44,
+          "name": "UserListDTO",
+          "format": "Array de JSON com campos { id, nome_completo, email, nivel_hierarquico_nome, status, data_criacao_formatada }",
+          "destination": "Visualizações de Listagem de Usuários, APIs de Listagem"
+        },
+        {
+          "id": 45,
+          "name": "TaskCreateDTO (Normalizado)",
+          "format": "JSON com campos { titulo, descricao?, responsavel_id, prioridade, status, data_limite? } — validado e normalizado",
+          "destination": "Handlers de Criação de Tarefas, Repositório de Tarefas"
+        },
+        {
+          "id": 46,
+          "name": "UserCreateDTO (Normalizado)",
+          "format": "JSON com campos { nome_completo, email, nivel_hierarquico_id } — validado e normalizado",
+          "destination": "Handlers de Criação de Usuários, Repositório de Usuários"
+        },
+        {
+          "id": 47,
+          "name": "TaskStatusChangeDTO",
+          "format": "JSON com campos { task_id, status_anterior, status_novo, data_transicao }",
+          "destination": "Handlers de Atualização de Status, Trilha de Auditoria"
+        },
+        {
+          "id": 48,
+          "name": "UserStatusChangeDTO",
+          "format": "JSON com campos { user_id, status_anterior, status_novo, data_mudanca }",
+          "destination": "Handlers de Ativação/Desativação de Usuários, Trilha de Auditoria"
+        }
+      ],
+      "processing": [
+        {
+          "id": 31,
+          "step": "Validar Estrutura de Entrada",
+          "description": "Verificar se o objeto de entrada (Task, User ou corpo de requisição) contém todos os campos obrigatórios e tipos corretos antes de processar transformações"
+        },
+        {
+          "id": 32,
+          "step": "Normalizar Campos de Texto",
+          "description": "Invocar sanitizeTaskTitle ou normalizeHierarchyLevelName para remover caracteres de controle, normalizar espaços em branco e truncar conforme limites máximos"
+        },
+        {
+          "id": 33,
+          "step": "Validar Valores de Enumeração",
+          "description": "Invocar validateTaskPriority e validateTaskStatus para garantir que valores de prioridade e status correspondem aos valores permitidos"
+        },
+        {
+          "id": 34,
+          "step": "Converter Formatos de Data",
+          "description": "Converter timestamps do banco de dados para strings ISO 8601 e strings de entrada para objetos Date conforme necessário"
+        },
+        {
+          "id": 35,
+          "step": "Calcular Campos Derivados",
+          "description": "Invocar isDateOverdue para determinar se tarefa está atrasada; calcular esta_critica verificando prioridade; enriquecer com nomes de usuários e níveis hierárquicos"
+        },
+        {
+          "id": 36,
+          "step": "Formatar Datas para Exibição",
+          "description": "Invocar formatDateForDisplay com localização do usuário para gerar strings de data formatadas conforme preferência regional"
+        },
+        {
+          "id": 37,
+          "step": "Remover Campos Sensíveis",
+          "description": "Omitir completamente campos sensíveis como senha_hash, datas de ativação/desativação e outros dados internos não destinados à exposição em APIs"
+        },
+        {
+          "id": 38,
+          "step": "Mesclar Atualizações Parciais",
+          "description": "Para operações de atualização, invocar mergeTaskUpdates ou mergeUserUpdates para combinar dados existentes com campos atualizados, preservando valores não modificados"
+        },
+        {
+          "id": 39,
+          "step": "Construir Estrutura DTO Final",
+          "description": "Montar o objeto DTO final com todos os campos transformados, normalizados, validados e enriquecidos, pronto para serialização JSON"
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 49,
+        "category": "validation",
+        "description": "Toda transformação de Task ou User deve validar que o objeto de entrada contém todos os campos obrigatórios (id, tenant_id, titulo/nome_completo, email, status) antes de processar, rejeitando entradas incompletas com erro específico.",
+        "enforcement": "code",
+        "verification": "Verificação de presença e tipo de cada campo obrigatório no início de cada função de transformação; lançamento de exceção InvalidInputError se algum campo obrigatório estiver ausente ou com tipo incorreto."
+      },
+      {
+        "id": 50,
+        "category": "validation",
+        "description": "Toda transformação de prioridade de tarefa deve validar que o valor corresponde a um dos enumerados permitidos (baixa, media, alta, urgente) utilizando validateTaskPriority do Toolkit, rejeitando valores fora do conjunto.",
+        "enforcement": "code",
+        "verification": "Invocação de validateTaskPriority antes de incluir prioridade no DTO; lançamento de exceção InvalidPriorityError se validação falhar."
+      },
+      {
+        "id": 51,
+        "category": "validation",
+        "description": "Toda transformação de status de tarefa deve validar que o valor corresponde a um dos status fixos definidos (A Fazer, Em Andamento, Concluído) utilizando validateTaskStatus do Toolkit, rejeitando valores fora do conjunto.",
+        "enforcement": "code",
+        "verification": "Invocação de validateTaskStatus antes de incluir status no DTO; lançamento de exceção InvalidStatusError se validação falhar."
+      },
+      {
+        "id": 52,
+        "category": "validation",
+        "description": "Toda transformação de e-mail de usuário deve validar o formato utilizando validateEmail do Toolkit, rejeitando entradas que não estejam em formato válido de endereço de correio eletrônico.",
+        "enforcement": "code",
+        "verification": "Invocação de validateEmail antes de incluir email no DTO; lançamento de exceção InvalidEmailError se validação falhar."
+      },
+      {
+        "id": 53,
+        "category": "authorization",
+        "description": "Toda transformação de User para UserDTO deve remover completamente o campo senha_hash, garantindo que dados sensíveis de autenticação nunca sejam expostos em APIs ou interfaces.",
+        "enforcement": "code",
+        "verification": "Verificação de que o campo senha_hash não está presente no objeto DTO final; teste automatizado que confirma ausência do campo em todas as transformações de User."
+      },
+      {
+        "id": 54,
+        "category": "compliance",
+        "description": "Toda transformação de dados pessoais de usuário (nome_completo, email) deve estar em conformidade com LGPD, garantindo que apenas dados necessários para a funcionalidade sejam incluídos no DTO e que dados sensíveis sejam removidos conforme apropriado.",
+        "enforcement": "code",
+        "verification": "Auditoria de campos incluídos em cada transformação de User; verificação de que nenhum campo adicional sensível é exposto; documentação de justificativa para cada campo incluído."
+      },
+      {
+        "id": 55,
+        "category": "invariant",
+        "description": "Toda transformação de tarefa deve garantir que o campo tenant_id é preservado intacto do objeto de entrada para o DTO, mantendo a rastreabilidade de isolamento multi-tenant.",
+        "enforcement": "code",
+        "verification": "Verificação de que tenant_id no DTO corresponde exatamente ao tenant_id da entidade de entrada; teste que confirma que tenant_id nunca é modificado durante transformação."
+      },
+      {
+        "id": 56,
+        "category": "invariant",
+        "description": "Toda transformação de usuário deve garantir que o campo tenant_id é preservado intacto do objeto de entrada para o DTO, mantendo a rastreabilidade de isolamento multi-tenant.",
+        "enforcement": "code",
+        "verification": "Verificação de que tenant_id no DTO corresponde exatamente ao tenant_id da entidade de entrada; teste que confirma que tenant_id nunca é modificado durante transformação."
+      },
+      {
+        "id": 57,
+        "category": "observability",
+        "description": "Toda transformação deve registrar em log qualquer erro de validação ou conversão, incluindo o tipo de erro, o campo afetado e o valor problemático, para fins de auditoria e diagnóstico.",
+        "enforcement": "code",
+        "verification": "Verificação de que exceções são capturadas e registradas com contexto completo; teste que confirma que logs contêm informações suficientes para diagnóstico de problemas."
+      },
+      {
+        "id": 58,
+        "category": "idempotency",
+        "description": "Toda transformação deve ser idempotente, produzindo o mesmo DTO quando invocada múltiplas vezes com a mesma entrada, sem efeitos colaterais ou modificação de estado.",
+        "enforcement": "code",
+        "verification": "Teste que invoca a mesma transformação múltiplas vezes com entrada idêntica e verifica que o resultado é sempre o mesmo; verificação de que nenhuma transformação modifica o objeto de entrada."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "Transformadores de DTO de Tarefas e Usuários é um conjunto de funções reutilizáveis e passivas que realiza conversão bidirecional entre entidades de domínio (Task, User) e Data Transfer Objects (DTOs) para transmissão em APIs e interfaces. Inclui transformações especializadas como formatação de datas conforme localização, remoção de dados sensíveis (hashes de senha), normalização de estruturas, e adaptação de representações entre camadas da aplicação. Essas funções são invocadas sob demanda por handlers, fluxos de negócio e camadas de apresentação, sem possuir ciclo de vida autônomo próprio, servindo como camada de suporte técnico compartilhada para transformação de dados entre domínio e interface."
+    },
+    "definition": {
+      "exports": [
+        {
+          "id": 2,
+          "name": "transformTaskToDTO",
+          "signature": "transformTaskToDTO(task: Task, userLocale: string): TaskDTO",
+          "source_shape": "{ id: uuid, tenant_id: uuid, titulo: string, descricao?: string, responsavel_id: uuid, criador_id: uuid, prioridade: enum[baixa|media|alta|urgente], status: string, data_limite?: date, data_criacao: timestamp, data_ultima_edicao?: timestamp, ultimo_editor_id?: uuid, data_conclusao?: timestamp }",
+          "target_shape": "{ id: uuid, tenant_id: uuid, titulo: string, descricao?: string, responsavel_id: uuid, responsavel_nome?: string, criador_id: uuid, criador_nome?: string, prioridade: enum[baixa|media|alta|urgente], status: string, data_limite?: string, data_limite_formatada?: string, data_criacao: string, data_criacao_formatada: string, data_ultima_edicao?: string, data_ultima_edicao_formatada?: string, ultimo_editor_id?: uuid, ultimo_editor_nome?: string, data_conclusao?: string, data_conclusao_formatada?: string, esta_atrasada: boolean }"
+        },
+        {
+          "id": 3,
+          "name": "transformUserToDTO",
+          "signature": "transformUserToDTO(user: User): UserDTO",
+          "source_shape": "{ id: uuid, tenant_id: uuid, nome_completo: string, email: string, nivel_hierarquico_id: uuid, status: enum[ativo|inativo], data_criacao: timestamp, criador_id: uuid, data_ultima_edicao?: timestamp, ultimo_editor_id?: uuid }",
+          "target_shape": "{ id: uuid, tenant_id: uuid, nome_completo: string, email: string, nivel_hierarquico_id: uuid, nivel_hierarquico_nome?: string, status: enum[ativo|inativo], data_criacao: string, data_criacao_formatada: string, criador_id: uuid, criador_nome?: string, data_ultima_edicao?: string, data_ultima_edicao_formatada?: string, ultimo_editor_id?: uuid, ultimo_editor_nome?: string }"
+        },
+        {
+          "id": 4,
+          "name": "transformTasksToListDTO",
+          "signature": "transformTasksToListDTO(tasks: Task[], userLocale: string): TaskListDTO[]",
+          "source_shape": "Task[]",
+          "target_shape": "{ id: uuid, titulo: string, responsavel_nome: string, prioridade: enum[baixa|media|alta|urgente], status: string, data_limite_formatada?: string, esta_atrasada: boolean, esta_critica: boolean }[]"
+        },
+        {
+          "id": 5,
+          "name": "transformTaskToKanbanDTO",
+          "signature": "transformTaskToKanbanDTO(task: Task, userLocale: string): TaskKanbanDTO",
+          "source_shape": "{ id: uuid, titulo: string, responsavel_id: uuid, prioridade: enum[baixa|media|alta|urgente], status: string, data_limite?: date, data_criacao: timestamp }",
+          "target_shape": "{ id: uuid, titulo: string, responsavel_nome: string, prioridade: enum[baixa|media|alta|urgente], data_limite_formatada?: string, esta_atrasada: boolean, esta_critica: boolean }"
+        },
+        {
+          "id": 6,
+          "name": "transformUsersToListDTO",
+          "signature": "transformUsersToListDTO(users: User[]): UserListDTO[]",
+          "source_shape": "User[]",
+          "target_shape": "{ id: uuid, nome_completo: string, email: string, nivel_hierarquico_nome: string, status: enum[ativo|inativo], data_criacao_formatada: string }[]"
+        },
+        {
+          "id": 7,
+          "name": "extractTaskDTOFromRequest",
+          "signature": "extractTaskDTOFromRequest(requestBody: any): TaskCreateDTO",
+          "source_shape": "{ titulo: string, descricao?: string, responsavel_id: uuid, prioridade: enum[baixa|media|alta|urgente], status?: string, data_limite?: string }",
+          "target_shape": "{ titulo: string, descricao?: string, responsavel_id: uuid, prioridade: enum[baixa|media|alta|urgente], status: string, data_limite?: date }"
+        },
+        {
+          "id": 8,
+          "name": "extractUserDTOFromRequest",
+          "signature": "extractUserDTOFromRequest(requestBody: any): UserCreateDTO",
+          "source_shape": "{ nome_completo: string, email: string, nivel_hierarquico_id: uuid }",
+          "target_shape": "{ nome_completo: string, email: string, nivel_hierarquico_id: uuid }"
+        },
+        {
+          "id": 9,
+          "name": "mergeTaskUpdates",
+          "signature": "mergeTaskUpdates(existingTask: Task, updates: Partial<TaskUpdateDTO>): Task",
+          "source_shape": "{ titulo?: string, descricao?: string, responsavel_id?: uuid, prioridade?: enum[baixa|media|alta|urgente], status?: string, data_limite?: date }",
+          "target_shape": "{ id: uuid, tenant_id: uuid, titulo: string, descricao?: string, responsavel_id: uuid, criador_id: uuid, prioridade: enum[baixa|media|alta|urgente], status: string, data_limite?: date, data_criacao: timestamp, data_ultima_edicao: timestamp, ultimo_editor_id: uuid, data_conclusao?: timestamp }"
+        },
+        {
+          "id": 10,
+          "name": "mergeUserUpdates",
+          "signature": "mergeUserUpdates(existingUser: User, updates: Partial<UserUpdateDTO>): User",
+          "source_shape": "{ nome_completo?: string, email?: string, nivel_hierarquico_id?: uuid, status?: enum[ativo|inativo] }",
+          "target_shape": "{ id: uuid, tenant_id: uuid, nome_completo: string, email: string, nivel_hierarquico_id: uuid, status: enum[ativo|inativo], data_criacao: timestamp, criador_id: uuid, data_ultima_edicao: timestamp, ultimo_editor_id: uuid }"
+        },
+        {
+          "id": 11,
+          "name": "transformTaskStatusTransition",
+          "signature": "transformTaskStatusTransition(task: Task, newStatus: string): TaskStatusChangeDTO",
+          "source_shape": "{ id: uuid, status: string }",
+          "target_shape": "{ task_id: uuid, status_anterior: string, status_novo: string, data_transicao: timestamp }"
+        },
+        {
+          "id": 12,
+          "name": "transformUserActivationChange",
+          "signature": "transformUserActivationChange(user: User, newStatus: enum[ativo|inativo]): UserStatusChangeDTO",
+          "source_shape": "{ id: uuid, status: enum[ativo|inativo] }",
+          "target_shape": "{ user_id: uuid, status_anterior: enum[ativo|inativo], status_novo: enum[ativo|inativo], data_mudanca: timestamp }"
+        }
+      ],
+      "transformations": [
+        {
+          "id": 13,
+          "name": "formatTaskDateFields",
+          "rule": "Aplicar formatação de data conforme localização do usuário (userLocale) utilizando formatDateForDisplay do Toolkit de Suporte Técnico",
+          "condition": "userLocale deve ser um código de localização válido (ex: 'pt-BR', 'en-US')",
+          "source_field": "data_criacao, data_ultima_edicao, data_conclusao, data_limite",
+          "target_field": "data_criacao_formatada, data_ultima_edicao_formatada, data_conclusao_formatada, data_limite_formatada"
+        },
+        {
+          "id": 14,
+          "name": "removePasswordHash",
+          "rule": "Remover completamente o campo senha_hash da representação DTO, garantindo que dados sensíveis não sejam expostos em APIs ou interfaces",
+          "condition": "Sempre aplicado em transformações de User para UserDTO",
+          "source_field": "senha_hash",
+          "target_field": "(omitido)"
+        },
+        {
+          "id": 15,
+          "name": "calculateTaskOverdueStatus",
+          "rule": "Invocar isDateOverdue do Toolkit de Suporte Técnico para determinar se a tarefa está com prazo vencido; excluir tarefas com status 'Concluído'",
+          "condition": "data_limite deve ser uma data válida e status não deve ser 'Concluído'",
+          "source_field": "data_limite, status",
+          "target_field": "esta_atrasada"
+        },
+        {
+          "id": 16,
+          "name": "calculateTaskCriticalStatus",
+          "rule": "Determinar se a tarefa é crítica verificando se prioridade é 'alta' ou 'urgente'",
+          "condition": "prioridade deve ser um dos valores válidos do enum",
+          "source_field": "prioridade",
+          "target_field": "esta_critica"
+        },
+        {
+          "id": 17,
+          "name": "normalizeTaskTitle",
+          "rule": "Invocar sanitizeTaskTitle do Toolkit de Suporte Técnico para normalizar espaços em branco e remover caracteres de controle",
+          "condition": "titulo deve ser uma string não vazia",
+          "source_field": "titulo",
+          "target_field": "titulo"
+        },
+        {
+          "id": 18,
+          "name": "normalizeHierarchyLevelName",
+          "rule": "Invocar normalizeHierarchyLevelName do Toolkit de Suporte Técnico para normalizar espaços em branco",
+          "condition": "nivel_hierarquico_nome deve ser uma string não vazia",
+          "source_field": "nivel_hierarquico_nome",
+          "target_field": "nivel_hierarquico_nome"
+        },
+        {
+          "id": 19,
+          "name": "validateTaskPriorityValue",
+          "rule": "Invocar validateTaskPriority do Toolkit de Suporte Técnico para validar que o valor de prioridade é um dos permitidos",
+          "condition": "prioridade deve ser uma string não vazia",
+          "source_field": "prioridade",
+          "target_field": "prioridade"
+        },
+        {
+          "id": 20,
+          "name": "validateTaskStatusValue",
+          "rule": "Invocar validateTaskStatus do Toolkit de Suporte Técnico para validar que o valor de status é um dos fixos definidos",
+          "condition": "status deve ser uma string não vazia",
+          "source_field": "status",
+          "target_field": "status"
+        },
+        {
+          "id": 21,
+          "name": "enrichTaskDTOWithUserNames",
+          "rule": "Enriquecer o DTO da tarefa com nomes dos usuários referenciados, consultando o repositório de usuários para resolver IDs para nomes legíveis",
+          "condition": "Os IDs de usuário devem existir no repositório e pertencer ao mesmo tenant",
+          "source_field": "responsavel_id, criador_id, ultimo_editor_id",
+          "target_field": "responsavel_nome, criador_nome, ultimo_editor_nome"
+        },
+        {
+          "id": 22,
+          "name": "enrichUserDTOWithHierarchyLevelName",
+          "rule": "Enriquecer o DTO do usuário com o nome do nível hierárquico, consultando a tabela de níveis hierárquicos para resolver ID para nome legível",
+          "condition": "O ID de nível hierárquico deve existir no repositório e pertencer ao mesmo tenant",
+          "source_field": "nivel_hierarquico_id",
+          "target_field": "nivel_hierarquico_nome"
+        },
+        {
+          "id": 23,
+          "name": "convertDateStringToDate",
+          "rule": "Converter string de data em formato ISO 8601 para objeto Date nativo da linguagem de programação",
+          "condition": "A string deve estar em formato ISO 8601 válido (YYYY-MM-DD)",
+          "source_field": "data_limite (string em formato ISO 8601)",
+          "target_field": "data_limite (objeto Date)"
+        },
+        {
+          "id": 24,
+          "name": "convertDateToISOString",
+          "rule": "Converter timestamp do banco de dados para string em formato ISO 8601 para transmissão em APIs",
+          "condition": "O timestamp deve ser uma data válida",
+          "source_field": "data_criacao, data_ultima_edicao, data_conclusao (timestamp)",
+          "target_field": "data_criacao, data_ultima_edicao, data_conclusao (string ISO 8601)"
+        },
+        {
+          "id": 25,
+          "name": "filterSensitiveUserFields",
+          "rule": "Remover campos sensíveis ou internos da representação DTO do usuário, mantendo apenas informações necessárias para a interface",
+          "condition": "Sempre aplicado em transformações de User para UserDTO",
+          "source_field": "senha_hash, data_ultima_ativacao, data_ultima_desativacao",
+          "target_field": "(omitido)"
+        }
+      ]
+    },
+    "pendencies": [
+      {
+        "id": 87,
+        "section": "definition",
+        "description": "Necessário definir o mecanismo exato de enriquecimento de DTOs com nomes de usuários e níveis hierárquicos (batch lookup vs. lazy loading vs. cache). Atualmente, a transformação assume que nomes estão disponíveis, mas não especifica como resolvê-los do repositório sem causar N+1 queries.",
+        "resolutionOptions": [
+          {
+            "id": 88,
+            "text": "Implementar batch lookup: coletar todos os IDs de usuários/níveis de um lote de tarefas, fazer uma única query ao repositório, e enriquecer os DTOs com os nomes retornados."
+          },
+          {
+            "id": 89,
+            "text": "Implementar lazy loading: incluir apenas IDs nos DTOs iniciais, e fornecer função separada de enriquecimento que pode ser invocada opcionalmente quando nomes são necessários."
+          },
+          {
+            "id": 90,
+            "text": "Implementar cache em memória: manter cache de IDs para nomes de usuários e níveis hierárquicos, invalidando conforme necessário, para evitar queries repetidas."
+          },
+          {
+            "id": 91,
+            "text": "Incluir nomes no objeto de entrada: modificar o repositório para retornar objetos Task e User já enriquecidos com nomes, eliminando a necessidade de enriquecimento na transformação."
+          }
+        ],
+        "recommendedOptionId": 88
+      },
+      {
+        "id": 92,
+        "section": "definition",
+        "description": "Necessário definir o comportamento exato de transformações quando dados de entrada contêm valores null ou undefined para campos opcionais. Atualmente, a especificação indica que campos opcionais devem ser omitidos, mas não está claro se isso se aplica a todos os campos opcionais ou apenas alguns.",
+        "resolutionOptions": [
+          {
+            "id": 93,
+            "text": "Omitir completamente: remover do DTO qualquer campo cuja entrada seja null ou undefined, resultando em DTOs com estrutura variável."
+          },
+          {
+            "id": 94,
+            "text": "Incluir com valor null: manter o campo no DTO com valor null quando a entrada for null, resultando em DTOs com estrutura consistente."
+          },
+          {
+            "id": 95,
+            "text": "Incluir com valor padrão: substituir null/undefined por valor padrão apropriado (string vazia, array vazio, etc.), resultando em DTOs sem valores null."
+          }
+        ],
+        "recommendedOptionId": 93
+      },
+      {
+        "id": 96,
+        "section": "definition",
+        "description": "Necessário definir se transformações devem validar integridade referencial (ex: verificar se responsavel_id referencia um usuário ativo do mesmo tenant) ou apenas validar formato/tipo. Atualmente, a especificação não menciona validação de integridade referencial.",
+        "resolutionOptions": [
+          {
+            "id": 97,
+            "text": "Validar integridade referencial: verificar que IDs de usuários referenciados existem e pertencem ao mesmo tenant, rejeitando transformações com referências inválidas."
+          },
+          {
+            "id": 98,
+            "text": "Não validar integridade referencial: assumir que dados de entrada já foram validados pelo repositório, e apenas validar formato/tipo dos campos."
+          },
+          {
+            "id": 99,
+            "text": "Validar integridade referencial opcionalmente: fornecer parâmetro de configuração que permite ativar/desativar validação de integridade referencial conforme necessário."
+          }
+        ],
+        "recommendedOptionId": 98
+      },
+      {
+        "id": 100,
+        "section": "flow",
+        "description": "Necessário definir o mecanismo de tratamento de erros durante transformação em lote (transformTasksToListDTO, transformUsersToListDTO). Atualmente, não está claro se um erro em um item deve falhar toda a transformação ou apenas aquele item.",
+        "resolutionOptions": [
+          {
+            "id": 101,
+            "text": "Falhar toda a transformação: se qualquer item falhar, lançar exceção e não retornar nenhum resultado, garantindo consistência."
+          },
+          {
+            "id": 102,
+            "text": "Falhar silenciosamente: omitir itens que falharem da lista retornada, retornando apenas itens transformados com sucesso."
+          },
+          {
+            "id": 103,
+            "text": "Retornar resultado parcial com erros: retornar array com itens transformados com sucesso e objetos de erro para itens que falharam, permitindo processamento parcial."
+          }
+        ],
+        "recommendedOptionId": 101
+      },
+      {
+        "id": 104,
+        "section": "non_functional_requirements",
+        "description": "Necessário definir o comportamento de cache para enriquecimento de nomes de usuários e níveis hierárquicos. Atualmente, não está especificado se cache deve ser utilizado, qual deve ser sua duração, e como deve ser invalidado.",
+        "resolutionOptions": [
+          {
+            "id": 105,
+            "text": "Sem cache: fazer lookup ao repositório a cada transformação, aceitando potencial impacto de desempenho em favor de dados sempre atualizados."
+          },
+          {
+            "id": 106,
+            "text": "Cache em memória com TTL: manter cache em memória com tempo de vida configurável (ex: 5 minutos), invalidando automaticamente após expiração."
+          },
+          {
+            "id": 107,
+            "text": "Cache com invalidação baseada em eventos: manter cache em memória e invalidar quando eventos de atualização de usuários/níveis forem emitidos."
+          }
+        ],
+        "recommendedOptionId": 106
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 67,
+        "then": "Retorna TaskDTO com todos os campos preenchidos, datas formatadas conforme pt-BR, esta_atrasada calculado corretamente, esta_critica=true (prioridade alta), e nenhum campo sensível exposto",
+        "type": "unit",
+        "when": "transformTaskToDTO é invocado com a tarefa e localização",
+        "given": "Uma entidade Task com id, tenant_id, titulo, descricao, responsavel_id, criador_id, prioridade='alta', status='Em Andamento', data_limite='2024-12-31', data_criacao='2024-01-01T10:00:00Z', e userLocale='pt-BR'",
+        "scenario": "Transformação de tarefa com todos os campos preenchidos",
+        "target_section": "definition"
+      },
+      {
+        "id": 68,
+        "then": "Retorna TaskDTO com campos opcionais omitidos (não null, não undefined), mantendo apenas campos obrigatórios e calculados",
+        "type": "unit",
+        "when": "transformTaskToDTO é invocado",
+        "given": "Uma entidade Task com campos obrigatórios preenchidos mas descricao=null, data_ultima_edicao=null, ultimo_editor_id=null, data_conclusao=null",
+        "scenario": "Transformação de tarefa com campos opcionais ausentes",
+        "target_section": "definition"
+      },
+      {
+        "id": 69,
+        "then": "Retorna UserDTO com todos os campos públicos preenchidos, mas senha_hash completamente ausente (não null, não vazio)",
+        "type": "unit",
+        "when": "transformUserToDTO é invocado",
+        "given": "Uma entidade User com id, tenant_id, nome_completo, email, nivel_hierarquico_id, status='ativo', data_criacao, criador_id, e senha_hash='$argon2id$...'",
+        "scenario": "Transformação de usuário com remoção de dados sensíveis",
+        "target_section": "definition"
+      },
+      {
+        "id": 70,
+        "then": "Lança exceção InvalidPriorityError com mensagem descritiva, sem criar DTO incompleto",
+        "type": "unit",
+        "when": "extractTaskDTOFromRequest é invocado",
+        "given": "Um corpo de requisição com prioridade='invalida' (não em [baixa, media, alta, urgente])",
+        "scenario": "Validação de prioridade inválida durante transformação",
+        "target_section": "definition"
+      },
+      {
+        "id": 71,
+        "then": "Lança exceção InvalidEmailError com mensagem descritiva, sem criar DTO com e-mail malformado",
+        "type": "unit",
+        "when": "extractUserDTOFromRequest é invocado",
+        "given": "Um corpo de requisição com email='nao-eh-email' (formato inválido)",
+        "scenario": "Validação de e-mail inválido durante transformação de usuário",
+        "target_section": "definition"
+      },
+      {
+        "id": 72,
+        "then": "Retorna TaskDTO com esta_atrasada=true, refletindo que o prazo foi ultrapassado",
+        "type": "unit",
+        "when": "transformTaskToDTO é invocado",
+        "given": "Uma entidade Task com data_limite='2024-01-01' (data passada), status='A Fazer', e data de referência='2024-12-31'",
+        "scenario": "Cálculo de tarefa atrasada com prazo vencido",
+        "target_section": "definition"
+      },
+      {
+        "id": 73,
+        "then": "Retorna TaskDTO com esta_atrasada=false, refletindo que o prazo ainda não foi ultrapassado",
+        "type": "unit",
+        "when": "transformTaskToDTO é invocado",
+        "given": "Uma entidade Task com data_limite='2025-12-31' (data futura), status='A Fazer', e data de referência='2024-12-31'",
+        "scenario": "Cálculo de tarefa não atrasada com prazo futuro",
+        "target_section": "definition"
+      },
+      {
+        "id": 74,
+        "then": "Retorna TaskDTO com esta_atrasada=false, pois tarefas concluídas não são consideradas atrasadas",
+        "type": "unit",
+        "when": "transformTaskToDTO é invocado",
+        "given": "Uma entidade Task com data_limite='2024-01-01' (data passada), status='Concluído', e data de referência='2024-12-31'",
+        "scenario": "Exclusão de tarefa concluída do cálculo de atraso",
+        "target_section": "definition"
+      },
+      {
+        "id": 75,
+        "then": "Retorna TaskDTO com data_criacao_formatada em formato brasileiro (ex: '15/01/2024 10:30')",
+        "type": "unit",
+        "when": "transformTaskToDTO é invocado",
+        "given": "Uma entidade Task com data_criacao='2024-01-15T10:30:00Z' e userLocale='pt-BR'",
+        "scenario": "Formatação de datas conforme localização pt-BR",
+        "target_section": "definition"
+      },
+      {
+        "id": 76,
+        "then": "Retorna TaskDTO com data_criacao_formatada em formato americano (ex: '01/15/2024 10:30 AM')",
+        "type": "unit",
+        "when": "transformTaskToDTO é invocado",
+        "given": "Uma entidade Task com data_criacao='2024-01-15T10:30:00Z' e userLocale='en-US'",
+        "scenario": "Formatação de datas conforme localização en-US",
+        "target_section": "definition"
+      },
+      {
+        "id": 77,
+        "then": "Retorna array de TaskListDTO com nomes de responsáveis preenchidos, utilizando no máximo 1 query ao banco de dados (batch lookup)",
+        "type": "integration",
+        "when": "transformTasksToListDTO é invocado",
+        "given": "Uma lista de 10 tarefas, cada uma com responsavel_id e criador_id referenciando usuários existentes no repositório",
+        "scenario": "Transformação de lista de tarefas com enriquecimento de nomes de usuários",
+        "target_section": "definition"
+      },
+      {
+        "id": 78,
+        "then": "Retorna UserDTO com nivel_hierarquico_nome preenchido com o nome do nível hierárquico",
+        "type": "integration",
+        "when": "transformUserToDTO é invocado",
+        "given": "Uma entidade User com nivel_hierarquico_id referenciando um nível hierárquico existente no repositório",
+        "scenario": "Transformação de usuário com enriquecimento de nome de nível hierárquico",
+        "target_section": "definition"
+      },
+      {
+        "id": 79,
+        "then": "Retorna Task com titulo atualizado e descricao preservada do original, sem perder dados não modificados",
+        "type": "integration",
+        "when": "mergeTaskUpdates é invocado",
+        "given": "Uma entidade Task existente com titulo='Tarefa Original' e um objeto de atualização com titulo='Tarefa Atualizada', descricao=null (não modificada)",
+        "scenario": "Merge de atualizações parciais de tarefa",
+        "target_section": "definition"
+      },
+      {
+        "id": 80,
+        "then": "Retorna User com nome atualizado e email preservado do original, sem perder dados não modificados",
+        "type": "integration",
+        "when": "mergeUserUpdates é invocado",
+        "given": "Uma entidade User existente com email='original@example.com' e um objeto de atualização com nome_completo='Novo Nome', email=null (não modificado)",
+        "scenario": "Merge de atualizações parciais de usuário",
+        "target_section": "definition"
+      },
+      {
+        "id": 81,
+        "then": "Retorna UserCreateDTO contendo apenas campos permitidos (nome_completo, email, nivel_hierarquico_id), ignorando campos injetados",
+        "type": "security",
+        "when": "extractUserDTOFromRequest é invocado",
+        "given": "Um corpo de requisição com campos adicionais maliciosos como 'senha_hash' ou 'data_ultima_desativacao'",
+        "scenario": "Injeção de campo sensível em DTO de usuário",
+        "target_section": "definition"
+      },
+      {
+        "id": 82,
+        "then": "Retorna TaskCreateDTO com titulo sanitizado: 'Tarefa com espaços', sem caracteres de controle",
+        "type": "security",
+        "when": "extractTaskDTOFromRequest é invocado",
+        "given": "Um corpo de requisição com titulo contendo caracteres de controle e espaços excessivos: 'Tarefa\\n\\t  com  espaços'",
+        "scenario": "Sanitização de título de tarefa com caracteres de controle",
+        "target_section": "definition"
+      },
+      {
+        "id": 83,
+        "then": "Retorna array de 1.000 TaskListDTO em tempo <= 50ms (p99)",
+        "type": "performance",
+        "when": "transformTasksToListDTO é invocado",
+        "given": "Uma lista de 1.000 entidades Task com dados realistas",
+        "scenario": "Transformação de 1.000 tarefas em menos de 50ms",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 84,
+        "then": "Retorna array de 10.000 TaskListDTO em tempo <= 200ms (p99)",
+        "type": "performance",
+        "when": "transformTasksToListDTO é invocado",
+        "given": "Uma lista de 10.000 entidades Task com dados realistas",
+        "scenario": "Transformação de 10.000 tarefas em menos de 200ms",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 85,
+        "then": "Retorna objeto que satisfaz schema TaskDTO com todos os campos obrigatórios preenchidos e tipos corretos",
+        "type": "contract",
+        "when": "transformTaskToDTO é invocado",
+        "given": "Uma entidade Task válida conforme schema de domínio",
+        "scenario": "Contrato de transformação de tarefa para DTO",
+        "target_section": "definition"
+      },
+      {
+        "id": 86,
+        "then": "Retorna objeto que satisfaz schema UserDTO com todos os campos obrigatórios preenchidos, tipos corretos, e sem campo senha_hash",
+        "type": "contract",
+        "when": "transformUserToDTO é invocado",
+        "given": "Uma entidade User válida conforme schema de domínio",
+        "scenario": "Contrato de transformação de usuário para DTO",
+        "target_section": "definition"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 59,
+        "target": "p99 <= 5ms por transformação individual, mesmo sob carga de 5.000 usuários ativos e 10.000 tarefas por tenant",
+        "category": "performance",
+        "requirement": "Transformação de uma tarefa individual (transformTaskToDTO) deve ser concluída em tempo adequado, sem impacto perceptível na experiência do usuário.",
+        "verification": "Teste de desempenho que mede tempo de execução de transformTaskToDTO com dados realistas; monitoramento de latência em produção com alertas para degradação acima do threshold."
+      },
+      {
+        "id": 60,
+        "target": "p99 <= 50ms para transformação de até 1.000 tarefas, p99 <= 200ms para até 10.000 tarefas",
+        "category": "performance",
+        "requirement": "Transformação de lista de tarefas (transformTasksToListDTO) deve ser concluída em tempo adequado, mesmo com centenas de tarefas.",
+        "verification": "Teste de desempenho que mede tempo de execução de transformTasksToListDTO com diferentes volumes de dados; monitoramento de latência em produção."
+      },
+      {
+        "id": 61,
+        "target": "Máximo 1 query ao banco de dados por lote de transformações, não 1 query por item transformado",
+        "category": "performance",
+        "requirement": "Enriquecimento de DTOs com nomes de usuários e níveis hierárquicos deve utilizar cache ou batch queries para evitar N+1 queries ao banco de dados.",
+        "verification": "Análise de queries executadas durante transformação em lote; teste que confirma que número de queries não cresce linearmente com número de itens transformados."
+      },
+      {
+        "id": 62,
+        "target": "Sem estado compartilhado entre invocações; sem locks ou sincronização necessária",
+        "category": "scalability",
+        "requirement": "Transformações devem ser stateless e thread-safe, permitindo execução paralela sem sincronização ou contenção.",
+        "verification": "Análise de código para verificar ausência de estado compartilhado; teste de concorrência que executa múltiplas transformações em paralelo e verifica correção dos resultados."
+      },
+      {
+        "id": 63,
+        "target": "100% de conformidade: nenhum campo sensível deve aparecer em nenhum DTO exposto",
+        "category": "security",
+        "requirement": "Transformações devem garantir que dados sensíveis (senha_hash, tokens, datas de ativação/desativação) nunca sejam incluídos em DTOs expostos em APIs.",
+        "verification": "Teste de segurança que verifica cada DTO gerado para presença de campos sensíveis; auditoria de código que confirma remoção de campos sensíveis em todas as transformações."
+      },
+      {
+        "id": 64,
+        "target": "Validação de tipo, comprimento, formato e valores enumerados para cada campo de entrada",
+        "category": "security",
+        "requirement": "Transformações de entrada (extractTaskDTOFromRequest, extractUserDTOFromRequest) devem sanitizar e validar todos os campos antes de retornar, prevenindo injeção de dados malformados.",
+        "verification": "Teste de segurança que tenta injetar dados malformados e verifica que são rejeitados ou sanitizados; teste de fuzzing que valida robustez contra entradas aleatórias."
+      },
+      {
+        "id": 65,
+        "target": "Cada transformação deve registrar em log: entrada, saída, tempo de execução, e qualquer erro ou aviso",
+        "category": "observability",
+        "requirement": "Transformações devem ser observáveis, permitindo rastreamento de erros e diagnóstico de problemas através de logs estruturados.",
+        "verification": "Verificação de que logs contêm informações estruturadas (JSON) com campos padrão; teste que confirma que logs são suficientes para diagnóstico de problemas."
+      },
+      {
+        "id": 66,
+        "target": "Nenhuma transformação deve falhar completamente por causa de um campo opcional ausente; campos opcionais devem ser omitidos do DTO quando não disponíveis",
+        "category": "availability",
+        "requirement": "Transformações devem ser resilientes a dados parcialmente ausentes ou malformados, fornecendo valores padrão ou omitindo campos opcionais conforme apropriado.",
+        "verification": "Teste que transforma objetos com campos opcionais ausentes e verifica que resultado é válido; teste que confirma que campos opcionais são omitidos quando não disponíveis."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 58,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T03:52:42.569Z",
+  "updatedAt": null
+}

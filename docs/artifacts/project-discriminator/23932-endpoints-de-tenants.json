@@ -1,0 +1,129 @@
+{
+  "id": 23932,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 8,
+        "name": "Identificador único que representa uma organização ou cliente no sistema multi-tenant",
+        "value": [
+          "tenant-uuid",
+          "slug_tenant"
+        ],
+        "method": "user-input",
+        "reasoning": "O slug_tenant é um identificador único de um tenant, caracterizado por uuid.\nO identificador único de um tenant é o slug_tenant, uma coluna da tabela tenants.",
+        "confidence": 0.8947,
+        "context_element_id": 2682
+      },
+      {
+        "id": 9,
+        "name": "Nome do identificador da estrutura lógica de dados",
+        "value": [
+          "uuid"
+        ],
+        "method": "internal-inference",
+        "reasoning": "O identificador primário do registro é o UUID, um identificador único gerado por cada instância.",
+        "confidence": 0.7886,
+        "context_element_id": 2690
+      },
+      {
+        "id": 13,
+        "name": "Operação de domínio ou caso de uso que o handler processa",
+        "value": [
+          "create-tenant",
+          "tenant creation and data generation in background worker"
+        ],
+        "method": "user-input",
+        "reasoning": "A requisição POST /api/tenants cria um novo tenant com dados do tenant criado.\nA operação processada é a criação de um tenant com status 'provisionamento_pendente' e a execução de criação de estrutura de dados em background worker.",
+        "confidence": 0.7027,
+        "context_element_id": 2782
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 15,
+        "name": "Implementar rate limiting com throttling configurável por endpoint e amostragem de requisições em cenários de alta carga",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O limite de 10 tenants por hora por user_id é configurado explicitamente, sem referência a um identificador específico.",
+        "confidence": 0.8853,
+        "context_element_id": 2860
+      },
+      {
+        "id": 19,
+        "name": "Estabelecer isolamento entre entidades usando containerização, virtualização e separação de ambientes por criticidade",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem separação, o novo tenant seria o refatorado do antigo, e a integração seria feita com o que já existe, não com o que ainda não existe.",
+        "confidence": 0.8041,
+        "context_element_id": 2934
+      },
+      {
+        "id": 20,
+        "name": "Implementar validação rigorosa de entradas com sanitização, whitelists de caracteres permitidos e prevenção contra ataques de injeção",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem checagem, o sistema aceita dados vazios ou mal formatados, o que torna a validação posterior mais difícil de identificar.",
+        "confidence": 0.7842,
+        "context_element_id": 2936
+      },
+      {
+        "id": 21,
+        "name": "Implementar não repúdio para ações críticas usando assinaturas digitais e timestamps criptográficos auditáveis",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A assinatura RS256, expiração de 3600 segundos e claims obrigatórios são requisitos de segurança para a autenticação do token.",
+        "confidence": 0.7424,
+        "context_element_id": 2941
+      },
+      {
+        "id": 22,
+        "name": "Configurar segurança específica para APIs e web services com rate limiting, validação de schema e autenticação por endpoint",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Rejeitar requisições inválidas com 401 sem tentativa de recuperação deixa o sistema exposto a operações ilegais sem sinal de falha.",
+        "confidence": 0.9011,
+        "context_element_id": 2945
+      },
+      {
+        "id": 23,
+        "name": "Implementar transações ACID com propriedades de atomicidade, consistência, isolamento e durabilidade para operações de dados críticas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem o rollback completo, o cliente vê erro 500 e não sabe que a operação falhou por falta de confiança.",
+        "confidence": 0.933,
+        "context_element_id": 2953
+      },
+      {
+        "id": 25,
+        "name": "Implemente event sourcing com um log de eventos imutável para dados críticos de auditoria e reconstrução de estado",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O evento de auditoria em conformidade com a LGPD é emitido para rastreabilidade de provisionamento de tenant.",
+        "confidence": 0.7034,
+        "context_element_id": 2966
+      },
+      {
+        "id": 27,
+        "name": "Implemente restrições operacionais que limitem as ações do sistema com base em critérios de segurança predefinidos, incluindo rate limits, limites de operação e políticas de acesso restritivas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem limite definido, um administrador pode provisionar quantas vezes quiser em um intervalo, causando erro acidental ou abuso de recursos.",
+        "confidence": 0.9204,
+        "context_element_id": 3062
+      }
+    ],
+    "discriminators": [],
+    "business_questions": []
+  },
+  "version": 3,
+  "active": true,
+  "sourceId": 23841,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T14:58:49.768Z",
+  "updatedAt": null
+}

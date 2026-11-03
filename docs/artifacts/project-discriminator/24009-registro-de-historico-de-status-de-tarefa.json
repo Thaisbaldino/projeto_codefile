@@ -1,0 +1,77 @@
+{
+  "id": 24009,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 19,
+        "name": "Retenção e Políticas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Dados pessoais são retidos indefinidamente com acesso restrito, e a retenção é baseada em regulamentação específica, o que torna a decisão de retenção de históricos em conformidade com LGPD uma questão de risco.",
+        "confidence": 0.904,
+        "context_element_id": 2849
+      }
+    ],
+    "attributes": [],
+    "best_practices": [
+      {
+        "id": 20,
+        "name": "Implementar retry automático com exponential backoff, jitter e circuit breaker para prevenir falhas em cascata",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem tentativa retransmitida, o erro não é notificado e a alteração de status não é registrada, o que torna a correção manual impossível.",
+        "confidence": 0.9174,
+        "context_element_id": 2895
+      },
+      {
+        "id": 24,
+        "name": "Implemente event sourcing com um log de eventos imutável para dados críticos de auditoria e reconstrução de estado",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem registro de cada transição, auditoria e consumo por outros componentes dependem de memória ou de recriação manual, sem garantia de integridade.",
+        "confidence": 0.7245,
+        "context_element_id": 2966
+      },
+      {
+        "id": 27,
+        "name": "Implemente Event Sourcing para conformidade, armazenando todos os eventos de mudança de estado como uma sequência imutável com versionamento e capacidade de replay",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem registro, a conclusão da alteração de status não pode ser confirmada, e a equipe não sabe se o status foi alterado ou não.",
+        "confidence": 0.7033,
+        "context_element_id": 3017
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 5,
+        "name": "Gerenciamento de Ciclo de Vida",
+        "value": "orientado a máquina de estados",
+        "method": "user-input",
+        "reasoning": "O status da tarefa é definido por um estado machine, com estados fixos (A Fazer, Em Andamento, Concluído) controlados por um padrão de estado.",
+        "confidence": 0.8239,
+        "context_element_id": 1477
+      },
+      {
+        "id": 12,
+        "name": "Escopo da Operação",
+        "value": "somente leitura",
+        "method": "user-input",
+        "reasoning": "Os endpoints de consulta de histórico são de leitura, sem operação CRUD, caracterizando um scope de operação leitoro.",
+        "confidence": 0.8113,
+        "context_element_id": 1943
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 5,
+  "active": true,
+  "sourceId": 23767,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}

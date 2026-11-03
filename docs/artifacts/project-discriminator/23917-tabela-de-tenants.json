@@ -1,0 +1,115 @@
+{
+  "id": 23917,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 16,
+        "name": "Tipo principal de falha ou degradação que o padrão deve mitigar",
+        "value": [
+          "database-timeout"
+        ],
+        "method": "internal-inference",
+        "reasoning": "A tabela de tenants precisa estar sempre disponível, com RTO de 15 minutos e RPO de 5 minutos, caracterizando falha de timeout de banco de dados.",
+        "confidence": 0.7825,
+        "context_element_id": 2771
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 21,
+        "name": "Projetar uma arquitetura evolutiva que permita adaptação contínua de desempenho conforme os requisitos mudam",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A estratégia de escalabilidade é definida para suportar crescimento progressivo de até 50 tenants no primeiro ano e centenas de tenants em futuras versões.",
+        "confidence": 0.7824,
+        "context_element_id": 2877
+      },
+      {
+        "id": 26,
+        "name": "Configurar um processo de restauração automática a partir de backups íntegros com verificação de integridade e testes de recuperação",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem backup automático, a indisponibilidade da tabela de tenants impede o acesso a todos os usuários, violando a SLA de disponibilidade.",
+        "confidence": 0.8125,
+        "context_element_id": 2952
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 1,
+        "name": "Paradigma de Armazenamento da Estrutura Lógica",
+        "value": "documento",
+        "method": "user-input",
+        "reasoning": "O armazenamento de configurações como JSON em metadata da tabela tenants é um paradigma de armazenamento documental.",
+        "confidence": 0.8162,
+        "context_element_id": 1321
+      },
+      {
+        "id": 3,
+        "name": "Capacidade de Busca",
+        "value": "filtro básico",
+        "method": "user-input",
+        "reasoning": "O requisito de recuperar tenants com filtros de status, ordenação e paginação é atendido por uma busca básica de filtro.",
+        "confidence": 0.7101,
+        "context_element_id": 1365
+      },
+      {
+        "id": 6,
+        "name": "Estrutura de Dados de Registro",
+        "value": "schema fixo",
+        "method": "internal-inference",
+        "reasoning": "O registro de um Tenant Provisionado é caracterizado por campos fixos, como id, nome, status, data_criacao, sem suporte a estrutura flexível.",
+        "confidence": 0.7396,
+        "context_element_id": 1510
+      },
+      {
+        "id": 33,
+        "name": "Provisionamento de Usuários",
+        "value": "provisionamento automatizado",
+        "method": "user-input",
+        "reasoning": "O provisionamento automático de um UUID para cada novo tenant é uma opção de provisionamento automático.",
+        "confidence": 0.8646,
+        "context_element_id": 4086
+      },
+      {
+        "id": 36,
+        "name": "Testes de Performance",
+        "value": "testes básicos de carga",
+        "method": "user-input",
+        "reasoning": "Testes de carga com múltiplas operações simultâneas são realizados para validar a performance sob carga operacional.",
+        "confidence": 0.7724,
+        "context_element_id": 4537
+      },
+      {
+        "id": 38,
+        "name": "Estratégia de Busca",
+        "value": "fallback por palavra-chave",
+        "method": "user-input",
+        "reasoning": "O índice sobre slug é usado para otimizar buscas por identificador textual do tenant, com fallback a pesquisa por uuid.",
+        "confidence": 0.8367,
+        "context_element_id": 4709
+      },
+      {
+        "id": 39,
+        "name": "Frequência de Atualização do Índice",
+        "value": "lote diário",
+        "method": "internal-inference",
+        "reasoning": "O índice não-único sobre data_criacao é atualizado em uma batch-daily, indicando que a atualização é feita de forma batch.",
+        "confidence": 0.7045,
+        "context_element_id": 4710
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 4,
+  "active": true,
+  "sourceId": 23664,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T14:58:49.768Z",
+  "updatedAt": null
+}

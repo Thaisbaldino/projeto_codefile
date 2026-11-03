@@ -1,0 +1,173 @@
+{
+  "id": 24037,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 11,
+        "name": "Identificador único que representa uma organização ou cliente no sistema multi-tenant",
+        "value": [
+          "tenant-id, email",
+          "tenant-uuid"
+        ],
+        "method": "user-input",
+        "reasoning": "O identificador único de um tenant é o tenant_id e o email, que são os campos que definem a identidade de um usuário dentro de um tenant.\nO identificador único de um tenant é o UUID do tenant, que é usado para validar a unicidade de e-mail por tenant.",
+        "confidence": 0.876,
+        "context_element_id": 2682
+      },
+      {
+        "id": 15,
+        "name": "Identificador específico do canal de experiência",
+        "value": [
+          "user-authenticated"
+        ],
+        "method": "internal-inference",
+        "reasoning": "O token JWT autentica o usuário, e a sessão do navegador é o canal de interação com o sistema.",
+        "confidence": 0.7414,
+        "context_element_id": 2713
+      },
+      {
+        "id": 16,
+        "name": "Identificador único da página no sistema",
+        "value": [
+          "user-profile"
+        ],
+        "method": "user-input",
+        "reasoning": "O estado inicial do perfil do usuário autenticado é identificado como página única do perfil do usuário.",
+        "confidence": 0.8089,
+        "context_element_id": 2718
+      },
+      {
+        "id": 18,
+        "name": "Perfil primário do usuário ou participante que interage com esta superfície",
+        "value": [
+          "user"
+        ],
+        "method": "user-input",
+        "reasoning": "O painel de visualização de dados pessoais é visível ao usuário, o principal interlocutor.",
+        "confidence": 0.7803,
+        "context_element_id": 2728
+      },
+      {
+        "id": 19,
+        "name": "Entidade de domínio principal exposta como recurso da API",
+        "value": [
+          "users"
+        ],
+        "method": "user-input",
+        "reasoning": "O endpoint GET /api/v1/users/profile retorna dados cadastrais atuais do usuário, caracterizando o entidade principal do domínio.",
+        "confidence": 0.9022,
+        "context_element_id": 2750
+      },
+      {
+        "id": 20,
+        "name": "Tipo específico de evento ou mensagem que está sendo comunicado",
+        "value": [
+          "Mensagem de Confirmação ou Erro"
+        ],
+        "method": "user-input",
+        "reasoning": "A notificação é de mensagens de confirmação ou erro.",
+        "confidence": 0.8874,
+        "context_element_id": 2755
+      },
+      {
+        "id": 23,
+        "name": "Contexto de usuários ou sistemas que interagem com a camada de segurança",
+        "value": [
+          "internal-employees"
+        ],
+        "method": "internal-inference",
+        "reasoning": "A regra de segurança atua sobre os funcionários internos, não sobre clientes externos ou sistemas externos.",
+        "confidence": 0.8723,
+        "context_element_id": 2799
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 37,
+        "name": "Implementar transações ACID com propriedades de atomicidade, consistência, isolamento e durabilidade para operações de dados críticas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem confirmação de integridade, a alteração de dados não é rejeitada e a operação é concluída.",
+        "confidence": 0.7459,
+        "context_element_id": 2953
+      },
+      {
+        "id": 44,
+        "name": "Mantenha um modelo de usuário com preferências, comportamentos de uso e personalização da interface para adaptar a experiência individualmente",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "A integração com o fluxo de gerenciamento de perfil de usuário, regras de validação de negócio, conformidade com LGPD, rastreabilidade de auditoria e invalidação de sessões quando a senha é alterada caracterizam um nível de rastreabilidade detalhado.",
+        "confidence": 0.868,
+        "context_element_id": 3046
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 57,
+        "name": "Modo de Interação",
+        "value": "interface visual",
+        "method": "user-input",
+        "reasoning": "A notificação é feita por Toast ou Modal, um canal de interface visual.",
+        "confidence": 0.7785,
+        "context_element_id": 4826
+      },
+      {
+        "id": 60,
+        "name": "Estratégia de Renderização",
+        "value": "lado do cliente",
+        "method": "internal-inference",
+        "reasoning": "A interface é renderizada com HTML/CSS/JavaScript, caracterizando uma renderização client-side.",
+        "confidence": 0.8345,
+        "context_element_id": 4869
+      },
+      {
+        "id": 61,
+        "name": "Modo de Apresentação",
+        "value": "modal",
+        "method": "user-input",
+        "reasoning": "O formulário de edição aberto é visualizado em modo modal, com o botão 'Editar Dados Pessoais' como entrada.",
+        "confidence": 0.7408,
+        "context_element_id": 4870
+      },
+      {
+        "id": 62,
+        "name": "Modo de Persistência",
+        "value": "salvamento automático",
+        "method": "user-input",
+        "reasoning": "A alteração de senha bem-sucedida é persistida automaticamente após a reabertura da visualização.",
+        "confidence": 0.8018,
+        "context_element_id": 4949
+      },
+      {
+        "id": 63,
+        "name": "Controle de Acesso",
+        "value": "acesso aberto",
+        "method": "internal-inference",
+        "reasoning": "O formulário de alteração de senha é aberto para que o usuário defina uma nova credencial, permitindo acesso público ao formulário.",
+        "confidence": 0.8088,
+        "context_element_id": 4950
+      },
+      {
+        "id": 67,
+        "name": "Histórico de Versões",
+        "value": "true",
+        "method": "internal-inference",
+        "reasoning": "A visualização é restaurada após a edição bem-sucedida, caracterizando uma história de versão.",
+        "confidence": 0.7593,
+        "context_element_id": 5021
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 4,
+  "active": true,
+  "sourceId": 23837,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:42:53.755Z",
+  "updatedAt": null
+}

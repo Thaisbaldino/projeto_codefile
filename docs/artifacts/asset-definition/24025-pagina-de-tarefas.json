@@ -1,0 +1,1008 @@
+{
+  "id": 24025,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 71,
+          "name": "Contexto de Autenticação do Usuário",
+          "format": "JWT com identificação de usuário, tenant_id, perfil e status de ativação",
+          "origin": "Sistema de Autenticação",
+          "trigger": "Usuário autenticado acessa a rota /tasks"
+        },
+        {
+          "id": 72,
+          "name": "Parâmetros de Filtro e Pesquisa",
+          "format": "Query parameters: status, responsible_id, priority, due_date_filter, search_term",
+          "origin": "Painel de Filtros e Pesquisa",
+          "trigger": "Usuário aplica filtros ou realiza pesquisa textual"
+        },
+        {
+          "id": 73,
+          "name": "Dados de Formulário de Criação de Tarefa",
+          "format": "JSON: { titulo, descricao?, responsavel_id, prioridade, status?, data_limite? }",
+          "origin": "Formulário de Criação",
+          "trigger": "Usuário submete formulário de criação de nova tarefa"
+        },
+        {
+          "id": 74,
+          "name": "Dados de Formulário de Edição de Tarefa",
+          "format": "JSON: { tarefa_id, titulo, descricao?, responsavel_id, prioridade, status, data_limite? }",
+          "origin": "Formulário de Edição",
+          "trigger": "Usuário submete formulário de edição de tarefa existente"
+        },
+        {
+          "id": 75,
+          "name": "Evento de Movimentação de Cartão no Kanban",
+          "format": "JSON: { tarefa_id, status_anterior, status_novo, coluna_destino }",
+          "origin": "Painel Kanban de Tarefas",
+          "trigger": "Usuário solta cartão em coluna de destino após drag and drop"
+        },
+        {
+          "id": 76,
+          "name": "Resposta de Listagem de Tarefas da API",
+          "format": "JSON array: [{ id, titulo, descricao, responsavel_id, responsavel_nome, prioridade, status, data_limite, data_criacao, criador_id }]",
+          "origin": "API Interna - Endpoints de Tarefas",
+          "trigger": "Página carrega ou filtros são aplicados"
+        },
+        {
+          "id": 77,
+          "name": "Resposta de Listagem de Usuários Ativos do Tenant",
+          "format": "JSON array: [{ id, nome, email, nivel_hierarquico, status }]",
+          "origin": "API Interna - Endpoints de Usuários",
+          "trigger": "Formulário de criação/edição é aberto para popular seletor de responsável"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 91,
+          "name": "Interface Renderizada com Tarefas Filtradas",
+          "format": "HTML/CSS/JavaScript renderizado com lista tabular ou quadro Kanban contendo tarefas do tenant, indicadores visuais de criticidade/atraso, controles de filtro e pesquisa.",
+          "destination": "Navegador do Usuário"
+        },
+        {
+          "id": 92,
+          "name": "Evento de Criação de Tarefa",
+          "format": "Evento TarefaCriada: { tarefa_id, titulo, responsavel_id, prioridade, data_limite, criador_id, tenant_id, timestamp }",
+          "destination": "Sistema de Eventos de Domínio"
+        },
+        {
+          "id": 93,
+          "name": "Evento de Edição de Tarefa",
+          "format": "Evento TarefaEditada: { tarefa_id, campos_alterados: { campo: { valor_anterior, valor_novo } }, editor_id, tenant_id, timestamp }",
+          "destination": "Sistema de Eventos de Domínio"
+        },
+        {
+          "id": 94,
+          "name": "Evento de Alteração de Status de Tarefa",
+          "format": "Evento StatusTarefaAlterado: { tarefa_id, status_anterior, status_novo, executor_id, tenant_id, timestamp }",
+          "destination": "Sistema de Eventos de Domínio"
+        },
+        {
+          "id": 95,
+          "name": "Mensagem de Confirmação ou Erro",
+          "format": "Toast/Alert com mensagem de sucesso ou erro específico por campo/operação",
+          "destination": "Interface do Usuário"
+        },
+        {
+          "id": 96,
+          "name": "Entrada de Auditoria",
+          "format": "Log estruturado: { usuario_id, tenant_id, acao, tarefa_id, dados_alterados, timestamp, ip_origem }",
+          "destination": "Trilha de Auditoria"
+        }
+      ],
+      "processing": [
+        {
+          "id": 78,
+          "step": "Validar Autenticação e Autorização",
+          "description": "Verifica se o usuário está autenticado, se o token JWT é válido, se o tenant está ativo e se o usuário possui status ativo, bloqueando acesso caso alguma validação falhe."
+        },
+        {
+          "id": 79,
+          "step": "Carregar Tarefas do Tenant",
+          "description": "Consulta a API de tarefas para obter todas as tarefas pertencentes ao tenant do usuário autenticado, aplicando isolamento de dados multi-tenant."
+        },
+        {
+          "id": 80,
+          "step": "Aplicar Filtros e Pesquisa",
+          "description": "Processa os parâmetros de filtro (status, responsável, prioridade, data limite) e termo de pesquisa textual, refinando o conjunto de tarefas exibidas conforme critérios selecionados."
+        },
+        {
+          "id": 81,
+          "step": "Calcular Indicadores de Criticidade e Atraso",
+          "description": "Identifica tarefas com alta prioridade e tarefas com prazo vencido, aplicando lógica de destaque visual para sinalizar demandas críticas e atrasadas."
+        },
+        {
+          "id": 82,
+          "step": "Renderizar Visualização em Lista ou Kanban",
+          "description": "Renderiza a visualização selecionada (lista tabular ou quadro Kanban) com tarefas filtradas, indicadores visuais de criticidade/atraso, e controles de interação (edição, movimentação)."
+        },
+        {
+          "id": 83,
+          "step": "Validar Dados de Criação de Tarefa",
+          "description": "Valida campos obrigatórios (título, responsável, prioridade), formatos (título <= 255 caracteres, responsável UUID válido), e regras de negócio (responsável ativo no tenant)."
+        },
+        {
+          "id": 84,
+          "step": "Invocar Fluxo de Criação de Tarefa",
+          "description": "Encadeia o fluxo de negócio Fluxo de Criação e Atribuição de Tarefa, que persiste a nova tarefa, registra auditoria, emite eventos de domínio e retorna confirmação."
+        },
+        {
+          "id": 85,
+          "step": "Validar Dados de Edição de Tarefa",
+          "description": "Valida campos obrigatórios (título, responsável, prioridade), formatos, regras de negócio (responsável ativo, transição de status válida), e isolamento multi-tenant."
+        },
+        {
+          "id": 86,
+          "step": "Invocar Fluxo de Atualização de Tarefa",
+          "description": "Encadeia o fluxo de negócio Fluxo de Atualização de Tarefa, que persiste alterações, registra auditoria, emite eventos de domínio e retorna confirmação."
+        },
+        {
+          "id": 87,
+          "step": "Validar Movimentação de Cartão no Kanban",
+          "description": "Valida que a coluna de destino é um status fixo válido, que o executor é autorizado a alterar a tarefa, e que a tarefa pertence ao tenant do usuário."
+        },
+        {
+          "id": 88,
+          "step": "Persistir Alteração de Status via Kanban",
+          "description": "Persiste a alteração de status da tarefa resultante da movimentação do cartão, registra transição em histórico, emite evento de domínio e atualiza visualização em tempo real."
+        },
+        {
+          "id": 89,
+          "step": "Carregar Usuários Ativos do Tenant",
+          "description": "Consulta a API de usuários para obter lista de colaboradores ativos do tenant, populando seletor de responsável em formulários de criação e edição."
+        },
+        {
+          "id": 90,
+          "step": "Atualizar Visualizações em Tempo Real",
+          "description": "Coordena a atualização das visualizações de lista e Kanban após criação, edição ou movimentação de tarefas, refletindo alterações sem recarregamento completo da página."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 97,
+        "category": "authorization",
+        "description": "Apenas usuários autenticados e ativos do tenant podem acessar a página de tarefas; usuários de tenants inativos ou não autenticados são redirecionados para login.",
+        "enforcement": "code",
+        "verification": "Guarda de rota valida autenticação e status de ativação antes de renderizar página; requisições não autenticadas retornam 401 Unauthorized; requisições de tenants inativos retornam 403 Forbidden."
+      },
+      {
+        "id": 98,
+        "category": "invariant",
+        "description": "Cada tarefa exibida na página pertence exclusivamente ao tenant do usuário autenticado; tarefas de outros tenants nunca são visíveis ou acessíveis.",
+        "enforcement": "code",
+        "verification": "Todas as consultas de tarefas incluem filtro WHERE tenant_id = :authenticated_user_tenant_id; testes de integração verificam que usuário de tenant A não consegue visualizar tarefas de tenant B mesmo manipulando parâmetros."
+      },
+      {
+        "id": 99,
+        "category": "validation",
+        "description": "Título de tarefa é obrigatório, não pode estar vazio, não pode exceder 255 caracteres e deve conter apenas caracteres permitidos (alfanuméricos, espaços, hífens, acentos).",
+        "enforcement": "code",
+        "verification": "Validação em cliente rejeita submissão com título vazio ou > 255 caracteres; validação em servidor rejeita com HTTP 400 Bad Request e mensagem de erro específica; testes unitários verificam regex de caracteres permitidos."
+      },
+      {
+        "id": 100,
+        "category": "validation",
+        "description": "Responsável selecionado deve ser um usuário ativo pertencente ao mesmo tenant do criador/editor; usuários inativos ou de outros tenants não podem ser selecionados.",
+        "enforcement": "code",
+        "verification": "Seletor de responsável carrega apenas usuários ativos do tenant via API; validação em servidor consulta repositório de usuários e rejeita com HTTP 400 se responsável não existe, está inativo ou pertence a outro tenant."
+      },
+      {
+        "id": 101,
+        "category": "validation",
+        "description": "Prioridade de tarefa deve ser um dos valores fixos definidos pelo sistema: baixa, média, alta, urgente; valores fora deste conjunto são rejeitados.",
+        "enforcement": "code",
+        "verification": "Seletor de prioridade oferece apenas valores permitidos; validação em servidor rejeita com HTTP 400 se valor não está no conjunto permitido; testes verificam rejeição de valores inválidos."
+      },
+      {
+        "id": 102,
+        "category": "validation",
+        "description": "Data limite de tarefa, quando informada, deve ser uma data válida no calendário e não pode ser anterior à data atual (não retroativa).",
+        "enforcement": "code",
+        "verification": "Date picker em cliente rejeita datas inválidas; validação em servidor rejeita com HTTP 400 se data é anterior a today() ou em formato inválido; testes verificam rejeição de datas retroativas."
+      },
+      {
+        "id": 103,
+        "category": "validation",
+        "description": "Status de tarefa deve ser um dos valores fixos definidos pelo sistema: A Fazer, Em Andamento, Concluído; valores fora deste conjunto são rejeitados.",
+        "enforcement": "code",
+        "verification": "Seletor de status oferece apenas valores permitidos; validação em servidor rejeita com HTTP 400 se valor não está no conjunto permitido; testes verificam rejeição de valores inválidos."
+      },
+      {
+        "id": 104,
+        "category": "invariant",
+        "description": "Transição de status de tarefa deve respeitar as regras de negócio definidas pela Regra de Transição de Status de Tarefa; transições inválidas são bloqueadas.",
+        "enforcement": "code",
+        "verification": "Fluxo de atualização invoca regra de negócio antes de persistir; regra valida transição e retorna erro se inválida; testes verificam que transições inválidas são bloqueadas com mensagem de erro."
+      },
+      {
+        "id": 105,
+        "category": "invariant",
+        "description": "Combinação de prioridade e prazo de tarefa deve respeitar as regras de negócio definidas pela Regra de Prioridade e Prazo de Tarefas; combinações inválidas são bloqueadas.",
+        "enforcement": "code",
+        "verification": "Fluxo de criação e atualização invoca regra de negócio antes de persistir; regra valida combinação e retorna erro se inválida; testes verificam que combinações inválidas são bloqueadas."
+      },
+      {
+        "id": 106,
+        "category": "observability",
+        "description": "Toda operação de criação, edição ou alteração de status de tarefa é registrada em trilha de auditoria com identificação do usuário executor, tenant, timestamp, identificação da tarefa e dados alterados.",
+        "enforcement": "code",
+        "verification": "Fluxos de criação e atualização registram entrada em trilha de auditoria após persistência bem-sucedida; testes verificam que entrada contém todos os campos obrigatórios; auditoria é consultável por administrador."
+      },
+      {
+        "id": 107,
+        "category": "compliance",
+        "description": "Dados pessoais de usuários (nome, e-mail) tratados na página de tarefas (seletor de responsável, exibição de responsável) devem estar em conformidade com LGPD, aplicando princípios de minimização de dados e proteção de informações pessoais.",
+        "enforcement": "code",
+        "verification": "Seletor de responsável carrega apenas nome e id do usuário, não e-mail; exibição de responsável mostra apenas nome; dados pessoais não são armazenados em cache do cliente; política de conformidade LGPD define retenção e exclusão de dados."
+      },
+      {
+        "id": 108,
+        "category": "rate_limit",
+        "description": "Requisições de criação de tarefas são limitadas a 10 requisições por minuto por usuário para prevenção de abuso; requisições excedentes retornam HTTP 429 Too Many Requests.",
+        "enforcement": "network",
+        "verification": "API gateway implementa rate limiting por user_id; testes verificam que 11ª requisição em 60 segundos retorna 429; limite é resetado a cada minuto."
+      },
+      {
+        "id": 109,
+        "category": "idempotency",
+        "description": "Criação de tarefa é idempotente quando a mesma requisição é enviada múltiplas vezes com o mesmo idempotency_key; segunda requisição retorna resultado da primeira sem criar tarefa duplicada.",
+        "enforcement": "code",
+        "verification": "Requisição de criação inclui header Idempotency-Key; servidor armazena resultado de requisição bem-sucedida; requisição duplicada com mesmo key retorna resultado anterior sem criar nova tarefa; testes verificam idempotência."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "A Página de Tarefas é a superfície de interface especializada que materializa a visualização, criação, edição e gerenciamento do ciclo de vida completo de tarefas dentro do módulo Gerenciamento de Tarefas. Compõe-se de duas visualizações complementares — lista tabular com suporte a filtragem, pesquisa e ordenação, e quadro Kanban com colunas fixas (A Fazer, Em Andamento, Concluído) permitindo movimentação visual de cartões — um painel de filtros e pesquisa textual que refina o conjunto de tarefas exibidas por status, responsável, prioridade e prazo, formulários de criação e edição de tarefas com validação de campos obrigatórios e responsável ativo no tenant, indicadores visuais diferenciados para tarefas críticas (alta prioridade) e atrasadas (prazo vencido), e mecanismos de isolamento de dados por tenant integrados em cada operação. Funciona como o ponto central de interação para gerenciamento de atividades, capturando intenções do usuário (criar, editar, filtrar, movimentar tarefas entre status), validando dados em cliente e servidor, persistindo alterações isoladas por tenant com rastreabilidade completa em trilha de auditoria, e renderizando visualizações adaptadas a dispositivos móveis e desktops."
+    },
+    "definition": {
+      "route": "/tasks",
+      "renders": [
+        {
+          "id": 2,
+          "kind": "table",
+          "name": "Visualização em Lista Tabular",
+          "source": "tasks_list_view_component"
+        },
+        {
+          "id": 3,
+          "kind": "panel",
+          "name": "Visualização em Quadro Kanban",
+          "source": "tasks_kanban_view_component"
+        },
+        {
+          "id": 4,
+          "kind": "panel",
+          "name": "Painel de Filtros e Pesquisa",
+          "source": "tasks_filter_search_panel_component"
+        },
+        {
+          "id": 5,
+          "kind": "form",
+          "name": "Formulário de Criação de Tarefa",
+          "source": "task_creation_form_component"
+        },
+        {
+          "id": 6,
+          "kind": "form",
+          "name": "Formulário de Edição de Tarefa",
+          "source": "task_edit_form_component"
+        },
+        {
+          "id": 7,
+          "kind": "panel",
+          "name": "Modal de Detalhes da Tarefa",
+          "source": "task_detail_modal_component"
+        },
+        {
+          "id": 8,
+          "kind": "interactive_surface",
+          "name": "Indicador de Tarefas Críticas e Atrasadas",
+          "source": "critical_overdue_tasks_indicator"
+        }
+      ],
+      "state_machine": {
+        "states": [
+          {
+            "id": 9,
+            "name": "Página Carregada",
+            "description": "Estado inicial onde a página de tarefas foi carregada com sucesso, exibindo a visualização padrão (lista ou Kanban) com todas as tarefas do tenant do usuário autenticado."
+          },
+          {
+            "id": 10,
+            "name": "Visualização em Lista Ativa",
+            "description": "Usuário está visualizando tarefas em formato de lista tabular com colunas de título, responsável, prioridade, status e data limite."
+          },
+          {
+            "id": 11,
+            "name": "Visualização em Kanban Ativa",
+            "description": "Usuário está visualizando tarefas organizadas em colunas fixas de status (A Fazer, Em Andamento, Concluído) com cartões contendo informações principais."
+          },
+          {
+            "id": 12,
+            "name": "Filtros Aplicados",
+            "description": "Um ou mais filtros (status, responsável, prioridade, data limite) foram aplicados e a visualização está exibindo apenas tarefas que satisfazem todos os critérios."
+          },
+          {
+            "id": 13,
+            "name": "Pesquisa Textual Ativa",
+            "description": "Campo de pesquisa textual foi preenchido e a visualização está exibindo apenas tarefas cujo título ou descrição contém o termo pesquisado."
+          },
+          {
+            "id": 14,
+            "name": "Formulário de Criação Aberto",
+            "description": "Modal ou formulário de criação de nova tarefa foi aberto, aguardando entrada de dados do usuário."
+          },
+          {
+            "id": 15,
+            "name": "Validando Criação de Tarefa",
+            "description": "Dados do formulário de criação estão sendo validados no cliente e servidor antes de persistência."
+          },
+          {
+            "id": 16,
+            "name": "Tarefa Criada com Sucesso",
+            "description": "Nova tarefa foi persistida com sucesso e adicionada à visualização correspondente (lista ou Kanban)."
+          },
+          {
+            "id": 17,
+            "name": "Formulário de Edição Aberto",
+            "description": "Modal ou formulário de edição de tarefa existente foi aberto com dados atuais pré-preenchidos."
+          },
+          {
+            "id": 18,
+            "name": "Validando Edição de Tarefa",
+            "description": "Dados do formulário de edição estão sendo validados no cliente e servidor antes de persistência."
+          },
+          {
+            "id": 19,
+            "name": "Tarefa Editada com Sucesso",
+            "description": "Alterações da tarefa foram persistidas com sucesso e refletidas em todas as visualizações."
+          },
+          {
+            "id": 20,
+            "name": "Cartão Selecionado para Movimentação",
+            "description": "Um cartão de tarefa no Kanban foi selecionado e está pronto para ser movido entre colunas via drag and drop."
+          },
+          {
+            "id": 21,
+            "name": "Movimentação em Progresso",
+            "description": "Cartão está sendo arrastado sobre o quadro Kanban com feedback visual indicando coluna de destino válida."
+          },
+          {
+            "id": 22,
+            "name": "Status Atualizado via Kanban",
+            "description": "Cartão foi solto em coluna de destino, status foi validado e persistido com sucesso."
+          },
+          {
+            "id": 23,
+            "name": "Modal de Detalhes Aberto",
+            "description": "Modal contendo detalhes completos da tarefa foi aberto para visualização ou edição."
+          },
+          {
+            "id": 24,
+            "name": "Erro de Validação",
+            "description": "Validação de dados falhou e mensagem de erro foi exibida ao usuário."
+          },
+          {
+            "id": 25,
+            "name": "Erro de Persistência",
+            "description": "Falha ao persistir dados no banco de dados; mensagem de erro foi exibida."
+          }
+        ],
+        "transitions": [
+          {
+            "id": 26,
+            "to": "Visualização em Lista Ativa",
+            "from": "Página Carregada",
+            "trigger": "Página é carregada com visualização padrão em lista ou usuário seleciona aba de lista"
+          },
+          {
+            "id": 27,
+            "to": "Visualização em Kanban Ativa",
+            "from": "Página Carregada",
+            "trigger": "Página é carregada com visualização padrão em Kanban ou usuário seleciona aba de Kanban"
+          },
+          {
+            "id": 28,
+            "to": "Visualização em Kanban Ativa",
+            "from": "Visualização em Lista Ativa",
+            "trigger": "Usuário clica em aba ou botão para alternar para visualização Kanban"
+          },
+          {
+            "id": 29,
+            "to": "Visualização em Lista Ativa",
+            "from": "Visualização em Kanban Ativa",
+            "trigger": "Usuário clica em aba ou botão para alternar para visualização em lista"
+          },
+          {
+            "id": 30,
+            "to": "Filtros Aplicados",
+            "from": "Visualização em Lista Ativa",
+            "guard": "filtro_selecionado !== null AND filtro_valor_valido === true",
+            "trigger": "Usuário seleciona um ou mais filtros no painel de filtros"
+          },
+          {
+            "id": 31,
+            "to": "Filtros Aplicados",
+            "from": "Visualização em Kanban Ativa",
+            "guard": "filtro_selecionado !== null AND filtro_valor_valido === true",
+            "trigger": "Usuário seleciona um ou mais filtros no painel de filtros"
+          },
+          {
+            "id": 32,
+            "to": "Visualização em Lista Ativa",
+            "from": "Filtros Aplicados",
+            "trigger": "Usuário remove todos os filtros ativos"
+          },
+          {
+            "id": 33,
+            "to": "Visualização em Kanban Ativa",
+            "from": "Filtros Aplicados",
+            "trigger": "Usuário remove todos os filtros ativos e está em visualização Kanban"
+          },
+          {
+            "id": 34,
+            "to": "Pesquisa Textual Ativa",
+            "from": "Visualização em Lista Ativa",
+            "trigger": "Usuário digita termo no campo de pesquisa textual"
+          },
+          {
+            "id": 35,
+            "to": "Pesquisa Textual Ativa",
+            "from": "Filtros Aplicados",
+            "trigger": "Usuário digita termo no campo de pesquisa enquanto filtros estão ativos"
+          },
+          {
+            "id": 36,
+            "to": "Visualização em Lista Ativa",
+            "from": "Pesquisa Textual Ativa",
+            "trigger": "Usuário limpa o campo de pesquisa textual"
+          },
+          {
+            "id": 37,
+            "to": "Formulário de Criação Aberto",
+            "from": "Visualização em Lista Ativa",
+            "trigger": "Usuário clica em botão 'Criar Tarefa' ou 'Nova Tarefa'"
+          },
+          {
+            "id": 38,
+            "to": "Formulário de Criação Aberto",
+            "from": "Visualização em Kanban Ativa",
+            "trigger": "Usuário clica em botão 'Criar Tarefa' ou 'Nova Tarefa'"
+          },
+          {
+            "id": 39,
+            "to": "Validando Criação de Tarefa",
+            "from": "Formulário de Criação Aberto",
+            "trigger": "Usuário submete o formulário com dados preenchidos"
+          },
+          {
+            "id": 40,
+            "to": "Tarefa Criada com Sucesso",
+            "from": "Validando Criação de Tarefa",
+            "guard": "validacao_passou AND persistencia_sucesso",
+            "trigger": "Todas as validações passaram e tarefa foi persistida com sucesso"
+          },
+          {
+            "id": 41,
+            "to": "Erro de Validação",
+            "from": "Validando Criação de Tarefa",
+            "guard": "validacao_falhou",
+            "trigger": "Validação falhou em um ou mais campos"
+          },
+          {
+            "id": 42,
+            "to": "Erro de Persistência",
+            "from": "Validando Criação de Tarefa",
+            "guard": "persistencia_falhou",
+            "trigger": "Falha ao persistir tarefa no banco de dados"
+          },
+          {
+            "id": 43,
+            "to": "Visualização em Lista Ativa",
+            "from": "Tarefa Criada com Sucesso",
+            "trigger": "Formulário é fechado e nova tarefa aparece na visualização"
+          },
+          {
+            "id": 44,
+            "to": "Visualização em Kanban Ativa",
+            "from": "Tarefa Criada com Sucesso",
+            "trigger": "Formulário é fechado e novo cartão aparece na coluna correspondente"
+          },
+          {
+            "id": 45,
+            "to": "Visualização em Lista Ativa",
+            "from": "Formulário de Criação Aberto",
+            "trigger": "Usuário cancela a criação sem salvar"
+          },
+          {
+            "id": 46,
+            "to": "Visualização em Kanban Ativa",
+            "from": "Formulário de Criação Aberto",
+            "trigger": "Usuário cancela a criação sem salvar"
+          },
+          {
+            "id": 47,
+            "to": "Formulário de Edição Aberto",
+            "from": "Visualização em Lista Ativa",
+            "trigger": "Usuário clica em ícone de edição ou linha da tabela para editar tarefa"
+          },
+          {
+            "id": 48,
+            "to": "Formulário de Edição Aberto",
+            "from": "Visualização em Kanban Ativa",
+            "trigger": "Usuário clica em cartão ou ícone de edição para editar tarefa"
+          },
+          {
+            "id": 49,
+            "to": "Formulário de Edição Aberto",
+            "from": "Modal de Detalhes Aberto",
+            "trigger": "Usuário clica em botão 'Editar' dentro do modal de detalhes"
+          },
+          {
+            "id": 50,
+            "to": "Validando Edição de Tarefa",
+            "from": "Formulário de Edição Aberto",
+            "trigger": "Usuário submete o formulário com dados modificados"
+          },
+          {
+            "id": 51,
+            "to": "Tarefa Editada com Sucesso",
+            "from": "Validando Edição de Tarefa",
+            "guard": "validacao_passou AND persistencia_sucesso",
+            "trigger": "Todas as validações passaram e alterações foram persistidas com sucesso"
+          },
+          {
+            "id": 52,
+            "to": "Erro de Validação",
+            "from": "Validando Edição de Tarefa",
+            "guard": "validacao_falhou",
+            "trigger": "Validação falhou em um ou mais campos"
+          },
+          {
+            "id": 53,
+            "to": "Erro de Persistência",
+            "from": "Validando Edição de Tarefa",
+            "guard": "persistencia_falhou",
+            "trigger": "Falha ao persistir alterações no banco de dados"
+          },
+          {
+            "id": 54,
+            "to": "Visualização em Lista Ativa",
+            "from": "Tarefa Editada com Sucesso",
+            "trigger": "Formulário é fechado e tarefa é atualizada na visualização"
+          },
+          {
+            "id": 55,
+            "to": "Visualização em Kanban Ativa",
+            "from": "Tarefa Editada com Sucesso",
+            "trigger": "Formulário é fechado e cartão é atualizado na visualização"
+          },
+          {
+            "id": 56,
+            "to": "Visualização em Lista Ativa",
+            "from": "Formulário de Edição Aberto",
+            "trigger": "Usuário cancela a edição sem salvar"
+          },
+          {
+            "id": 57,
+            "to": "Visualização em Kanban Ativa",
+            "from": "Formulário de Edição Aberto",
+            "trigger": "Usuário cancela a edição sem salvar"
+          },
+          {
+            "id": 58,
+            "to": "Cartão Selecionado para Movimentação",
+            "from": "Visualização em Kanban Ativa",
+            "trigger": "Usuário inicia operação de arrastar cartão (mouse down em desktop ou toque longo em mobile)"
+          },
+          {
+            "id": 59,
+            "to": "Movimentação em Progresso",
+            "from": "Cartão Selecionado para Movimentação",
+            "trigger": "Usuário move o mouse/toque sobre o quadro enquanto arrastando o cartão"
+          },
+          {
+            "id": 60,
+            "to": "Status Atualizado via Kanban",
+            "from": "Movimentação em Progresso",
+            "guard": "coluna_destino_valida AND validacao_status_sucesso AND persistencia_sucesso",
+            "trigger": "Usuário solta o cartão sobre coluna de destino válida e status é persistido"
+          },
+          {
+            "id": 61,
+            "to": "Cartão Selecionado para Movimentação",
+            "from": "Movimentação em Progresso",
+            "trigger": "Usuário cancela a movimentação ou move para fora do quadro"
+          },
+          {
+            "id": 62,
+            "to": "Visualização em Kanban Ativa",
+            "from": "Status Atualizado via Kanban",
+            "trigger": "Cartão foi atualizado na coluna de destino e quadro retorna ao estado normal"
+          },
+          {
+            "id": 63,
+            "to": "Modal de Detalhes Aberto",
+            "from": "Visualização em Lista Ativa",
+            "trigger": "Usuário clica em linha da tabela para visualizar detalhes completos da tarefa"
+          },
+          {
+            "id": 64,
+            "to": "Modal de Detalhes Aberto",
+            "from": "Visualização em Kanban Ativa",
+            "trigger": "Usuário clica em cartão para visualizar detalhes completos da tarefa"
+          },
+          {
+            "id": 65,
+            "to": "Visualização em Lista Ativa",
+            "from": "Modal de Detalhes Aberto",
+            "trigger": "Usuário fecha o modal de detalhes"
+          },
+          {
+            "id": 66,
+            "to": "Visualização em Kanban Ativa",
+            "from": "Modal de Detalhes Aberto",
+            "trigger": "Usuário fecha o modal de detalhes"
+          },
+          {
+            "id": 67,
+            "to": "Formulário de Criação Aberto",
+            "from": "Erro de Validação",
+            "trigger": "Usuário corrige os erros e resubmete o formulário de criação"
+          },
+          {
+            "id": 68,
+            "to": "Formulário de Edição Aberto",
+            "from": "Erro de Validação",
+            "trigger": "Usuário corrige os erros e resubmete o formulário de edição"
+          },
+          {
+            "id": 69,
+            "to": "Formulário de Criação Aberto",
+            "from": "Erro de Persistência",
+            "trigger": "Usuário tenta novamente após erro de persistência na criação"
+          },
+          {
+            "id": 70,
+            "to": "Formulário de Edição Aberto",
+            "from": "Erro de Persistência",
+            "trigger": "Usuário tenta novamente após erro de persistência na edição"
+          }
+        ]
+      }
+    },
+    "pendencies": [
+      {
+        "id": 137,
+        "section": "definition",
+        "description": "Definição de valores fixos para níveis de prioridade (baixa, média, alta, urgente) não está explicitamente documentada em nenhum artefato de entrada. Necessário confirmar se estes são os únicos valores permitidos ou se há variações por tenant.",
+        "resolutionOptions": [
+          {
+            "id": 138,
+            "text": "Confirmar com Product Owner que prioridades são fixas globalmente: baixa, média, alta, urgente; sem personalização por tenant nesta versão."
+          },
+          {
+            "id": 139,
+            "text": "Implementar tabela de prioridades no banco de dados para suportar personalização por tenant em versão futura; usar valores padrão nesta versão."
+          },
+          {
+            "id": 140,
+            "text": "Documentar valores de prioridade em arquivo de configuração (config.json ou variáveis de ambiente) para facilitar mudanças futuras sem alteração de código."
+          }
+        ],
+        "recommendedOptionId": 138
+      },
+      {
+        "id": 141,
+        "section": "definition",
+        "description": "Comportamento esperado quando um usuário responsável por tarefas é desativado não está explicitamente definido. Necessário confirmar se tarefas atribuídas a usuários desativados permanecem visíveis, são reatribuídas automaticamente ou são marcadas como órfãs.",
+        "resolutionOptions": [
+          {
+            "id": 142,
+            "text": "Tarefas atribuídas a usuários desativados permanecem visíveis com indicação visual de que o responsável está inativo; administrador pode reatribuir manualmente."
+          },
+          {
+            "id": 143,
+            "text": "Tarefas atribuídas a usuários desativados são automaticamente reatribuídas ao criador da tarefa ou a um administrador designado."
+          },
+          {
+            "id": 144,
+            "text": "Tarefas atribuídas a usuários desativados são marcadas como 'órfãs' e removidas da visualização até serem reatribuídas manualmente."
+          }
+        ],
+        "recommendedOptionId": 142
+      },
+      {
+        "id": 145,
+        "section": "flow",
+        "description": "Mecanismo de sincronização em tempo real entre múltiplos usuários visualizando a mesma página de tarefas não está explicitamente definido. Necessário confirmar se alterações feitas por um usuário são refletidas imediatamente para outros usuários visualizando a mesma página.",
+        "resolutionOptions": [
+          {
+            "id": 146,
+            "text": "Implementar WebSocket ou Server-Sent Events (SSE) para sincronização em tempo real; alterações são propagadas para todos os clientes conectados imediatamente."
+          },
+          {
+            "id": 147,
+            "text": "Implementar polling periódico (a cada 5-10 segundos) para sincronização eventual; alterações são refletidas com latência de até 10 segundos."
+          },
+          {
+            "id": 148,
+            "text": "Não implementar sincronização em tempo real nesta versão; usuários precisam recarregar a página manualmente para ver alterações feitas por outros usuários."
+          }
+        ],
+        "recommendedOptionId": 146
+      },
+      {
+        "id": 149,
+        "section": "non_functional_requirements",
+        "description": "Requisito de desempenho para operações de drag and drop no Kanban em dispositivos móveis com conexão lenta não está quantificado. Necessário definir alvo de latência e frame rate para garantir experiência aceitável em mobile.",
+        "resolutionOptions": [
+          {
+            "id": 150,
+            "text": "Definir alvo de p95 <= 500ms para operação de drag and drop em mobile; implementar debounce e throttle para reduzir requisições ao servidor."
+          },
+          {
+            "id": 151,
+            "text": "Substituir drag and drop por interação alternativa em mobile (toque longo + seleção de coluna) para melhor usabilidade em telas pequenas."
+          },
+          {
+            "id": 152,
+            "text": "Implementar modo offline para Kanban em mobile; alterações são sincronizadas quando conexão é restaurada."
+          }
+        ],
+        "recommendedOptionId": 151
+      },
+      {
+        "id": 153,
+        "section": "rules",
+        "description": "Regra de validação para limite máximo de caracteres em campo de descrição de tarefa não está explicitamente definida. Necessário confirmar se há limite e qual é o valor.",
+        "resolutionOptions": [
+          {
+            "id": 154,
+            "text": "Definir limite máximo de 2000 caracteres para descrição de tarefa; validação rejeita descrições maiores com mensagem de erro."
+          },
+          {
+            "id": 155,
+            "text": "Não definir limite máximo para descrição; permitir descrições de qualquer tamanho (limitado apenas pela capacidade do banco de dados)."
+          },
+          {
+            "id": 156,
+            "text": "Definir limite máximo de 5000 caracteres para descrição; implementar contador de caracteres no formulário para feedback ao usuário."
+          }
+        ],
+        "recommendedOptionId": 154
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 124,
+        "then": "Validação rejeita o título e exibe mensagem de erro específica indicando caracteres não permitidos",
+        "type": "unit",
+        "when": "Usuário digita um título contendo caracteres especiais não permitidos (ex: @#$%)",
+        "given": "Um formulário de criação de tarefa está aberto",
+        "scenario": "Validação de título de tarefa com caracteres inválidos",
+        "target_section": "definition"
+      },
+      {
+        "id": 125,
+        "then": "Validação rejeita a data e exibe mensagem de erro indicando que a data não pode ser retroativa",
+        "type": "unit",
+        "when": "Usuário seleciona uma data limite anterior à data atual",
+        "given": "Um formulário de criação de tarefa está aberto",
+        "scenario": "Validação de data limite retroativa",
+        "target_section": "definition"
+      },
+      {
+        "id": 126,
+        "then": "Tarefa é criada no banco de dados, mensagem de sucesso é exibida, nova tarefa aparece na lista sem recarregamento completo da página",
+        "type": "integration",
+        "when": "Usuário preenche formulário de criação com dados válidos (título, responsável ativo, prioridade) e submete",
+        "given": "Usuário autenticado está na página de tarefas com visualização em lista",
+        "scenario": "Criação de tarefa com sucesso e reflexão na visualização",
+        "target_section": "flow"
+      },
+      {
+        "id": 127,
+        "then": "Alterações são persistidas, cartão é atualizado na visualização Kanban com novo título e indicador visual de prioridade",
+        "type": "integration",
+        "when": "Usuário clica em cartão, edita o título e prioridade, e submete o formulário",
+        "given": "Usuário autenticado está visualizando tarefas em Kanban",
+        "scenario": "Edição de tarefa e atualização em tempo real no Kanban",
+        "target_section": "flow"
+      },
+      {
+        "id": 128,
+        "then": "Status da tarefa é alterado para 'Em Andamento', cartão é movido para coluna de destino, alteração é persistida no banco de dados",
+        "type": "integration",
+        "when": "Usuário arrasta um cartão para a coluna 'Em Andamento' e solta",
+        "given": "Usuário autenticado está visualizando tarefas em Kanban com cartões em coluna 'A Fazer'",
+        "scenario": "Movimentação de cartão entre colunas do Kanban",
+        "target_section": "flow"
+      },
+      {
+        "id": 129,
+        "then": "Visualização exibe apenas tarefas que satisfazem todos os três critérios; indicadores visuais mostram filtros ativos; contagem de tarefas é atualizada",
+        "type": "integration",
+        "when": "Usuário seleciona filtro por status='Em Andamento' E responsável='João' E prioridade='Alta'",
+        "given": "Usuário autenticado está na página de tarefas com 50 tarefas de diferentes status, responsáveis e prioridades",
+        "scenario": "Aplicação de múltiplos filtros combinados",
+        "target_section": "flow"
+      },
+      {
+        "id": 130,
+        "then": "Visualização exibe apenas tarefas cujo título contém 'relatório'; pesquisa é case-insensitive; contagem de resultados é exibida",
+        "type": "integration",
+        "when": "Usuário digita 'relatório' no campo de pesquisa textual",
+        "given": "Usuário autenticado está na página de tarefas com 100 tarefas",
+        "scenario": "Pesquisa textual por título de tarefa",
+        "target_section": "flow"
+      },
+      {
+        "id": 131,
+        "then": "Requisição é bloqueada com erro 403 Forbidden; usuário do tenant A nunca consegue visualizar tarefas do tenant B",
+        "type": "security",
+        "when": "Usuário do tenant A tenta acessar tarefas do tenant B manipulando parâmetros de requisição",
+        "given": "Dois usuários autenticados de tenants diferentes (A e B) acessam a página de tarefas",
+        "scenario": "Isolamento de dados entre tenants",
+        "target_section": "rules"
+      },
+      {
+        "id": 132,
+        "then": "Validação rejeita a atribuição com mensagem de erro indicando que o responsável está inativo; tarefa não é criada",
+        "type": "security",
+        "when": "Outro usuário tenta criar uma tarefa atribuindo o usuário desativado como responsável",
+        "given": "Um usuário foi desativado no tenant",
+        "scenario": "Validação de responsável ativo no tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 133,
+        "then": "Página carrega em tempo <= 3000ms; visualização em lista exibe primeiras 100 tarefas com paginação; Kanban carrega com todas as colunas visíveis",
+        "type": "performance",
+        "when": "Usuário autenticado acessa a página de tarefas",
+        "given": "Um tenant possui 10.000 tarefas no banco de dados",
+        "scenario": "Carregamento de página com 10.000 tarefas",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 134,
+        "then": "Filtro retorna resultado em tempo <= 500ms; visualização é atualizada sem recarregamento completo da página",
+        "type": "performance",
+        "when": "Usuário aplica filtro por status='Concluído'",
+        "given": "Um tenant possui 10.000 tarefas de diferentes status",
+        "scenario": "Filtragem de 10.000 tarefas por status",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 135,
+        "then": "Tarefa é criada, editada, movida entre status e concluída com sucesso; todas as alterações são refletidas em tempo real nas visualizações; trilha de auditoria registra todas as operações",
+        "type": "e2e",
+        "when": "Usuário cria uma tarefa com título 'Implementar Feature X', responsável 'Maria', prioridade 'Alta', prazo em 7 dias; depois edita o título para 'Implementar Feature X - Versão 2'; depois move o cartão para 'Em Andamento' no Kanban; depois marca como 'Concluído'",
+        "given": "Usuário autenticado está na página de tarefas",
+        "scenario": "Fluxo completo de criação, edição e conclusão de tarefa",
+        "target_section": "flow"
+      },
+      {
+        "id": 136,
+        "then": "Sessão do usuário é invalidada; próxima requisição retorna 401 Unauthorized; usuário é redirecionado para página de login",
+        "type": "e2e",
+        "when": "Administrador desativa o usuário enquanto ele está navegando",
+        "given": "Usuário autenticado está na página de tarefas",
+        "scenario": "Acesso à página de tarefas após desativação de usuário",
+        "target_section": "rules"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 110,
+        "target": "p95 <= 2000ms (incluindo latência de rede e renderização); p99 <= 3000ms",
+        "category": "performance",
+        "requirement": "Carregamento inicial da página de tarefas com listagem de até 100 tarefas deve ocorrer em tempo adequado sem degradação perceptível.",
+        "verification": "Testes de performance com Lighthouse, WebPageTest ou ferramentas similares; monitoramento de RUM (Real User Monitoring) em produção; alertas configurados para p95 > 2000ms."
+      },
+      {
+        "id": 111,
+        "target": "Tempo de resposta da API de filtro <= 500ms; atualização visual no cliente <= 200ms após resposta",
+        "category": "performance",
+        "requirement": "Aplicação de filtros e pesquisa textual deve atualizar a visualização em tempo real sem recarregamento completo da página.",
+        "verification": "Testes de integração verificam tempo de resposta da API; testes de performance verificam tempo de renderização; monitoramento em produção rastreia latência de filtro."
+      },
+      {
+        "id": 112,
+        "target": "Frame rate >= 60 FPS durante operação de drag and drop; latência de feedback visual <= 100ms",
+        "category": "performance",
+        "requirement": "Movimentação de cartão no Kanban via drag and drop deve ser fluida e responsiva, sem lag ou travamento.",
+        "verification": "Testes de performance com DevTools do navegador; monitoramento de FPS durante drag and drop; testes em dispositivos móveis com diferentes capacidades de processamento."
+      },
+      {
+        "id": 113,
+        "target": "Persistência no servidor <= 500ms; atualização visual no cliente <= 200ms após confirmação",
+        "category": "performance",
+        "requirement": "Operações de criação e edição de tarefas devem ser persistidas e refletidas na visualização em tempo real sem atrasos perceptíveis.",
+        "verification": "Testes de integração medem tempo de persistência; testes de performance medem tempo de atualização visual; monitoramento em produção rastreia latência de operações."
+      },
+      {
+        "id": 114,
+        "target": "Carregamento de página com 10.000 tarefas <= 3000ms; filtragem de 10.000 tarefas <= 500ms",
+        "category": "scalability",
+        "requirement": "Página de tarefas deve suportar tenants com até 10.000 tarefas sem degradação significativa de desempenho.",
+        "verification": "Testes de carga com 10.000 tarefas por tenant; monitoramento de desempenho em produção com tenants de grande volume; índices de banco de dados otimizados para consultas de filtro."
+      },
+      {
+        "id": 115,
+        "target": "Latência de API <= 500ms sob carga de 5.000 usuários; taxa de erro < 0,1%",
+        "category": "scalability",
+        "requirement": "Página de tarefas deve suportar até 5.000 usuários ativos simultâneos na plataforma sem degradação de desempenho.",
+        "verification": "Testes de carga com simulação de 5.000 usuários simultâneos; monitoramento de latência e taxa de erro em produção; auto-scaling configurado para manter SLA."
+      },
+      {
+        "id": 116,
+        "target": "100% das requisições via HTTPS; certificado TLS válido e atualizado",
+        "category": "security",
+        "requirement": "Todas as comunicações entre cliente e servidor devem ser criptografadas usando HTTPS com TLS 1.2 ou superior.",
+        "verification": "Testes de segurança verificam que HTTP é redirecionado para HTTPS; certificado TLS é validado; testes de penetração verificam ausência de comunicação não criptografada."
+      },
+      {
+        "id": 117,
+        "target": "TTL de token configurável (padrão: 60 minutos); invalidação imediata ao desativar usuário ou tenant",
+        "category": "security",
+        "requirement": "Tokens JWT de autenticação devem ter tempo de expiração configurável e ser invalidados quando o usuário é desativado ou o tenant é desativado.",
+        "verification": "Testes verificam que token expira após TTL; testes verificam que token é invalidado ao desativar usuário; monitoramento em produção rastreia invalidações de token."
+      },
+      {
+        "id": 118,
+        "target": "100% das entradas de usuário são validadas e sanitizadas; testes de segurança não encontram vulnerabilidades de injeção",
+        "category": "security",
+        "requirement": "Validação de entrada deve ser rigorosa em cliente e servidor para prevenção de injeção de código (XSS, SQL injection) e outras vulnerabilidades.",
+        "verification": "Testes de segurança (OWASP Top 10) verificam ausência de vulnerabilidades; testes de penetração tentam injetar código malicioso; validação é testada com inputs maliciosos."
+      },
+      {
+        "id": 119,
+        "target": "Uptime >= 99,5% (máximo 3,6 horas de downtime por mês); RTO <= 15 minutos; RPO <= 5 minutos",
+        "category": "availability",
+        "requirement": "Página de tarefas deve estar disponível com alta disponibilidade, dado que sua indisponibilidade impede acesso de todos os usuários à funcionalidade principal.",
+        "verification": "Monitoramento contínuo de disponibilidade; alertas configurados para downtime; testes de failover verificam recuperação automática; backups são testados regularmente."
+      },
+      {
+        "id": 120,
+        "target": "Responsividade em breakpoints: mobile (320px), tablet (768px), desktop (1024px); funcionalidade completa em todos os breakpoints",
+        "category": "availability",
+        "requirement": "Página de tarefas deve ser acessível em dispositivos móveis (smartphones e tablets) com a mesma funcionalidade e usabilidade que em desktops.",
+        "verification": "Testes de responsividade em múltiplos dispositivos e tamanhos de tela; testes de usabilidade em mobile; monitoramento de taxa de erro em mobile."
+      },
+      {
+        "id": 121,
+        "target": "Logs estruturados em formato JSON com campos: timestamp, user_id, tenant_id, acao, tarefa_id, resultado, latencia_ms",
+        "category": "observability",
+        "requirement": "Página de tarefas deve emitir logs estruturados de todas as operações (criação, edição, filtro, pesquisa) para fins de debugging e monitoramento.",
+        "verification": "Logs são coletados em sistema centralizado (ELK, Datadog, etc.); testes verificam que logs contêm todos os campos obrigatórios; alertas configurados para erros."
+      },
+      {
+        "id": 122,
+        "target": "Trace ID é propagado em todas as requisições; latência de cada serviço é rastreada; traces são armazenados por no mínimo 7 dias",
+        "category": "observability",
+        "requirement": "Página de tarefas deve implementar rastreamento distribuído (distributed tracing) para rastrear requisições através de múltiplos serviços.",
+        "verification": "Testes verificam que Trace ID é propagado; traces são consultáveis em ferramenta de tracing (Jaeger, Zipkin, etc.); alertas configurados para latência anormal."
+      },
+      {
+        "id": 123,
+        "target": "Custo por usuário ativo <= $0,10/mês; taxa de cache hit >= 80%; compressão de resposta >= 70%",
+        "category": "cost",
+        "requirement": "Página de tarefas deve ser otimizada para minimizar custos de infraestrutura (computação, armazenamento, transferência de dados).",
+        "verification": "Monitoramento de custos em plataforma de cloud (AWS, GCP, Azure); análise de cache hit rate; análise de compressão de resposta; otimizações implementadas quando custo excede limite."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 16,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:08:39.923Z",
+  "updatedAt": null
+}

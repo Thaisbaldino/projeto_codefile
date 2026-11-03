@@ -1,0 +1,124 @@
+{
+  "id": 23979,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 3,
+        "name": "Identificador único da página no sistema",
+        "value": [
+          "login-form"
+        ],
+        "method": "user-input",
+        "reasoning": "O formulário de login é o identificador único da página.",
+        "confidence": 0.757,
+        "context_element_id": 2718
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 9,
+        "name": "Implementar identificação única de atores com sistemas de identidade centralizados e gerenciamento unificado de credenciais",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem identificação única, a comunicação entre a API e o sistema seria confusa, e a identidade do cliente seria perdida.",
+        "confidence": 0.8133,
+        "context_element_id": 2928
+      },
+      {
+        "id": 11,
+        "name": "Alterar todas as configurações padrão do sistema, incluindo senhas, portas, protocolos e parâmetros de segurança",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Cada caractere da senha é processado de forma diferente, e o custo do hash é ajustado conforme a necessidade de segurança.",
+        "confidence": 0.7344,
+        "context_element_id": 2935
+      },
+      {
+        "id": 13,
+        "name": "Garantir a autenticidade de identidades e origens usando certificados digitais, PKI e validação de cadeia de confiança (chain-of-trust)",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Certificados digitais, PKI e validação de cadeia de confiança garantem que a identidade e a origem sejam autenticadas, evitando que o acesso seja autorizado por meio de identidade imitada.",
+        "confidence": 0.9013,
+        "context_element_id": 2943
+      },
+      {
+        "id": 14,
+        "name": "Configurar revogação automática de acesso para contas comprometidas com invalidação imediata de tokens e sessões ativas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem ação explícita, o token de sessão permanece ativo e o usuário pode voltar a acessar sem autorização.",
+        "confidence": 0.9653,
+        "context_element_id": 2946
+      },
+      {
+        "id": 15,
+        "name": "Implementar bloqueio automático de recursos sob ataque com isolamento temporário e redirecionamento de tráfego",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem saída rápida, o sistema fica parado e a operação fica parada, o que não é aceitável em um ambiente de negócios.",
+        "confidence": 0.8587,
+        "context_element_id": 2947
+      },
+      {
+        "id": 17,
+        "name": "Desenvolva arquiteturas de plugins para extensibilidade sem modificar o núcleo",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A integração com SSO e OAuth é feita por meio de plugins, sem alteração do código principal.",
+        "confidence": 0.7012,
+        "context_element_id": 2989
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 20,
+        "name": "Provedor de Identidade",
+        "value": "federado externo",
+        "method": "user-input",
+        "reasoning": "O provedor de identidade externo é fornecido via SSO/OAuth, caracterizando uma integração federada externa.",
+        "confidence": 0.7975,
+        "context_element_id": 4082
+      },
+      {
+        "id": 21,
+        "name": "Estratégia de Sessão",
+        "value": "sessões com estado",
+        "method": "user-input",
+        "reasoning": "A sessão mantém o token expirado após o login bem-sucedido, caracterizando sessões stateful-sessions.",
+        "confidence": 0.8709,
+        "context_element_id": 4084
+      },
+      {
+        "id": 24,
+        "name": "Integração de Identidade",
+        "value": "provedor OAuth",
+        "method": "user-input",
+        "reasoning": "A adição de provedores externos de identidade via SSO/OAuth (como Google e Microsoft) é feita sem necessidade de reestruturação significativa da arquitetura.",
+        "confidence": 0.9761,
+        "context_element_id": 4128
+      },
+      {
+        "id": 27,
+        "name": "Padrão de Navegação",
+        "value": "autônomo",
+        "method": "user-input",
+        "reasoning": "A tela de login exibe um link direto para o fluxo de recuperação de senha, redirecionando para uma página separada ou abrindo um modal/painel na mesma tela, caracterizando um padrão de navegação standalone.",
+        "confidence": 0.7973,
+        "context_element_id": 4872
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 6,
+  "active": true,
+  "sourceId": 23592,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T16:51:36.738Z",
+  "updatedAt": null
+}

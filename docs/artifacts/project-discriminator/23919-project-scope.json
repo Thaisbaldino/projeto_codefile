@@ -1,0 +1,185 @@
+{
+  "id": 23919,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 15,
+        "name": "Observabilidade e Detecção",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem visibilidade centralizada, prazos e responsabilidades ficam escondidos, e o acompanhamento só acontece quando o problema já está fora do prazo.",
+        "confidence": 0.728,
+        "context_element_id": 2814
+      },
+      {
+        "id": 17,
+        "name": "Confusão de Identidade e Responsabilidade",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem clareza sobre quem é responsável, a equipe se confunde ao tentar executar tarefas, e a responsabilidade é reavaliada a cada nova tentativa.",
+        "confidence": 0.9423,
+        "context_element_id": 2839
+      }
+    ],
+    "attributes": [
+      {
+        "id": 5,
+        "name": "Entidade primária ou tipo de dados armazenado",
+        "value": [
+          "user-profiles"
+        ],
+        "method": "user-input",
+        "reasoning": "Os dados dos colaboradores cadastrados na plataforma, incluindo nome, e-mail, nível hierárquico, status de ativação e vínculo com o tenant, são dados de perfil de usuário.",
+        "confidence": 0.8679,
+        "context_element_id": 2692
+      },
+      {
+        "id": 6,
+        "name": "Framework regulatório ou compliance que a regra deve atender",
+        "value": [
+          "LGPD"
+        ],
+        "method": "user-input",
+        "reasoning": "O tratamento de dados pessoais dos usuários deve estar em conformidade com a Lei Geral de Proteção de Dados (LGPD).",
+        "confidence": 0.9768,
+        "context_element_id": 2699
+      },
+      {
+        "id": 9,
+        "name": "Principal tipo de entidade a ser estruturada no modelo",
+        "value": [
+          "employees"
+        ],
+        "method": "internal-inference",
+        "reasoning": "O cadastro de colaboradores e a definição de níveis hierárquicos dentro de cada organização são entidades do tipo employees.",
+        "confidence": 0.7981,
+        "context_element_id": 2710
+      },
+      {
+        "id": 13,
+        "name": "Frameworks regulatórios ou padrões de compliance que devem ser atendidos",
+        "value": [
+          "LGPD"
+        ],
+        "method": "user-input",
+        "reasoning": "O tratamento de dados pessoais dos usuários deve ser implementado em conformidade com a Lei Geral de Proteção de Dados (LGPD).",
+        "confidence": 0.7311,
+        "context_element_id": 2801
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 18,
+        "name": "Configurar filas de prioridade para processar eventos críticos primeiro, estabelecendo políticas de priorização baseadas em SLA",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Prioridade é definida por nível de prioridade, como baixa, média, alta ou urgente, e não por SLA ou métrica de performance.",
+        "confidence": 0.8849,
+        "context_element_id": 2861
+      },
+      {
+        "id": 19,
+        "name": "Estabelecer um sistema de rastreabilidade abrangente com logs detalhados de todas as ações de usuários e mudanças do sistema",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem registro das ações, ninguém sabe quem fez o quê e quando, e a responsabilidade é questionada em vez de reconhecida.",
+        "confidence": 0.9443,
+        "context_element_id": 2925
+      },
+      {
+        "id": 22,
+        "name": "Projete para operações self-service, permitindo que as equipes gerenciem seus próprios recursos",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "O acesso a esse processo é exclusivo de operadores internos da plataforma, não de clientes externos, o que torna a operação uma operação de self-service.",
+        "confidence": 0.7456,
+        "context_element_id": 3002
+      },
+      {
+        "id": 23,
+        "name": "Mantenha um modelo de tarefas do usuário com rastreamento do contexto atual, histórico de ações e sugestões de próximos passos com base no fluxo de trabalho",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem rastrear o contexto atual, a equipe não consegue reagir a mudanças sem recomeçar o processo inteiro.",
+        "confidence": 0.9202,
+        "context_element_id": 3045
+      },
+      {
+        "id": 24,
+        "name": "Implemente operabilidade por meio de interfaces intuitivas com padrões consistentes, navegação clara e fluxos de trabalho otimizados",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Uma tela lenta em um dispositivo móvel é a mesma coisa que um site demorado em um computador, e ambas prejudicam a experiência do usuário.",
+        "confidence": 0.7353,
+        "context_element_id": 3051
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 1,
+        "name": "Nível de Agregação de Domínio",
+        "value": "membro de agregado",
+        "method": "internal-inference",
+        "reasoning": "O cadastro de novos tenants é um agregado membro do sistema, com operadores internos da plataforma responsável pelo registro.",
+        "confidence": 0.7304,
+        "context_element_id": 1472
+      },
+      {
+        "id": 25,
+        "name": "Isolamento de Tenant",
+        "value": "isolamento por tenant",
+        "method": "user-input",
+        "reasoning": "Cada organização acessa seus próprios dados exclusivamente, sem interferência nos dados de outros tenants, caracterizando isolamento de dados por tenant.",
+        "confidence": 0.9194,
+        "context_element_id": 4085
+      },
+      {
+        "id": 27,
+        "name": "Escopo de Governança",
+        "value": "em toda a empresa",
+        "method": "internal-inference",
+        "reasoning": "A gestão multi-tenant atende a múltiplas empresas na mesma plataforma, com segregação completa de dados e configurações por organização, caracterizando escopo de governança em escala empresarial.",
+        "confidence": 0.7944,
+        "context_element_id": 4169
+      },
+      {
+        "id": 29,
+        "name": "Momento de Execução",
+        "value": "agendado",
+        "method": "user-input",
+        "reasoning": "O ciclo de vida das tarefas é executado em tempo previamente definido, caracterizando execução programada.",
+        "confidence": 0.7836,
+        "context_element_id": 4325
+      },
+      {
+        "id": 31,
+        "name": "Complexidade do Fluxo de Trabalho",
+        "value": "complexo",
+        "method": "internal-inference",
+        "reasoning": "A organização e acompanhamento das atividades de equipes envolvem múltiplas etapas e prazos, caracterizando um modelo de execução complexo.",
+        "confidence": 0.7629,
+        "context_element_id": 4578
+      },
+      {
+        "id": 33,
+        "name": "Estratégia de Responsividade",
+        "value": "responsivo e adaptativo",
+        "method": "user-input",
+        "reasoning": "A interface do sistema é responsiva para dispositivos móveis, mantendo navegação rápida e fluida como requisito de experiência do usuário.",
+        "confidence": 0.9271,
+        "context_element_id": 4911
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 13,
+  "active": true,
+  "sourceId": 23577,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T14:58:49.768Z",
+  "updatedAt": null
+}

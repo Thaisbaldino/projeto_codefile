@@ -1,0 +1,555 @@
+{
+  "id": 23815,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 32,
+          "name": "Usuário Autenticado",
+          "format": "AuthContext { user_id, email, tenant_id, perfil, status, permissions }",
+          "origin": "Camada de Autenticação (ASSET-007)",
+          "trigger": "POST /api/auth/login bem-sucedido"
+        },
+        {
+          "id": 33,
+          "name": "Definições de Rota",
+          "format": "Array de rotas com path, layout, page_ref, guards",
+          "origin": "Configuração da Aplicação",
+          "trigger": null
+        },
+        {
+          "id": 34,
+          "name": "Contexto de Tenant",
+          "format": "{ tenant_id, tenant.status, tenant.slug }",
+          "origin": "Sessão do Usuário",
+          "trigger": null
+        },
+        {
+          "id": 35,
+          "name": "Permissões Resolvidas",
+          "format": "string[] de escopos (tasks:read, users:write, tenants:read, etc.)",
+          "origin": "Controle de Identidade e Acesso (ASSET-007)",
+          "trigger": null
+        }
+      ],
+      "outputs": [
+        {
+          "id": 44,
+          "name": "Estrutura de Navegação Renderizada",
+          "format": "HTML/DOM com layout, sidebar, breadcrumb, página principal e footer",
+          "destination": "Navegador do Usuário"
+        },
+        {
+          "id": 45,
+          "name": "Árvore de Navegação Filtrada",
+          "format": "Array hierárquico de itens de menu acessíveis ao usuário",
+          "destination": "Componente de Sidebar"
+        },
+        {
+          "id": 46,
+          "name": "Contexto de Autenticação",
+          "format": "AuthContext disponível via Context API ou State Management",
+          "destination": "Componentes Filhos"
+        },
+        {
+          "id": 47,
+          "name": "Evento de Navegação",
+          "format": "{ user_id, tenant_id, rota_acessada, timestamp, ip_address }",
+          "destination": "Trilha de Auditoria (ASSET-053)"
+        }
+      ],
+      "processing": [
+        {
+          "id": 36,
+          "step": "Validar Autenticação",
+          "description": "Verificar se o usuário possui token válido e não expirado; redirecionar para /login se não autenticado."
+        },
+        {
+          "id": 37,
+          "step": "Validar Status do Tenant",
+          "description": "Verificar se o tenant do usuário está ativo; redirecionar para /login se tenant inativo."
+        },
+        {
+          "id": 38,
+          "step": "Validar Status do Usuário",
+          "description": "Verificar se o usuário está com status ativo; redirecionar para /login se inativo."
+        },
+        {
+          "id": 39,
+          "step": "Resolver Permissões",
+          "description": "Consultar permissões do usuário conforme seu perfil (colaborador, gestor, administrador_tenant, administrador_plataforma)."
+        },
+        {
+          "id": 40,
+          "step": "Filtrar Rotas Acessíveis",
+          "description": "Aplicar guardas de rota e filtrar árvore de navegação para exibir apenas rotas e itens de menu acessíveis conforme perfil e permissões."
+        },
+        {
+          "id": 41,
+          "step": "Compor Layout",
+          "description": "Selecionar layout apropriado (app_shell ou admin_layout) e renderizar slots com componentes de header, sidebar, breadcrumb, main_content e footer."
+        },
+        {
+          "id": 42,
+          "step": "Renderizar Página",
+          "description": "Carregar e renderizar a página específica referenciada pela rota dentro do slot main_content do layout selecionado."
+        },
+        {
+          "id": 43,
+          "step": "Gerenciar Contexto de Workspace",
+          "description": "Manter contexto de tenant, usuário e permissões disponível globalmente para componentes filhos acessarem durante renderização."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 48,
+        "category": "authorization",
+        "description": "Toda rota protegida deve validar autenticação do usuário antes de renderizar; usuários não autenticados devem ser redirecionados para /login.",
+        "enforcement": "code",
+        "verification": "Teste de integração: acessar rota protegida sem token deve retornar redirecionamento para /login com status 302 ou 307."
+      },
+      {
+        "id": 49,
+        "category": "authorization",
+        "description": "Rotas administrativas (/tenants, /tenants/:id) devem ser acessíveis apenas a usuários com perfil 'administrador_plataforma'; outros perfis devem ser redirecionados para /tasks.",
+        "enforcement": "code",
+        "verification": "Teste de integração: usuário com perfil 'colaborador' ou 'administrador_tenant' tentando acessar /tenants deve ser redirecionado para /tasks."
+      },
+      {
+        "id": 50,
+        "category": "authorization",
+        "description": "Itens de navegação no sidebar devem ser filtrados conforme o perfil do usuário; colaboradores não devem visualizar opção de 'Administração' ou 'Tenants'.",
+        "enforcement": "code",
+        "verification": "Teste de integração: usuário com perfil 'colaborador' renderizando sidebar não deve exibir item 'nav.administration' ou 'nav.tenants'."
+      },
+      {
+        "id": 51,
+        "category": "authorization",
+        "description": "Tenant inativo deve bloquear acesso a todas as rotas protegidas; usuários do tenant inativo devem ser redirecionados para /login com mensagem de erro.",
+        "enforcement": "code",
+        "verification": "Teste de integração: usuário autenticado com tenant.status='inativo' tentando acessar qualquer rota protegida deve ser redirecionado para /login."
+      },
+      {
+        "id": 52,
+        "category": "authorization",
+        "description": "Usuário inativo deve ser impedido de acessar rotas protegidas; sessão deve ser revogada e usuário redirecionado para /login.",
+        "enforcement": "code",
+        "verification": "Teste de integração: usuário com status='inativo' tentando acessar rota protegida deve ser redirecionado para /login e sessão invalidada."
+      },
+      {
+        "id": 53,
+        "category": "invariant",
+        "description": "Isolamento de dados por tenant: rotas protegidas devem sempre operar dentro do escopo do tenant do usuário autenticado; nenhuma rota deve permitir acesso a dados de outro tenant.",
+        "enforcement": "code",
+        "verification": "Teste de segurança: manipular parâmetro tenant_id em requisição de usuário de outro tenant deve retornar erro 403 Forbidden ou redirecionar para /login."
+      },
+      {
+        "id": 54,
+        "category": "observability",
+        "description": "Toda tentativa de acesso a rota protegida deve ser registrada em log de auditoria, incluindo user_id, tenant_id, rota acessada, timestamp e resultado (sucesso ou redirecionamento).",
+        "enforcement": "code",
+        "verification": "Teste de auditoria: acessar rota protegida deve gerar entrada em tabela de auditoria com campos user_id, tenant_id, rota, timestamp, resultado."
+      },
+      {
+        "id": 55,
+        "category": "compliance",
+        "description": "Acesso a rotas contendo dados pessoais (usuários, perfis) deve estar em conformidade com LGPD; dados devem ser acessados apenas por usuários autorizados do mesmo tenant.",
+        "enforcement": "code",
+        "verification": "Teste de conformidade: usuário de tenant A não deve conseguir acessar dados de usuários do tenant B via manipulação de parâmetros em /users ou /users/:id."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "A Área de Rotas Protegidas é a estrutura de navegação que organiza e controla o acesso às funcionalidades principais da plataforma após autenticação do usuário. Compõe-se de rotas protegidas por guardas de autenticação e autorização, layouts com slots para composição de páginas de tarefas, usuários e gerenciamento, árvore de navegação hierárquica que filtra itens conforme o perfil do usuário (colaborador, gestor, administrador de tenant), e mecanismos de resolução de permissões em tempo de roteamento. Diferencia-se da Estrutura de Navegação Principal (asset 17) por focar exclusivamente nas rotas acessíveis apenas a usuários autenticados e ativos, enquanto a estrutura principal inclui também rotas públicas de autenticação. Funciona como a espinha dorsal da experiência pós-login, garantindo que cada usuário navegue apenas pelas seções e funcionalidades às quais tem acesso conforme seu perfil e status de ativação."
+    },
+    "definition": {
+      "guards": [
+        {
+          "id": 2,
+          "name": "authenticated_guard",
+          "condition": "user.authenticated === true AND user.tenant_id !== null AND user.status === 'ativo'",
+          "redirect_to": "/login"
+        },
+        {
+          "id": 3,
+          "name": "tenant_active_guard",
+          "condition": "user.tenant.status === 'ativo'",
+          "redirect_to": "/login"
+        },
+        {
+          "id": 4,
+          "name": "admin_tenant_guard",
+          "condition": "user.perfil === 'administrador_tenant' AND user.status === 'ativo' AND user.tenant.status === 'ativo'",
+          "redirect_to": "/tasks"
+        },
+        {
+          "id": 5,
+          "name": "admin_platform_guard",
+          "condition": "user.perfil === 'administrador_plataforma' AND user.status === 'ativo'",
+          "redirect_to": "/tasks"
+        }
+      ],
+      "routes": [
+        {
+          "id": 6,
+          "path": "/",
+          "layout": "app_shell",
+          "page_ref": "dashboard"
+        },
+        {
+          "id": 7,
+          "path": "/tasks",
+          "layout": "app_shell",
+          "page_ref": "tasks_page"
+        },
+        {
+          "id": 8,
+          "path": "/tasks/:id",
+          "layout": "app_shell",
+          "page_ref": "task_detail_page"
+        },
+        {
+          "id": 9,
+          "path": "/users",
+          "layout": "app_shell",
+          "page_ref": "users_management_page"
+        },
+        {
+          "id": 10,
+          "path": "/users/:id",
+          "layout": "app_shell",
+          "page_ref": "user_profile_page"
+        },
+        {
+          "id": 11,
+          "path": "/hierarchy-levels",
+          "layout": "app_shell",
+          "page_ref": "hierarchy_levels_page"
+        },
+        {
+          "id": 12,
+          "path": "/tenants",
+          "layout": "admin_layout",
+          "page_ref": "tenants_management_page"
+        },
+        {
+          "id": 13,
+          "path": "/tenants/:id",
+          "layout": "admin_layout",
+          "page_ref": "tenant_detail_page"
+        }
+      ],
+      "layouts": [
+        {
+          "id": 14,
+          "name": "app_shell",
+          "slots": [
+            {
+              "id": 15,
+              "name": "header",
+              "description": "Cabeçalho da aplicação contendo logo, menu de usuário e controles globais."
+            },
+            {
+              "id": 16,
+              "name": "sidebar",
+              "description": "Barra lateral com navegação principal e menu de seções acessíveis conforme permissões do usuário autenticado."
+            },
+            {
+              "id": 17,
+              "name": "breadcrumb",
+              "description": "Trilha de navegação indicando a posição atual do usuário na hierarquia de páginas protegidas."
+            },
+            {
+              "id": 18,
+              "name": "main_content",
+              "description": "Área principal de conteúdo onde a página específica é renderizada."
+            },
+            {
+              "id": 19,
+              "name": "footer",
+              "description": "Rodapé da aplicação com informações adicionais e links de suporte."
+            }
+          ]
+        },
+        {
+          "id": 20,
+          "name": "admin_layout",
+          "slots": [
+            {
+              "id": 21,
+              "name": "header",
+              "description": "Cabeçalho administrativo com identificação de contexto administrativo restrito."
+            },
+            {
+              "id": 22,
+              "name": "admin_sidebar",
+              "description": "Barra lateral com navegação administrativa restrita a administradores da plataforma."
+            },
+            {
+              "id": 23,
+              "name": "main_content",
+              "description": "Área principal de conteúdo para operações administrativas de tenants."
+            },
+            {
+              "id": 24,
+              "name": "footer",
+              "description": "Rodapé com informações administrativas."
+            }
+          ]
+        }
+      ],
+      "nav_tree": [
+        {
+          "id": 25,
+          "icon": "dashboard",
+          "label_key": "nav.dashboard",
+          "parent_id": null,
+          "route_ref": "/"
+        },
+        {
+          "id": 26,
+          "icon": "tasks",
+          "label_key": "nav.tasks",
+          "parent_id": null,
+          "route_ref": "/tasks"
+        },
+        {
+          "id": 27,
+          "icon": "users",
+          "label_key": "nav.users",
+          "parent_id": null,
+          "route_ref": "/users"
+        },
+        {
+          "id": 28,
+          "icon": "hierarchy",
+          "label_key": "nav.hierarchy_levels",
+          "parent_id": null,
+          "route_ref": "/hierarchy-levels"
+        },
+        {
+          "id": 29,
+          "icon": "settings",
+          "label_key": "nav.administration",
+          "parent_id": null
+        },
+        {
+          "id": 30,
+          "icon": "organizations",
+          "label_key": "nav.tenants",
+          "parent_id": 29,
+          "route_ref": "/tenants"
+        },
+        {
+          "id": 31,
+          "icon": "audit",
+          "label_key": "nav.audit_trail",
+          "parent_id": 29,
+          "route_ref": "/audit"
+        }
+      ]
+    },
+    "pendencies": [
+      {
+        "id": 71,
+        "section": "definition",
+        "description": "Necessário definir a lista completa de feature_ids que esta Área de Rotas Protegidas materializa. Atualmente, correlações estão sendo estabelecidas contra features de autenticação, gerenciamento de usuários e tarefas, mas falta confirmação de quais features específicas (FRONT-xxx) esta asset realiza.",
+        "resolutionOptions": [
+          {
+            "id": 72,
+            "text": "Revisar FEATURE DEFINITIONS fornecidas e mapear explicitamente quais features (sourceId 1-18) são materializadas por esta asset; adicionar correlações contra feature_definition para cada uma."
+          },
+          {
+            "id": 73,
+            "text": "Consultar Product Owner para confirmar escopo de features que esta asset cobre; atualizar definição com lista de feature_ids."
+          }
+        ],
+        "recommendedOptionId": 72
+      },
+      {
+        "id": 74,
+        "section": "definition",
+        "description": "Falta especificação de como a árvore de navegação (nav_tree) será dinamicamente filtrada conforme permissões do usuário. Atualmente, nav_tree é estática, mas necessário definir mecanismo de filtragem em tempo de roteamento.",
+        "resolutionOptions": [
+          {
+            "id": 75,
+            "text": "Implementar função de filtragem que percorre nav_tree e remove itens cujas rotas não estão acessíveis conforme user.permissions; retornar nav_tree filtrada."
+          },
+          {
+            "id": 76,
+            "text": "Adicionar campo 'required_permission' a cada item de nav_tree; durante renderização, filtrar itens que exigem permissão não presente em user.permissions."
+          }
+        ],
+        "recommendedOptionId": 75
+      },
+      {
+        "id": 77,
+        "section": "flow",
+        "description": "Necessário detalhar como o contexto de workspace (tenant_id, user_id, permissions) é propagado para componentes filhos durante renderização de páginas. Atualmente, flow menciona 'Gerenciar Contexto de Workspace' mas não especifica mecanismo (Context API, Redux, etc.).",
+        "resolutionOptions": [
+          {
+            "id": 78,
+            "text": "Usar React Context API para criar AuthContext e TenantContext; disponibilizar globalmente via Provider no root da aplicação."
+          },
+          {
+            "id": 79,
+            "text": "Usar State Management (Redux, Zustand, etc.) para armazenar AuthContext e TenantContext; componentes filhos acessam via hooks ou selectors."
+          }
+        ],
+        "recommendedOptionId": 78
+      },
+      {
+        "id": 80,
+        "section": "rules",
+        "description": "Falta especificação de comportamento quando token de acesso expira durante navegação do usuário. Atualmente, regra menciona validação de autenticação, mas não detalha se refresh automático deve ocorrer ou se usuário deve ser redirecionado para /login.",
+        "resolutionOptions": [
+          {
+            "id": 81,
+            "text": "Implementar refresh automático de token: quando access_token expira, usar refresh_token para obter novo access_token sem redirecionar usuário para /login."
+          },
+          {
+            "id": 82,
+            "text": "Redirecionar para /login quando access_token expira; usuário deve fazer login novamente para continuar navegando."
+          }
+        ],
+        "recommendedOptionId": 81
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 63,
+        "then": "Página de tarefas é renderizada com layout app_shell; sidebar exibe itens de navegação acessíveis ao perfil do usuário; evento de auditoria é registrado.",
+        "type": "integration",
+        "when": "Usuário navega para /tasks",
+        "given": "Usuário com token válido, status ativo e tenant ativo",
+        "scenario": "Usuário autenticado acessa rota protegida",
+        "target_section": "flow"
+      },
+      {
+        "id": 64,
+        "then": "Redirecionamento para /login ocorre; nenhum conteúdo protegido é renderizado; evento de tentativa de acesso não autorizado é registrado.",
+        "type": "security",
+        "when": "Usuário tenta acessar /tasks",
+        "given": "Usuário sem token ou com token expirado",
+        "scenario": "Usuário não autenticado tenta acessar rota protegida",
+        "target_section": "rules"
+      },
+      {
+        "id": 65,
+        "then": "Redirecionamento para /tasks ocorre; item 'Administração' não é exibido no sidebar; evento de tentativa de acesso não autorizado é registrado.",
+        "type": "integration",
+        "when": "Usuário tenta acessar /tenants",
+        "given": "Usuário com perfil 'colaborador', status ativo, tenant ativo",
+        "scenario": "Usuário com perfil colaborador tenta acessar rota administrativa",
+        "target_section": "rules"
+      },
+      {
+        "id": 66,
+        "then": "Redirecionamento para /login ocorre; mensagem de erro informando que tenant está inativo é exibida; sessão é revogada.",
+        "type": "integration",
+        "when": "Usuário tenta navegar para outra rota ou recarrega a página",
+        "given": "Usuário autenticado com tenant ativo; tenant é desativado externamente",
+        "scenario": "Tenant é desativado enquanto usuário está navegando",
+        "target_section": "rules"
+      },
+      {
+        "id": 67,
+        "then": "Redirecionamento para /login ocorre; sessão é revogada; evento de desativação de usuário é registrado.",
+        "type": "integration",
+        "when": "Usuário tenta navegar para outra rota ou recarrega a página",
+        "given": "Usuário autenticado com status ativo; usuário é desativado externamente",
+        "scenario": "Usuário é desativado enquanto está navegando",
+        "target_section": "rules"
+      },
+      {
+        "id": 68,
+        "then": "Guardas são resolvidos em <= 50ms; nav_tree é filtrada em <= 50ms; página é renderizada sem atraso perceptível.",
+        "type": "performance",
+        "when": "Usuário acessa rota protegida",
+        "given": "Tenant com 50+ rotas e 100+ itens de navegação; usuário autenticado",
+        "scenario": "Resolução de guardas e filtragem de navegação em tenant com muitas rotas",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 69,
+        "then": "Guardas validam corretamente user.authenticated, user.status, user.tenant.status, user.perfil; nav_tree é filtrada conforme permissions.",
+        "type": "contract",
+        "when": "Roteador consome AuthContext para resolver guardas e filtrar navegação",
+        "given": "IAM (ASSET-007) fornece AuthContext com user_id, email, tenant_id, perfil, status, permissions",
+        "scenario": "Estrutura de AuthContext fornecida por IAM é consumida corretamente",
+        "target_section": "definition"
+      },
+      {
+        "id": 70,
+        "then": "Guarda retorna false; redirecionamento para /login é acionado.",
+        "type": "unit",
+        "when": "Guarda authenticated_guard valida token",
+        "given": "Token JWT com exp < data_atual",
+        "scenario": "Guarda de autenticação rejeita token expirado",
+        "target_section": "definition"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 56,
+        "target": "p99 <= 50ms para resolução de guardas e filtragem de nav_tree, mesmo com 100+ itens de navegação.",
+        "category": "performance",
+        "requirement": "Resolução de rotas e filtragem de navegação deve ocorrer sem impacto perceptível no tempo de carregamento da página.",
+        "verification": "Teste de performance: medir tempo de execução de guards e filtragem de nav_tree com profiler de navegador; p99 deve estar <= 50ms."
+      },
+      {
+        "id": 57,
+        "target": "First Contentful Paint (FCP) <= 1.5s em conexão 4G; Largest Contentful Paint (LCP) <= 2.5s.",
+        "category": "performance",
+        "requirement": "Renderização de layout e sidebar deve ser rápida e responsiva em dispositivos móveis.",
+        "verification": "Teste de performance: executar Lighthouse em dispositivo móvel simulado; FCP e LCP devem atender aos targets."
+      },
+      {
+        "id": 58,
+        "target": "Suportar até 50 rotas e 100+ itens de navegação sem impacto perceptível no tempo de resolução.",
+        "category": "scalability",
+        "requirement": "Estrutura de navegação deve suportar crescimento de rotas e itens de menu sem degradação de performance.",
+        "verification": "Teste de carga: adicionar 50 rotas e 100+ itens de nav_tree; medir tempo de resolução e renderização; deve permanecer <= 50ms."
+      },
+      {
+        "id": 59,
+        "target": "100% das validações de autenticação e autorização devem ser executadas no servidor; nenhuma validação crítica deve depender apenas de lógica cliente.",
+        "category": "security",
+        "requirement": "Validação de guardas deve ocorrer no servidor (backend) para garantir que manipulação de tokens ou parâmetros no cliente não contorne proteções.",
+        "verification": "Teste de segurança: interceptar requisição e remover/modificar token; servidor deve rejeitar com 401 Unauthorized."
+      },
+      {
+        "id": 60,
+        "target": "Todas as requisições contendo tokens devem usar HTTPS (TLS 1.2+); tokens não devem ser armazenados em localStorage sem proteção adicional.",
+        "category": "security",
+        "requirement": "Tokens JWT devem ser transmitidos apenas via HTTPS e armazenados de forma segura no cliente.",
+        "verification": "Teste de segurança: verificar que requisições com token usam HTTPS; inspecionar armazenamento de token no cliente."
+      },
+      {
+        "id": 61,
+        "target": "99.9% de uptime; tempo de recuperação de falha <= 30 segundos.",
+        "category": "availability",
+        "requirement": "Serviço de roteamento e navegação deve estar disponível com alta disponibilidade, dado que sua indisponibilidade impede acesso a toda a plataforma.",
+        "verification": "Teste de disponibilidade: simular falha de serviço de autenticação; verificar que fallback ou retry ocorre em <= 30 segundos."
+      },
+      {
+        "id": 62,
+        "target": "100% das transições de rota devem gerar evento de auditoria com user_id, tenant_id, rota_origem, rota_destino, timestamp.",
+        "category": "observability",
+        "requirement": "Eventos de navegação e mudanças de rota devem ser registrados para auditoria e análise de comportamento do usuário.",
+        "verification": "Teste de auditoria: navegar entre rotas; verificar que cada transição gera entrada em log de auditoria com campos obrigatórios."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 18,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T05:44:07.524Z",
+  "updatedAt": null
+}

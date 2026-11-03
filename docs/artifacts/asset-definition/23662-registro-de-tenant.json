@@ -1,0 +1,551 @@
+{
+  "id": 23662,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 20,
+          "name": "Solicitação de Provisionamento",
+          "format": "JSON { nome: string, slug: string }",
+          "origin": "Formulário de Provisionamento (ASSET-015)",
+          "trigger": "Administrador interno submete formulário de criação de novo tenant"
+        },
+        {
+          "id": 21,
+          "name": "Solicitação de Ativação",
+          "format": "JSON { tenant_id: uuid }",
+          "origin": "Interface de Gerenciamento de Tenants (ASSET-015)",
+          "trigger": "Administrador interno solicita ativação de tenant desativado"
+        },
+        {
+          "id": 22,
+          "name": "Solicitação de Desativação",
+          "format": "JSON { tenant_id: uuid }",
+          "origin": "Interface de Gerenciamento de Tenants (ASSET-015)",
+          "trigger": "Administrador interno solicita desativação de tenant ativo"
+        },
+        {
+          "id": 23,
+          "name": "Consulta de Tenant",
+          "format": "Query { tenant_id: uuid } ou { slug: string }",
+          "origin": "Fluxos de Autenticação, Cadastro de Usuário, Criação de Tarefa",
+          "trigger": null
+        }
+      ],
+      "outputs": [
+        {
+          "id": 37,
+          "name": "Tenant Provisionado",
+          "format": "Registro persistido em dbo.tenants com status='ativo', evento TenantProvisionado emitido",
+          "destination": "Repositório de Tenants (ASSET-048), Trilha de Auditoria (ASSET-053)"
+        },
+        {
+          "id": 38,
+          "name": "Tenant Ativado",
+          "format": "Registro atualizado em dbo.tenants com status='ativo', evento TenantAtivado emitido",
+          "destination": "Repositório de Tenants (ASSET-048), Trilha de Auditoria (ASSET-053)"
+        },
+        {
+          "id": 39,
+          "name": "Tenant Desativado",
+          "format": "Registro atualizado em dbo.tenants com status='inativo', evento TenantDesativado emitido, sessões revogadas",
+          "destination": "Repositório de Tenants (ASSET-048), Trilha de Auditoria (ASSET-053)"
+        },
+        {
+          "id": 40,
+          "name": "Confirmação de Sucesso",
+          "format": "JSON { success: true, message: string, tenant: { id, nome, slug, status } }",
+          "destination": "Interface de Gerenciamento de Tenants (ASSET-015)"
+        },
+        {
+          "id": 41,
+          "name": "Mensagem de Erro",
+          "format": "JSON { success: false, error: string, field?: string }",
+          "destination": "Interface de Gerenciamento de Tenants (ASSET-015)"
+        }
+      ],
+      "processing": [
+        {
+          "id": 24,
+          "step": "Validar Unicidade de Slug",
+          "description": "Verifica se o identificador textual (slug) informado não existe em nenhum outro tenant na plataforma, rejeitando duplicatas."
+        },
+        {
+          "id": 25,
+          "step": "Validar Formato de Slug",
+          "description": "Valida que o slug respeita o padrão permitido (apenas letras minúsculas, números e hífens, sem espaços ou caracteres especiais)."
+        },
+        {
+          "id": 26,
+          "step": "Validar Preenchimento de Campos Obrigatórios",
+          "description": "Garante que nome e slug estão preenchidos antes de persistir o registro."
+        },
+        {
+          "id": 27,
+          "step": "Registrar Metadados de Provisionamento",
+          "description": "Captura data_criacao, administrador_criador_id e atribui status inicial 'ativo' ao novo tenant."
+        },
+        {
+          "id": 28,
+          "step": "Criar Estrutura Isolada de Dados",
+          "description": "Provisiona espaço isolado de dados para o novo tenant, garantindo segregação completa de usuários, tarefas e configurações."
+        },
+        {
+          "id": 29,
+          "step": "Registrar Evento de Provisionamento",
+          "description": "Emite evento TenantProvisionado com dados do tenant criado para fins de auditoria e integração."
+        },
+        {
+          "id": 30,
+          "step": "Validar Status Atual para Ativação",
+          "description": "Verifica se o tenant está em status 'inativo' antes de permitir ativação, rejeitando ativação de tenants já ativos."
+        },
+        {
+          "id": 31,
+          "step": "Atualizar Status para Ativo",
+          "description": "Altera o status do tenant para 'ativo' e registra data_ultima_ativacao."
+        },
+        {
+          "id": 32,
+          "step": "Registrar Evento de Ativação",
+          "description": "Emite evento TenantAtivado com identificação do administrador executor para auditoria."
+        },
+        {
+          "id": 33,
+          "step": "Validar Status Atual para Desativação",
+          "description": "Verifica se o tenant está em status 'ativo' antes de permitir desativação, rejeitando desativação de tenants já inativos."
+        },
+        {
+          "id": 34,
+          "step": "Invalidar Sessões Ativas",
+          "description": "Revoga imediatamente todas as sessões autenticadas de usuários pertencentes ao tenant sendo desativado."
+        },
+        {
+          "id": 35,
+          "step": "Atualizar Status para Inativo",
+          "description": "Altera o status do tenant para 'inativo' e registra data_ultima_desativacao."
+        },
+        {
+          "id": 36,
+          "step": "Registrar Evento de Desativação",
+          "description": "Emite evento TenantDesativado com identificação do administrador executor para auditoria."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 42,
+        "category": "invariant",
+        "description": "Cada tenant deve possuir um identificador único (slug) que não pode ser duplicado na plataforma. Dois tenants nunca podem compartilhar o mesmo slug.",
+        "enforcement": "db_constraint",
+        "verification": "Constraint UNIQUE(slug) na tabela dbo.tenants; tentativa de inserção com slug duplicado é rejeitada pelo banco de dados."
+      },
+      {
+        "id": 43,
+        "category": "validation",
+        "description": "O slug de um tenant deve conter apenas letras minúsculas, números e hífens, sem espaços, caracteres especiais ou maiúsculas. Comprimento mínimo de 1 caractere.",
+        "enforcement": "code",
+        "verification": "Validação de formato via regex ^[a-z0-9-]+$ antes de persistência; rejeição com mensagem de erro específica se formato inválido."
+      },
+      {
+        "id": 44,
+        "category": "invariant",
+        "description": "O nome de um tenant não pode estar vazio. Campo obrigatório em toda operação de provisionamento.",
+        "enforcement": "db_constraint",
+        "verification": "Constraint NOT NULL(nome) na tabela dbo.tenants; tentativa de inserção com nome nulo é rejeitada."
+      },
+      {
+        "id": 45,
+        "category": "invariant",
+        "description": "Todo tenant deve estar em um dos dois estados válidos: 'ativo' ou 'inativo'. Nenhum outro valor é permitido.",
+        "enforcement": "db_constraint",
+        "verification": "Constraint CHECK(status IN ('ativo', 'inativo')) na tabela dbo.tenants; tentativa de inserção com status inválido é rejeitada."
+      },
+      {
+        "id": 46,
+        "category": "authorization",
+        "description": "Apenas usuários com perfil de administrador interno da plataforma podem provisionar, ativar ou desativar tenants. Colaboradores, gestores e administradores de tenant não possuem acesso a essas operações.",
+        "enforcement": "code",
+        "verification": "Verificação de role do usuário autenticado antes de cada operação de provisionamento, ativação ou desativação; rejeição com erro 403 Forbidden se role não for 'admin_plataforma'."
+      },
+      {
+        "id": 47,
+        "category": "invariant",
+        "description": "Um tenant desativado bloqueia imediatamente o acesso de todos os seus usuários. Nenhum usuário de um tenant inativo pode realizar login ou acessar dados da plataforma.",
+        "enforcement": "code",
+        "verification": "Verificação de status do tenant durante autenticação; rejeição de login com mensagem de erro adequada se tenant estiver inativo."
+      },
+      {
+        "id": 48,
+        "category": "invariant",
+        "description": "Desativação de um tenant invalida imediatamente todas as sessões ativas de seus usuários, revogando acesso em tempo real sem permitir continuação de operações.",
+        "enforcement": "code",
+        "verification": "Revogação de tokens de sessão e invalidação de cache de sessão no momento da desativação; verificação de status do tenant em cada requisição autenticada."
+      },
+      {
+        "id": 49,
+        "category": "compliance",
+        "description": "Dados de um tenant (usuários, tarefas, configurações) devem estar completamente isolados de outros tenants. Nenhuma consulta, operação ou exposição de dados deve permitir acesso cruzado entre tenants.",
+        "enforcement": "code",
+        "verification": "Filtro de tenant_id em todas as consultas ao banco de dados; testes de segurança verificando que usuário de tenant A não consegue acessar dados de tenant B mesmo com manipulação de parâmetros."
+      },
+      {
+        "id": 50,
+        "category": "retention",
+        "description": "Dados de um tenant desativado devem ser preservados indefinidamente para fins de auditoria, conformidade LGPD e possível reativação futura. Exclusão de dados de tenant desativado não é permitida sem processo manual de aprovação.",
+        "enforcement": "manual",
+        "verification": "Procedimento de retenção de dados documentado; exclusão de dados de tenant requer aprovação explícita de administrador de plataforma e registro em log de auditoria."
+      },
+      {
+        "id": 51,
+        "category": "observability",
+        "description": "Toda operação de provisionamento, ativação ou desativação de tenant deve ser registrada em trilha de auditoria com identificação do administrador executor, timestamp e dados do tenant afetado.",
+        "enforcement": "code",
+        "verification": "Registro em dbo.audit_log de cada operação com campos: usuario_id, tenant_id, operacao, timestamp, dados_anteriores, dados_novos; verificação de completude de logs em testes de auditoria."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "O Registro de Tenant é um Business Record que encapsula os dados estruturais de uma organização (empresa) cadastrada na plataforma multi-tenant. Contém identificadores únicos, nome da organização, status de ativação (ativo/inativo), metadados de provisionamento (data de criação, administrador responsável) e referências de configuração. Serve como raiz de isolamento de dados, garantindo que cada tenant possua seu próprio espaço segregado de usuários, tarefas, níveis hierárquicos e históricos. O registro é persistido no banco de dados relacional e validado quanto a unicidade de identificador, conformidade com LGPD, e integridade referencial com usuários administradores. Não contém lógica de negócio complexa (delegada ao domínio), persistência (delegada ao repositório) ou apresentação (delegada às páginas de interface)."
+    },
+    "definition": {
+      "events": [
+        {
+          "id": 17,
+          "name": "TenantProvisionado",
+          "description": "Emitido quando um novo tenant é provisionado com sucesso na plataforma.",
+          "payload_shape": "{ id: uuid, nome: string, slug: string, data_criacao: timestamp, administrador_criador_id: uuid }"
+        },
+        {
+          "id": 18,
+          "name": "TenantAtivado",
+          "description": "Emitido quando um tenant previamente desativado é reativado, habilitando acesso de usuários.",
+          "payload_shape": "{ id: uuid, data_ativacao: timestamp, administrador_executor_id: uuid }"
+        },
+        {
+          "id": 19,
+          "name": "TenantDesativado",
+          "description": "Emitido quando um tenant ativo é desativado, bloqueando acesso de todos os usuários da organização.",
+          "payload_shape": "{ id: uuid, data_desativacao: timestamp, administrador_executor_id: uuid }"
+        }
+      ],
+      "record_spec": {
+        "id": 2,
+        "name": "Tenant",
+        "fields": [
+          {
+            "id": 3,
+            "name": "id",
+            "type": "uuid",
+            "nullable": false,
+            "description": "Identificador único do tenant na plataforma, gerado automaticamente no momento do provisionamento."
+          },
+          {
+            "id": 4,
+            "name": "nome",
+            "type": "string",
+            "nullable": false,
+            "description": "Nome descritivo da organização (empresa) cadastrada, informado pelo administrador interno durante o provisionamento."
+          },
+          {
+            "id": 5,
+            "name": "slug",
+            "type": "string",
+            "nullable": false,
+            "description": "Identificador único textual do tenant (código ou slug), utilizado em URLs e referências internas, contendo apenas letras minúsculas, números e hífens."
+          },
+          {
+            "id": 6,
+            "name": "status",
+            "type": "enum[ativo|inativo]",
+            "nullable": false,
+            "description": "Status de ativação do tenant; ativo permite acesso de usuários, inativo bloqueia todas as operações e login."
+          },
+          {
+            "id": 7,
+            "name": "data_criacao",
+            "type": "timestamp",
+            "nullable": false,
+            "description": "Data e hora de provisionamento do tenant, registrada automaticamente pelo sistema no momento da criação."
+          },
+          {
+            "id": 8,
+            "name": "administrador_criador_id",
+            "type": "uuid",
+            "nullable": false,
+            "description": "Referência ao usuário administrador interno da plataforma que realizou o provisionamento do tenant."
+          },
+          {
+            "id": 9,
+            "name": "data_ultima_ativacao",
+            "type": "timestamp",
+            "nullable": true,
+            "description": "Data e hora da última ativação do tenant; null se nunca foi desativado após criação."
+          },
+          {
+            "id": 10,
+            "name": "data_ultima_desativacao",
+            "type": "timestamp",
+            "nullable": true,
+            "description": "Data e hora da última desativação do tenant; null se nunca foi desativado."
+          }
+        ],
+        "constraints": [
+          {
+            "id": 11,
+            "kind": "primary_key",
+            "expression": "PRIMARY KEY (id)",
+            "description": "Garante unicidade do identificador UUID do tenant."
+          },
+          {
+            "id": 12,
+            "kind": "unique",
+            "expression": "UNIQUE (slug)",
+            "description": "Garante unicidade do identificador textual (slug) do tenant na plataforma, impedindo duplicação de códigos."
+          },
+          {
+            "id": 13,
+            "kind": "not_null",
+            "expression": "NOT NULL (nome, slug, status, data_criacao, administrador_criador_id)",
+            "description": "Garante que campos essenciais de identificação e auditoria do tenant estejam sempre preenchidos."
+          },
+          {
+            "id": 14,
+            "kind": "check",
+            "expression": "CHECK (status IN ('ativo', 'inativo'))",
+            "description": "Valida que o status do tenant é um dos valores permitidos."
+          },
+          {
+            "id": 15,
+            "kind": "check",
+            "expression": "CHECK (slug ~ '^[a-z0-9-]+$' AND length(slug) > 0)",
+            "description": "Valida que o slug contém apenas letras minúsculas, números e hífens, e não está vazio."
+          },
+          {
+            "id": 16,
+            "kind": "foreign_key",
+            "expression": "FOREIGN KEY (administrador_criador_id) REFERENCES usuarios(id)",
+            "description": "Garante que o administrador criador do tenant existe na tabela de usuários (referência a usuário administrador interno)."
+          }
+        ]
+      }
+    },
+    "pendencies": [
+      {
+        "id": 67,
+        "section": "definition",
+        "description": "Necessário definir o mecanismo exato de geração ou validação do slug de tenant. Atualmente especificado como 'apenas letras minúsculas, números e hífens', mas falta clareza sobre se slugs são gerados automaticamente (com entropia) ou informados pelo usuário com validação.",
+        "resolutionOptions": [
+          {
+            "id": 68,
+            "text": "Slug gerado automaticamente pelo sistema com entropia criptográfica (ex: nanoid ou uuid truncado), não editável pelo usuário. Garante unicidade e resistência a enumeração."
+          },
+          {
+            "id": 69,
+            "text": "Slug informado pelo usuário (administrador interno) durante provisionamento, validado contra padrão ^[a-z0-9-]+$ e unicidade. Permite legibilidade mas requer validação rigorosa."
+          },
+          {
+            "id": 70,
+            "text": "Slug sugerido automaticamente pelo sistema baseado no nome do tenant, editável pelo usuário. Balanço entre legibilidade e segurança."
+          }
+        ],
+        "recommendedOptionId": 69
+      },
+      {
+        "id": 71,
+        "section": "definition",
+        "description": "Falta especificação de como a 'estrutura isolada de dados' é criada no momento do provisionamento. Necessário detalhar se envolve criação de schema separado, particionamento, ou apenas filtros de aplicação.",
+        "resolutionOptions": [
+          {
+            "id": 72,
+            "text": "Schema PostgreSQL separado por tenant (ex: schema_tenant_<id>). Isolamento máximo mas complexidade operacional aumentada."
+          },
+          {
+            "id": 73,
+            "text": "Tabelas compartilhadas com coluna tenant_id e índices, isolamento garantido por filtros de aplicação e constraints. Simplicidade operacional, requer disciplina de código."
+          },
+          {
+            "id": 74,
+            "text": "Banco de dados separado por tenant. Isolamento máximo mas custo de infraestrutura significativo."
+          }
+        ],
+        "recommendedOptionId": 73
+      },
+      {
+        "id": 75,
+        "section": "rules",
+        "description": "Regra de retenção de dados de tenant desativado (rule id 50) especifica 'indefinidamente' mas falta definição de política de retenção mínima, período de arquivamento ou critérios de exclusão após período longo.",
+        "resolutionOptions": [
+          {
+            "id": 76,
+            "text": "Retenção indefinida sem exclusão automática. Dados preservados perpetuamente para auditoria completa."
+          },
+          {
+            "id": 77,
+            "text": "Retenção por 7 anos (conforme LGPD e práticas contábeis), com arquivamento após 2 anos e exclusão automática após 7 anos, sujeito a aprovação manual."
+          },
+          {
+            "id": 78,
+            "text": "Retenção configurável por tenant, com padrão de 3 anos, permitindo que administrador de plataforma customize período."
+          }
+        ],
+        "recommendedOptionId": 77
+      },
+      {
+        "id": 79,
+        "section": "non_functional_requirements",
+        "description": "Requisito de performance (id 55) especifica '<= 500ms' para ativação/desativação, mas falta clareza sobre se inclui invalidação de sessões (que pode ser assíncrona) ou apenas atualização de status.",
+        "resolutionOptions": [
+          {
+            "id": 80,
+            "text": "Operação síncrona: ativação/desativação + invalidação de sessões completam em <= 500ms antes de retorno ao cliente."
+          },
+          {
+            "id": 81,
+            "text": "Operação híbrida: atualização de status completa em <= 500ms (síncrono), invalidação de sessões disparada assincronamente com SLA de <= 5 segundos."
+          },
+          {
+            "id": 82,
+            "text": "Operação assíncrona: ativação/desativação enfileirada, retorna imediatamente ao cliente, processamento completo em <= 5 segundos."
+          }
+        ],
+        "recommendedOptionId": 80
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 59,
+        "then": "Slugs com apenas letras minúsculas, números e hífens são aceitos; slugs com maiúsculas, espaços ou caracteres especiais são rejeitados com mensagem de erro específica",
+        "type": "unit",
+        "when": "O slug é validado contra o padrão permitido",
+        "given": "Um formulário de provisionamento com slug informado",
+        "scenario": "Validação de Slug de Tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 60,
+        "then": "Constraint UNIQUE(slug) rejeita a inserção; mensagem de erro informando que slug já existe é retornada ao usuário",
+        "type": "unit",
+        "when": "O segundo tenant tenta ser persistido",
+        "given": "Dois tenants sendo provisionados com o mesmo slug",
+        "scenario": "Unicidade de Slug na Plataforma",
+        "target_section": "rules"
+      },
+      {
+        "id": 61,
+        "then": "Novo tenant é criado com status 'ativo', estrutura isolada de dados é provisionada, evento TenantProvisionado é emitido, registro de auditoria é criado, confirmação é exibida ao administrador",
+        "type": "integration",
+        "when": "Formulário é preenchido com nome e slug válidos e submetido",
+        "given": "Administrador interno autenticado com role 'admin_plataforma' acessa formulário de provisionamento",
+        "scenario": "Provisionamento Completo de Novo Tenant",
+        "target_section": "definition"
+      },
+      {
+        "id": 62,
+        "then": "Todas as sessões ativas dos usuários do tenant são invalidadas imediatamente; tentativas de login retornam erro informando que tenant está inativo; nenhum usuário consegue acessar dados do tenant",
+        "type": "security",
+        "when": "Administrador interno desativa o tenant",
+        "given": "Um tenant ativo com usuários autenticados",
+        "scenario": "Bloqueio de Acesso de Tenant Desativado",
+        "target_section": "rules"
+      },
+      {
+        "id": 63,
+        "then": "Requisição é rejeitada; filtro de tenant_id no servidor garante que apenas dados de tenant A são retornados; nenhuma exposição de dados de tenant B ocorre",
+        "type": "security",
+        "when": "Usuário de tenant A tenta acessar dados de tenant B manipulando parâmetros de requisição",
+        "given": "Dois tenants diferentes com usuários autenticados em cada um",
+        "scenario": "Isolamento de Dados entre Tenants",
+        "target_section": "rules"
+      },
+      {
+        "id": 64,
+        "then": "Status do tenant é alterado para 'ativo', data_ultima_ativacao é registrada, evento TenantAtivado é emitido, usuários conseguem realizar login novamente",
+        "type": "integration",
+        "when": "Administrador interno solicita ativação do tenant",
+        "given": "Um tenant com status 'inativo'",
+        "scenario": "Ativação de Tenant Desativado",
+        "target_section": "flow"
+      },
+      {
+        "id": 65,
+        "then": "Operação completa em <= 2 segundos; operações de outros tenants não são impactadas; índices são mantidos eficientemente",
+        "type": "performance",
+        "when": "Novo tenant é provisionado",
+        "given": "Plataforma com 50 tenants já cadastrados",
+        "scenario": "Tempo de Resposta de Provisionamento",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 66,
+        "then": "Payload contém { id: uuid, nome: string, slug: string, data_criacao: timestamp, administrador_criador_id: uuid }; evento é entregue a subscribers de auditoria e observabilidade",
+        "type": "contract",
+        "when": "Evento TenantProvisionado é emitido",
+        "given": "Novo tenant é provisionado com sucesso",
+        "scenario": "Contrato de Evento TenantProvisionado",
+        "target_section": "definition"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 52,
+        "target": "Slug gerado com entropia suficiente ou validado contra lista de padrões proibidos; comprimento mínimo de 3 caracteres.",
+        "category": "security",
+        "requirement": "Identificador de tenant (slug) deve ser resistente a ataques de enumeração e previsibilidade. Não deve ser sequencial, previsível ou derivável de padrões.",
+        "verification": "Teste de geração de 1000 slugs verificando ausência de padrão sequencial ou previsível; teste de rejeição de slugs comuns ou óbvios."
+      },
+      {
+        "id": 53,
+        "target": "Operação de desativação executada em transação ACID com isolamento SERIALIZABLE; invalidação de sessões completada antes de retorno ao cliente.",
+        "category": "security",
+        "requirement": "Operações de ativação e desativação de tenant devem ser imunes a race conditions. Desativação deve invalidar sessões de forma atômica e consistente.",
+        "verification": "Teste de concorrência com múltiplas requisições simultâneas de desativação e login; verificação de que apenas uma desativação é processada e sessões são revogadas atomicamente."
+      },
+      {
+        "id": 54,
+        "target": "Operação de provisionamento completa em <= 2 segundos; criação de estrutura isolada não bloqueia operações de outros tenants.",
+        "category": "performance",
+        "requirement": "Provisionamento de novo tenant deve completar em tempo adequado, criando estrutura isolada de dados sem impacto em tenants existentes.",
+        "verification": "Teste de provisionamento medindo tempo de execução; teste de carga com provisionamento simultâneo de múltiplos tenants verificando isolamento de performance."
+      },
+      {
+        "id": 55,
+        "target": "Operação de ativação/desativação completa em <= 500ms; invalidação de sessões executada via índice de tenant_id sem full table scan.",
+        "category": "performance",
+        "requirement": "Ativação e desativação de tenant devem ser operações rápidas, sem varredura completa de usuários ou tarefas.",
+        "verification": "Teste de ativação/desativação medindo tempo de execução; análise de plano de execução SQL verificando uso de índices."
+      },
+      {
+        "id": 56,
+        "target": "Tempo de resposta p99 <= 50ms para consulta de tenant; disponibilidade >= 99.9% em SLA de plataforma.",
+        "category": "availability",
+        "requirement": "Consultas de tenant (por id ou slug) devem estar disponíveis com alta disponibilidade, pois são críticas para autenticação e isolamento de dados.",
+        "verification": "Teste de carga com 500 RPS de consultas de tenant; monitoramento de latência p99 em produção; teste de failover de banco de dados."
+      },
+      {
+        "id": 57,
+        "target": "Operações de tenant mantêm performance constante com até 500 tenants; índices em slug e id garantem O(log n) para consultas.",
+        "category": "scalability",
+        "requirement": "Modelo de tenant deve suportar crescimento de até 50 tenants no primeiro ano, com capacidade de escalar para centenas de tenants sem reestruturação.",
+        "verification": "Teste de carga com 500 tenants cadastrados; análise de crescimento de índices; teste de performance de consultas com volume crescente."
+      },
+      {
+        "id": 58,
+        "target": "100% das operações registradas em trilha de auditoria com timestamp, usuário executor e dados do tenant; eventos emitidos para sistema de observabilidade.",
+        "category": "observability",
+        "requirement": "Eventos de ciclo de vida de tenant (provisionamento, ativação, desativação) devem ser rastreáveis e auditáveis para fins de conformidade e investigação.",
+        "verification": "Verificação de completude de logs em testes de auditoria; teste de emissão de eventos verificando payload e timestamp; consulta de logs verificando rastreabilidade de operações."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 64,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T00:12:02.009Z",
+  "updatedAt": null
+}

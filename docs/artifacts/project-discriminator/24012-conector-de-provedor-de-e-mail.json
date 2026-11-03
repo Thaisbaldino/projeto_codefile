@@ -1,0 +1,161 @@
+{
+  "id": 24012,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 18,
+        "name": "Falhas em Cascata",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Uma falha em um componente que rapidamente propagaria a outros sistemas conectados causaria um corte total de múltiplos serviços, com retomada demorada e impacto ampliado.",
+        "confidence": 0.7201,
+        "context_element_id": 2816
+      }
+    ],
+    "attributes": [
+      {
+        "id": 12,
+        "name": "Tipo específico de evento ou mensagem que está sendo comunicado",
+        "value": [
+          "email-validated"
+        ],
+        "method": "internal-inference",
+        "reasoning": "A requisição é enviada ao provedor apenas quando o formato de e-mail é válido.",
+        "confidence": 0.8715,
+        "context_element_id": 2755
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 21,
+        "name": "Implementar rate limiting com throttling configurável por endpoint e amostragem de requisições em cenários de alta carga",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O conector respeita o limite de taxa do provedor (100 requisições por minuto) e enfileira ou rejeita requisições excedentes com erro RATE_LIMITED e Retry-After em details.\nO limite de 100 requisições por minuto é o valor configurado, sem referência a um padrão de métrica fixo.",
+        "confidence": 0.7267,
+        "context_element_id": 2860
+      },
+      {
+        "id": 22,
+        "name": "Configurar filas de prioridade para processar eventos críticos primeiro, estabelecendo políticas de priorização baseadas em SLA",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Requisições de baixo valor de resposta são processadas primeiro, garantindo que a fila de prioridade seja usada para atender essas demandas críticas.",
+        "confidence": 0.9704,
+        "context_element_id": 2861
+      },
+      {
+        "id": 23,
+        "name": "Definir timeouts configuráveis para todas as operações críticas e monitorar orçamentos de tempo por transação/endpoint",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O tempo limite de requisição é definido explícitamente como 10 segundos, sem referência a um padrão padrão ou configuração padrão.",
+        "confidence": 0.7388,
+        "context_element_id": 2863
+      },
+      {
+        "id": 24,
+        "name": "Implementar testes automáticos de integridade (health checks) executados periodicamente para validar funcionalidades críticas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A conexão com o provedor é testada em cada chamada, e a resposta é usada para determinar a operacionalidade do serviço.",
+        "confidence": 0.9056,
+        "context_element_id": 2885
+      },
+      {
+        "id": 25,
+        "name": "Implementar tratamento robusto de exceções com circuit breakers, bulkheads e isolamento de falhas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Requisição de teste é enviada ao provedor, e a falha é reaberta após 60 segundos, sem que o cliente saia do ciclo.",
+        "confidence": 0.8283,
+        "context_element_id": 2892
+      },
+      {
+        "id": 26,
+        "name": "Implementar retry automático com exponential backoff, jitter e circuit breaker para prevenir falhas em cascata",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem rejeição, o sistema fica sobrecarregado e a demanda acumula sem que ninguém saia do ciclo.",
+        "confidence": 0.8268,
+        "context_element_id": 2895
+      },
+      {
+        "id": 27,
+        "name": "Implementar tolerância a falhas garantindo operação contínua mesmo na presença de falhas de componentes",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A falha do provedor externo é uma falha externa que não pode ser prevista, e a plataforma precisa operar mesmo sem a entrega.",
+        "confidence": 0.877,
+        "context_element_id": 2900
+      },
+      {
+        "id": 29,
+        "name": "Implementar verificação de integridade de mensagens usando checksums e HMAC para detectar alterações não autorizadas durante a transmissão",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem a verificação de assinatura, qualquer pessoa que conheça o payload e a chave secreta poderia alterar a confirmação sem ser reconhecida.",
+        "confidence": 0.9566,
+        "context_element_id": 2923
+      },
+      {
+        "id": 32,
+        "name": "Garantir a autenticidade de identidades e origens usando certificados digitais, PKI e validação de cadeia de confiança (chain-of-trust)",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Rejeitar conexões não-HTTPS é a exigência clara do requisito de segurança.",
+        "confidence": 0.7568,
+        "context_element_id": 2943
+      },
+      {
+        "id": 36,
+        "name": "Configure o sistema para sempre falhar em um estado seguro por meio de valores padrão conservadores, modo somente leitura ou desligamento controlado quando condições inseguras são detectadas",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem tentativa de contato, o cliente fica esperando sem saber que a conexão não existe, e a espera se torna uma rejeição silenciosa.",
+        "confidence": 0.8441,
+        "context_element_id": 3070
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 4,
+        "name": "Propósito do Registro",
+        "value": "definição de template",
+        "method": "user-input",
+        "reasoning": "A definição do identificador do template do e-mail de recuperação de senha é uma definição de template.",
+        "confidence": 0.7821,
+        "context_element_id": 1511
+      },
+      {
+        "id": 6,
+        "name": "Natureza da Operação",
+        "value": "operação de leitura",
+        "method": "internal-inference",
+        "reasoning": "A requisição de envio de email para reativar a senha é um leitura de dados, sem alteração de estado ou execução de ação.",
+        "confidence": 0.7182,
+        "context_element_id": 1974
+      },
+      {
+        "id": 49,
+        "name": "Rate Limiting",
+        "value": "yes",
+        "method": "user-input",
+        "reasoning": "O limite de requisições por minuto é configurado explicitamente para 100, indicando que rate limiting é implementado.",
+        "confidence": 0.8399,
+        "context_element_id": 4502
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 5,
+  "active": true,
+  "sourceId": 23845,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}

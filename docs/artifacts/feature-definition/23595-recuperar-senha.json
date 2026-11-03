@@ -1,0 +1,301 @@
+{
+  "id": 23595,
+  "projectId": 4118,
+  "type": "feature_definition",
+  "content": {
+    "pendencies": [
+      {
+        "id": 37,
+        "section": "functional",
+        "description": "Qual deve ser o prazo de expiração do token de recuperação de senha gerado? Após esse período sem uso, o link enviado por e-mail deve se tornar inválido.",
+        "resolutionOptions": [
+          {
+            "id": 38,
+            "text": "Definir expiração de 15 minutos para o token de recuperação de senha."
+          },
+          {
+            "id": 39,
+            "text": "Definir expiração de 1 hora para o token de recuperação de senha."
+          },
+          {
+            "id": 40,
+            "text": "Definir expiração de 24 horas para o token de recuperação de senha."
+          }
+        ],
+        "recommendedOptionId": 39
+      },
+      {
+        "id": 41,
+        "section": "functional",
+        "description": "Quais são os critérios de complexidade mínima exigidos para a nova senha no momento da redefinição? Por exemplo: comprimento mínimo, uso de letras maiúsculas, minúsculas, números e caracteres especiais.",
+        "resolutionOptions": [
+          {
+            "id": 42,
+            "text": "Exigir apenas comprimento mínimo de 8 caracteres, sem restrições adicionais de composição."
+          },
+          {
+            "id": 43,
+            "text": "Exigir mínimo de 8 caracteres contendo ao menos uma letra maiúscula, uma letra minúscula e um número."
+          },
+          {
+            "id": 44,
+            "text": "Exigir mínimo de 10 caracteres contendo ao menos uma letra maiúscula, uma letra minúscula, um número e um caractere especial."
+          }
+        ],
+        "recommendedOptionId": 43
+      },
+      {
+        "id": 45,
+        "section": "functional",
+        "description": "Como o tenant do usuário deve ser identificado durante o fluxo de recuperação de senha? O usuário acessa o fluxo por subdomínio ou URL específica do tenant (alinhado com a pendência de identificação de tenant da feature Autenticar Usuário), ou o e-mail é suficiente para resolver o tenant?",
+        "resolutionOptions": [
+          {
+            "id": 46,
+            "text": "O tenant é identificado pelo subdomínio ou URL de acesso, alinhado com a estratégia definida na feature de autenticação."
+          },
+          {
+            "id": 47,
+            "text": "O e-mail é suficiente para identificar o tenant, pois o sistema resolve o vínculo automaticamente."
+          }
+        ],
+        "recommendedOptionId": 46
+      },
+      {
+        "id": 48,
+        "section": "functional",
+        "description": "Deve haver um limite máximo de solicitações de recuperação de senha que um mesmo endereço de e-mail pode realizar em um determinado período (além do rate limiting por IP já previsto nos requisitos não funcionais)?",
+        "resolutionOptions": [
+          {
+            "id": 49,
+            "text": "Limitar a no máximo 3 solicitações por e-mail em um período de 1 hora, bloqueando novas tentativas até o período expirar."
+          },
+          {
+            "id": 50,
+            "text": "Limitar a no máximo 5 solicitações por e-mail em um período de 24 horas, bloqueando novas tentativas até o período expirar."
+          },
+          {
+            "id": 51,
+            "text": "Não aplicar limite por e-mail além do rate limiting por IP; o mecanismo de invalidação do token anterior já mitiga o abuso."
+          }
+        ],
+        "recommendedOptionId": 49
+      },
+      {
+        "id": 52,
+        "section": "functional",
+        "description": "Após a redefinição de senha bem-sucedida, o sistema deve redirecionar automaticamente o usuário para a tela de login ou exibir apenas a mensagem de sucesso sem redirecionamento automático?",
+        "resolutionOptions": [
+          {
+            "id": 53,
+            "text": "Redirecionar automaticamente o usuário para a tela de login após exibir a mensagem de sucesso por alguns segundos."
+          },
+          {
+            "id": 54,
+            "text": "Exibir apenas a mensagem de sucesso com um botão ou link para o usuário navegar manualmente até a tela de login."
+          }
+        ],
+        "recommendedOptionId": 53
+      },
+      {
+        "id": 55,
+        "section": "non-functional",
+        "description": "Qual deve ser o tempo máximo aceitável para entrega do e-mail de recuperação de senha ao usuário após a solicitação? Existe um SLA de entrega esperado para o serviço de e-mail transacional?",
+        "resolutionOptions": [
+          {
+            "id": 56,
+            "text": "Não definir SLA formal de entrega; o e-mail deve ser enfileirado imediatamente e a entrega depende do provedor transacional contratado."
+          },
+          {
+            "id": 57,
+            "text": "Definir SLA de entrega de até 2 minutos para o e-mail de recuperação chegar à caixa de entrada do usuário, monitorando falhas de entrega."
+          }
+        ],
+        "recommendedOptionId": 56
+      }
+    ],
+    "functional_requirements": [
+      {
+        "group": {
+          "id": 1,
+          "name": "Solicitação de Recuperação de Senha",
+          "items": [
+            {
+              "id": 2,
+              "description": "Exibir formulário de solicitação de recuperação de senha contendo campo para informação do endereço de e-mail cadastrado."
+            },
+            {
+              "id": 3,
+              "description": "Validar o preenchimento do campo de e-mail antes de submeter a solicitação, exibindo mensagem de erro específica quando o campo estiver vazio."
+            },
+            {
+              "id": 4,
+              "description": "Validar o formato do endereço de e-mail informado na solicitação, rejeitando entradas que não estejam em formato válido antes de processar o pedido."
+            },
+            {
+              "id": 5,
+              "description": "Verificar a existência do endereço de e-mail informado na base de usuários do tenant correspondente antes de disparar o e-mail de recuperação."
+            },
+            {
+              "id": 6,
+              "description": "Retornar mensagem de confirmação genérica ao usuário após a submissão da solicitação, independentemente de o e-mail existir ou não na base, a fim de evitar enumeração de usuários cadastrados."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 7,
+          "name": "Geração e Envio do Link de Recuperação",
+          "items": [
+            {
+              "id": 8,
+              "description": "Gerar token de recuperação de senha único, seguro e de uso único associado ao usuário e ao tenant identificados pela solicitação."
+            },
+            {
+              "id": 9,
+              "description": "Definir prazo de expiração para o token de recuperação gerado, invalidando-o automaticamente após o período configurado caso não seja utilizado."
+            },
+            {
+              "id": 10,
+              "description": "Enviar e-mail transacional ao endereço informado contendo link de redefinição de senha com o token de recuperação embutido, por meio do serviço de envio de e-mail integrado à plataforma."
+            },
+            {
+              "id": 11,
+              "description": "Invalidar qualquer token de recuperação anterior ainda ativo para o mesmo usuário ao gerar um novo token, garantindo que apenas o link mais recente seja válido."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 12,
+          "name": "Redefinição de Senha",
+          "items": [
+            {
+              "id": 13,
+              "description": "Exibir formulário de redefinição de senha ao usuário que acessar o link de recuperação válido, contendo campos para nova senha e confirmação da nova senha."
+            },
+            {
+              "id": 14,
+              "description": "Validar que o token de recuperação presente no link de redefinição é válido, pertence ao tenant correto e não está expirado antes de exibir o formulário de redefinição."
+            },
+            {
+              "id": 15,
+              "description": "Exibir mensagem de erro informativa ao usuário que acessar um link de recuperação inválido, expirado ou já utilizado, orientando-o a solicitar um novo link."
+            },
+            {
+              "id": 16,
+              "description": "Validar que os campos de nova senha e confirmação de senha estão preenchidos e são idênticos antes de processar a redefinição, exibindo mensagem de erro específica em caso de divergência."
+            },
+            {
+              "id": 17,
+              "description": "Aplicar regras de complexidade mínima à nova senha informada, rejeitando senhas que não atendam aos critérios definidos e exibindo mensagem explicativa ao usuário."
+            },
+            {
+              "id": 18,
+              "description": "Persistir a nova senha do usuário em formato de hash seguro após a validação bem-sucedida de todos os critérios, substituindo a senha anterior."
+            },
+            {
+              "id": 19,
+              "description": "Invalidar o token de recuperação imediatamente após a redefinição de senha bem-sucedida, impedindo sua reutilização."
+            },
+            {
+              "id": 20,
+              "description": "Exibir mensagem de confirmação de sucesso ao usuário após a redefinição de senha concluída, orientando-o a realizar o login com a nova senha."
+            },
+            {
+              "id": 21,
+              "description": "Invalidar todas as sessões ativas do usuário no momento em que a redefinição de senha for concluída com sucesso, forçando novo login com a nova credencial."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 22,
+          "name": "Identificação do Tenant no Fluxo de Recuperação",
+          "items": [
+            {
+              "id": 23,
+              "description": "Identificar o tenant ao qual o usuário pertence durante o fluxo de recuperação de senha, garantindo que o link gerado e o processo de redefinição estejam estritamente vinculados à organização correta."
+            },
+            {
+              "id": 24,
+              "description": "Impedir que um token de recuperação gerado para um usuário de um tenant seja utilizado para redefinir a senha de um usuário de outro tenant, respeitando o isolamento multi-tenant."
+            }
+          ]
+        }
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "group": {
+          "id": 25,
+          "name": "Segurança e Conformidade",
+          "items": [
+            {
+              "id": 26,
+              "description": "Gerar tokens de recuperação de senha utilizando gerador criptograficamente seguro, com entropia suficiente para resistir a ataques de força bruta e adivinhação."
+            },
+            {
+              "id": 27,
+              "description": "Transmitir todas as comunicações do fluxo de recuperação de senha exclusivamente por meio de protocolo HTTPS, garantindo a confidencialidade dos dados em trânsito."
+            },
+            {
+              "id": 28,
+              "description": "Armazenar o token de recuperação de senha em formato de hash seguro na base de dados, nunca em texto simples, de modo que sua exposição não permita uso direto por um atacante."
+            },
+            {
+              "id": 29,
+              "description": "Registrar em log de auditoria toda solicitação de recuperação de senha e toda redefinição concluída, incluindo identificação do usuário, tenant, timestamp e resultado da operação, em conformidade com os requisitos de rastreabilidade da plataforma."
+            },
+            {
+              "id": 30,
+              "description": "Garantir que os dados pessoais do usuário tratados no fluxo de recuperação de senha (e-mail) estejam em conformidade com a LGPD, aplicando princípios de minimização de dados e proteção das informações pessoais."
+            },
+            {
+              "id": 31,
+              "description": "Aplicar mecanismo de limitação de taxa (rate limiting) nas requisições de solicitação de recuperação de senha por endereço de e-mail e por endereço IP, prevenindo abuso e ataques de enumeração ou sobrecarga do serviço de e-mail."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 32,
+          "name": "Usabilidade e Responsividade",
+          "items": [
+            {
+              "id": 33,
+              "description": "Renderizar as telas do fluxo de recuperação de senha (solicitação e redefinição) de forma responsiva e adaptativa, garantindo usabilidade adequada em dispositivos móveis (smartphones e tablets) e em desktops."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 34,
+          "name": "Desempenho e Disponibilidade",
+          "items": [
+            {
+              "id": 35,
+              "description": "Processar a solicitação de recuperação de senha e enfileirar o envio do e-mail transacional em tempo adequado, mesmo sob carga de até 5.000 usuários ativos na plataforma, sem degradação perceptível para o usuário."
+            },
+            {
+              "id": 36,
+              "description": "Garantir que o fluxo de recuperação de senha permaneça disponível com alta disponibilidade, dado que sua indisponibilidade impede que usuários bloqueados recuperem o acesso à plataforma."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 5,
+  "sourceType": "feature",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-10T20:41:50.502Z",
+  "updatedAt": null
+}

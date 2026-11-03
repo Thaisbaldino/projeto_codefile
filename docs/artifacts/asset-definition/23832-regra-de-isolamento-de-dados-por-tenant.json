@@ -1,0 +1,415 @@
+{
+  "id": 23832,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 21,
+          "name": "Requisição de acesso a recurso",
+          "format": "HTTP request com headers de autenticação (token JWT) e parâmetros de recurso (tenant_id, resource_id)",
+          "origin": "Usuário autenticado ou sistema interno",
+          "trigger": "Qualquer operação que acesse dados (leitura, criação, edição, exclusão, listagem)"
+        },
+        {
+          "id": 22,
+          "name": "Contexto de autenticação",
+          "format": "AuthContext contendo usuario_id, tenant_id, perfil, status",
+          "origin": "Camada de autenticação (Controle de Identidade e Acesso)",
+          "trigger": "Disponível em toda requisição autenticada"
+        },
+        {
+          "id": 23,
+          "name": "Evento de desativação de tenant",
+          "format": "Evento contendo tenant_id e timestamp de desativação",
+          "origin": "Operação administrativa de desativação de tenant",
+          "trigger": "Quando administrador interno desativa um tenant"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 31,
+          "name": "Decisão de isolamento",
+          "format": "Booleano indicando se acesso é permitido (true) ou negado (false)",
+          "destination": "Camada de aplicação (handlers, repositórios)"
+        },
+        {
+          "id": 32,
+          "name": "Mensagem de erro genérica",
+          "format": "String com mensagem de erro que não revela detalhes internos ou existência de recurso em outro tenant",
+          "destination": "Camada de apresentação (API response)"
+        },
+        {
+          "id": 33,
+          "name": "Dados filtrados por tenant",
+          "format": "Array de recursos pertencentes exclusivamente ao tenant do executor",
+          "destination": "Camada de apresentação (API response)"
+        },
+        {
+          "id": 34,
+          "name": "Evento de sessão invalidada",
+          "format": "Evento contendo usuario_id e tenant_id para invalidação de sessão",
+          "destination": "Sistema de gerenciamento de sessões"
+        }
+      ],
+      "processing": [
+        {
+          "id": 24,
+          "step": "Extrair contexto de autenticação",
+          "description": "Extrair tenant_id e usuario_id do token JWT ou contexto de sessão da requisição"
+        },
+        {
+          "id": 25,
+          "step": "Identificar recurso alvo",
+          "description": "Identificar o recurso sendo acessado (usuário, tarefa, nível hierárquico) e seu tenant_id proprietário"
+        },
+        {
+          "id": 26,
+          "step": "Validar propriedade de recurso",
+          "description": "Comparar tenant_id do executor com tenant_id do recurso alvo; rejeitar se não correspondem"
+        },
+        {
+          "id": 27,
+          "step": "Validar parâmetros de requisição",
+          "description": "Verificar se parâmetros de requisição (tenant_id, resource_id) não foram manipulados para contornar isolamento"
+        },
+        {
+          "id": 28,
+          "step": "Aplicar filtros de escopo em consultas",
+          "description": "Para operações de listagem, adicionar cláusula WHERE tenant_id = executor_tenant_id nas consultas de banco de dados"
+        },
+        {
+          "id": 29,
+          "step": "Registrar tentativa de acesso cruzado",
+          "description": "Se isolamento for violado, registrar em log de auditoria a tentativa de acesso não autorizado entre tenants"
+        },
+        {
+          "id": 30,
+          "step": "Invalidar sessões de tenant desativado",
+          "description": "Quando um tenant é desativado, invalidar todas as sessões ativas de usuários daquele tenant"
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 35,
+        "category": "invariant",
+        "description": "Nenhum usuário pode acessar dados de um tenant diferente daquele ao qual está autenticado, independentemente de manipulação de parâmetros ou tentativas de contorno.",
+        "enforcement": "code",
+        "verification": "Validar em tempo de execução que tenant_id do executor corresponde ao tenant_id do recurso alvo antes de qualquer operação de leitura, escrita ou exclusão. Rejeitar requisições que violem este invariante com mensagem de erro genérica."
+      },
+      {
+        "id": 36,
+        "category": "invariant",
+        "description": "Operações de listagem devem retornar apenas recursos pertencentes ao tenant do usuário autenticado, nunca recursos de outros tenants.",
+        "enforcement": "db_constraint",
+        "verification": "Adicionar cláusula WHERE tenant_id = :executor_tenant_id em todas as consultas de listagem no banco de dados. Validar que índices compostos (tenant_id, status/email/etc) são utilizados para otimização."
+      },
+      {
+        "id": 37,
+        "category": "authorization",
+        "description": "Usuários de um tenant desativado devem ser imediatamente impedidos de acessar a plataforma, com todas as sessões ativas invalidadas.",
+        "enforcement": "code",
+        "verification": "Verificar status do tenant do executor no início de cada requisição. Se tenant está inativo, rejeitar operação e invalidar sessão. Validar em logs de auditoria que sessões foram invalidadas no momento exato da desativação."
+      },
+      {
+        "id": 38,
+        "category": "validation",
+        "description": "Parâmetros de requisição contendo tenant_id ou resource_id devem ser validados contra o contexto de autenticação para detectar manipulação.",
+        "enforcement": "code",
+        "verification": "Comparar tenant_id em parâmetros de requisição com tenant_id do executor. Se não correspondem, rejeitar com erro genérico. Registrar tentativa de manipulação em log de auditoria."
+      },
+      {
+        "id": 39,
+        "category": "compliance",
+        "description": "Isolamento de dados entre tenants é requisito obrigatório de conformidade com LGPD, garantindo que dados pessoais de uma organização não sejam acessíveis por outra.",
+        "enforcement": "code",
+        "verification": "Validar em testes de segurança que nenhum dado de um tenant é retornado em requisições de outro tenant. Executar testes de penetração que tentam contornar isolamento via manipulação de parâmetros."
+      },
+      {
+        "id": 40,
+        "category": "observability",
+        "description": "Toda tentativa de acesso cruzado entre tenants deve ser registrada em log de auditoria para detecção de anomalias e investigação de segurança.",
+        "enforcement": "code",
+        "verification": "Verificar que logs de auditoria contêm registro de cada tentativa de acesso não autorizado entre tenants, incluindo usuario_id, tenant_id_executor, tenant_id_alvo, timestamp e tipo de operação."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "A Regra de Isolamento de Dados por Tenant é uma regra de negócio crítica que encapsula a política de segregação obrigatória de dados entre organizações na plataforma multi-tenant. Implementa validações e restrições que garantem que cada tenant acesse exclusivamente seus próprios dados (usuários, tarefas, configurações, históricos), impedindo qualquer possibilidade de visualização, interferência ou vazamento de informações entre organizações. A regra opera em múltiplos pontos de aplicação: validação de escopo em consultas de banco de dados, verificação de propriedade de recurso antes de operações de leitura/escrita, bloqueio de requisições que tentam acessar dados de tenants diferentes, e invalidação de sessões quando um tenant é desativado. Funciona em conjunto com a Regra de Controle de Acesso por Perfil para reforçar a autorização, garantindo que nenhuma operação cruze limites de tenant, independentemente de manipulação de parâmetros ou tentativas de contorno. Serve como guardrail fundamental para segurança, conformidade com LGPD e confiança multi-tenant."
+    },
+    "definition": {
+      "cases": [
+        {
+          "id": 2,
+          "description": "Validação de isolamento ao listar usuários de um tenant, impedindo acesso a usuários de outras organizações",
+          "input_pattern": "Requisição para listar usuários do tenant A por usuário autenticado no tenant A",
+          "expected_output": "Retorno apenas de usuários pertencentes ao tenant A; usuários de outros tenants não são retornados"
+        },
+        {
+          "id": 3,
+          "description": "Validação de isolamento ao tentar acessar dados de usuário de outro tenant",
+          "input_pattern": "Requisição para editar perfil de usuário pertencente ao tenant B por usuário autenticado no tenant A",
+          "expected_output": "Rejeição com mensagem de erro: 'Acesso negado. Usuário não pertence a este tenant'"
+        },
+        {
+          "id": 4,
+          "description": "Validação de isolamento ao listar tarefas de um tenant, impedindo acesso a tarefas de outras organizações",
+          "input_pattern": "Requisição para listar tarefas do tenant A por usuário autenticado no tenant A",
+          "expected_output": "Retorno apenas de tarefas pertencentes ao tenant A; tarefas de outros tenants não são retornadas"
+        },
+        {
+          "id": 5,
+          "description": "Validação de isolamento ao tentar atualizar tarefa de outro tenant",
+          "input_pattern": "Requisição para alterar status de tarefa pertencente ao tenant B por usuário autenticado no tenant A",
+          "expected_output": "Rejeição com mensagem de erro: 'Acesso negado. Tarefa não pertence a este tenant'"
+        },
+        {
+          "id": 6,
+          "description": "Validação de isolamento ao tentar atribuir tarefa a usuário de outro tenant",
+          "input_pattern": "Requisição para atribuir tarefa do tenant A a usuário pertencente ao tenant B",
+          "expected_output": "Rejeição com mensagem de erro: 'Acesso negado. Responsável não pertence a este tenant'"
+        },
+        {
+          "id": 7,
+          "description": "Validação de isolamento ao listar níveis hierárquicos de um tenant",
+          "input_pattern": "Requisição para listar níveis hierárquicos do tenant A por usuário autenticado no tenant A",
+          "expected_output": "Retorno apenas de níveis hierárquicos pertencentes ao tenant A; níveis de outros tenants não são retornados"
+        },
+        {
+          "id": 8,
+          "description": "Validação de isolamento ao tentar criar nível hierárquico em outro tenant",
+          "input_pattern": "Requisição para criar nível hierárquico no tenant B por usuário autenticado no tenant A",
+          "expected_output": "Rejeição com mensagem de erro: 'Acesso negado. Tenant não pertence a este contexto'"
+        },
+        {
+          "id": 9,
+          "description": "Validação de isolamento ao tentar usar token de recuperação de senha de outro tenant",
+          "input_pattern": "Requisição para redefinir senha utilizando token gerado para usuário de tenant B, executada por usuário de tenant A",
+          "expected_output": "Rejeição com mensagem de erro: 'Token de recuperação inválido ou expirado' (sem revelar que pertence a outro tenant)"
+        },
+        {
+          "id": 10,
+          "description": "Validação de isolamento ao invalidar sessões de tenant desativado",
+          "input_pattern": "Desativação de tenant A enquanto usuários do tenant A possuem sessões ativas",
+          "expected_output": "Todas as sessões ativas de usuários do tenant A são invalidadas imediatamente; usuários são desconectados"
+        },
+        {
+          "id": 11,
+          "description": "Validação de isolamento ao tentar acessar histórico de tarefas de outro tenant",
+          "input_pattern": "Requisição para consultar histórico de transições de status de tarefa pertencente ao tenant B por usuário autenticado no tenant A",
+          "expected_output": "Rejeição com mensagem de erro: 'Acesso negado. Tarefa não pertence a este tenant'"
+        }
+      ],
+      "rule_spec": {
+        "id": 12,
+        "inputs": [
+          {
+            "id": 13,
+            "name": "usuario_executor",
+            "type": "object",
+            "description": "Objeto contendo dados do usuário autenticado que está tentando acessar um recurso (id, email, tenant_id, status)"
+          },
+          {
+            "id": 14,
+            "name": "recurso_alvo",
+            "type": "object",
+            "description": "Objeto contendo dados do recurso sendo acessado (usuário, tarefa, nível hierárquico, histórico) incluindo seu tenant_id proprietário"
+          },
+          {
+            "id": 15,
+            "name": "tipo_operacao",
+            "type": "enum[leitura|criacao|edicao|exclusao|listagem]",
+            "description": "Tipo de operação sendo realizada sobre o recurso (leitura, criação, edição, exclusão, listagem)"
+          },
+          {
+            "id": 16,
+            "name": "tenant_alvo",
+            "type": "uuid",
+            "description": "Identificador do tenant ao qual o recurso alvo pertence; utilizado para validar isolamento"
+          },
+          {
+            "id": 17,
+            "name": "parametros_requisicao",
+            "type": "object",
+            "description": "Parâmetros da requisição que podem conter tenant_id ou resource_id manipulados; deve ser validado contra tenant_executor"
+          }
+        ],
+        "outputs": [
+          {
+            "id": 18,
+            "name": "isolamento_validado",
+            "type": "boolean",
+            "description": "Indica se o isolamento de dados foi validado com sucesso (true) ou se a requisição viola o isolamento (false)"
+          },
+          {
+            "id": 19,
+            "name": "mensagem_erro",
+            "type": "string",
+            "description": "Mensagem de erro genérica quando isolamento_validado = false; vazio quando isolamento_validado = true"
+          },
+          {
+            "id": 20,
+            "name": "recurso_permitido",
+            "type": "boolean",
+            "description": "Indica se o recurso alvo pertence ao tenant do executor e pode ser acessado (true) ou se pertence a outro tenant (false)"
+          }
+        ],
+        "decision": "Aplicar validações sequenciais de isolamento multi-tenant: (1) Validar que o usuário executor está autenticado e seu tenant_id está definido; (2) Validar que o recurso alvo possui tenant_id definido e este corresponde ao tenant_executor; (3) Para operações de listagem, filtrar resultados para retornar apenas recursos pertencentes ao tenant_executor; (4) Para operações de leitura/edição/exclusão, validar que tenant_alvo == tenant_executor antes de permitir acesso; (5) Rejeitar qualquer requisição que tente acessar recursos de tenant diferente, retornando mensagem de erro genérica que não revela a existência do recurso em outro tenant; (6) Validar que parâmetros de requisição (tenant_id, resource_id) não foram manipulados para contornar isolamento; (7) Invalidar sessões quando um tenant é desativado, bloqueando operações subsequentes. Retornar validação bem-sucedida (true) apenas quando tenant_alvo == tenant_executor; caso contrário, retornar rejeição (false) com mensagem de erro genérica."
+      }
+    },
+    "pendencies": [
+      {
+        "id": 51,
+        "section": "definition",
+        "description": "Necessário definir o mecanismo exato de invalidação de sessões quando um tenant é desativado. Deve-se clarificar se a invalidação é síncrona (bloqueando a operação de desativação até que todas as sessões sejam invalidadas) ou assíncrona (iniciando um job de background para invalidar sessões).",
+        "resolutionOptions": [
+          {
+            "id": 52,
+            "text": "Invalidação síncrona: bloquear a operação de desativação de tenant até que todas as sessões ativas sejam invalidadas no banco de dados de sessões. Garante consistência imediata mas pode introduzir latência na operação de desativação."
+          },
+          {
+            "id": 53,
+            "text": "Invalidação assíncrona: iniciar um job de background que invalida sessões em paralelo, permitindo que a operação de desativação retorne imediatamente. Requer mecanismo de retry e garantia de entrega eventual."
+          },
+          {
+            "id": 54,
+            "text": "Invalidação híbrida: invalidar sessões em cache em memória de forma síncrona (rápido), e persistir invalidação no banco de dados de forma assíncrona. Garante que novas requisições são rejeitadas imediatamente, mas permite que operação de desativação retorne rapidamente."
+          }
+        ],
+        "recommendedOptionId": 54
+      },
+      {
+        "id": 55,
+        "section": "rules",
+        "description": "Necessário definir o comportamento exato quando um usuário tenta acessar um recurso de outro tenant. Deve-se clarificar se a mensagem de erro deve ser genérica (não revelando existência do recurso) ou se pode indicar que o recurso pertence a outro tenant.",
+        "resolutionOptions": [
+          {
+            "id": 56,
+            "text": "Mensagem de erro genérica: retornar 'Acesso negado' ou 'Recurso não encontrado' sem indicar se o recurso existe em outro tenant. Mais seguro, mas menos informativo para usuários legítimos."
+          },
+          {
+            "id": 57,
+            "text": "Mensagem de erro específica: retornar 'Recurso pertence a outro tenant' ou similar. Mais informativo, mas revela informações sobre estrutura de dados."
+          }
+        ],
+        "recommendedOptionId": 56
+      },
+      {
+        "id": 58,
+        "section": "non_functional_requirements",
+        "description": "Necessário definir o SLA exato para invalidação de sessões de tenant desativado. O alvo de 100ms é apropriado ou deve ser mais agressivo (ex: 10ms)?",
+        "resolutionOptions": [
+          {
+            "id": 59,
+            "text": "SLA de 100ms: permite implementação assíncrona com job de background, mas garante invalidação rápida o suficiente para evitar operações não autorizadas."
+          },
+          {
+            "id": 60,
+            "text": "SLA de 10ms: requer invalidação síncrona ou cache em memória, mais complexo mas mais seguro."
+          },
+          {
+            "id": 61,
+            "text": "SLA de 1s: permite implementação mais simples com job de background, mas pode permitir operações não autorizadas em janela de tempo."
+          }
+        ],
+        "recommendedOptionId": 59
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 45,
+        "then": "Requisição é rejeitada com erro genérico; nenhuma tarefa do tenant B é retornada; tentativa é registrada em log de auditoria",
+        "type": "security",
+        "when": "Usuário tenta listar tarefas do tenant B alterando parâmetro tenant_id na requisição",
+        "given": "Dois tenants (A e B) com usuários e tarefas cadastrados; usuário autenticado no tenant A",
+        "scenario": "Validar que usuário de um tenant não consegue acessar dados de outro tenant via manipulação de parâmetros",
+        "target_section": "rules"
+      },
+      {
+        "id": 46,
+        "then": "Requisição é rejeitada com erro 'Acesso negado'; dados do usuário do tenant B não são modificados; tentativa é registrada em auditoria",
+        "type": "security",
+        "when": "Administrador tenta editar perfil de usuário pertencente ao tenant B via API",
+        "given": "Dois tenants (A e B) com usuários cadastrados; usuário administrador autenticado no tenant A",
+        "scenario": "Validar que usuário não consegue editar usuário de outro tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 47,
+        "then": "Requisição é rejeitada com erro 'Responsável não pertence a este tenant'; tarefa não é modificada; tentativa é registrada em auditoria",
+        "type": "security",
+        "when": "Usuário tenta atribuir tarefa do tenant A a usuário do tenant B",
+        "given": "Dois tenants (A e B) com usuários e tarefas; usuário autenticado no tenant A",
+        "scenario": "Validar que usuário não consegue atribuir tarefa a usuário de outro tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 48,
+        "then": "Todas as sessões ativas de usuários do tenant A são invalidadas imediatamente; usuários são desconectados; tentativas subsequentes de acesso são rejeitadas",
+        "type": "security",
+        "when": "Administrador interno desativa o tenant A",
+        "given": "Tenant A ativo com usuários autenticados e sessões ativas",
+        "scenario": "Validar que sessões são invalidadas quando tenant é desativado",
+        "target_section": "rules"
+      },
+      {
+        "id": 49,
+        "then": "Apenas usuários e tarefas do tenant A são retornados; dados do tenant B não aparecem em nenhuma listagem",
+        "type": "integration",
+        "when": "Usuário lista usuários e tarefas do seu tenant",
+        "given": "Dois tenants (A e B) com múltiplos usuários e tarefas; usuário autenticado no tenant A",
+        "scenario": "Validar que filtros de escopo são aplicados em consultas de listagem",
+        "target_section": "definition"
+      },
+      {
+        "id": 50,
+        "then": "Cada tentativa é registrada em log de auditoria com usuario_id, tenant_id_executor, tenant_id_alvo, timestamp e tipo_operacao",
+        "type": "security",
+        "when": "Usuário tenta acessar dados do tenant B múltiplas vezes",
+        "given": "Dois tenants (A e B); usuário autenticado no tenant A",
+        "scenario": "Validar que tentativas de acesso cruzado são registradas em auditoria",
+        "target_section": "rules"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 41,
+        "target": "100% de requisições que violam isolamento são rejeitadas; 0% de vazamento de dados entre tenants em testes de penetração",
+        "category": "security",
+        "requirement": "Isolamento de dados entre tenants deve ser garantido com confiança criptográfica, sem possibilidade de contorno por manipulação de parâmetros ou exploração de vulnerabilidades de lógica.",
+        "verification": "Executar testes de segurança automatizados que tentam acessar recursos de tenants diferentes via manipulação de parâmetros, headers e tokens. Validar que todas as tentativas são rejeitadas."
+      },
+      {
+        "id": 42,
+        "target": "Overhead de validação de isolamento <= 1ms por requisição; p99 de latência de validação <= 5ms",
+        "category": "performance",
+        "requirement": "Validação de isolamento não deve introduzir latência perceptível nas operações, mesmo em tenants com grande volume de dados.",
+        "verification": "Medir tempo de execução de validação de isolamento em testes de carga com 10.000 tarefas por tenant. Validar que latência permanece abaixo do alvo mesmo sob pico de carga."
+      },
+      {
+        "id": 43,
+        "target": "Sessões invalidadas em <= 100ms após desativação de tenant; 100% de sessões ativas são invalidadas",
+        "category": "availability",
+        "requirement": "Invalidação de sessões de tenant desativado deve ocorrer imediatamente, sem atraso que permita operações não autorizadas.",
+        "verification": "Desativar tenant e validar que todas as sessões ativas de usuários daquele tenant são invalidadas em tempo real. Tentar acessar plataforma com sessão invalidada e validar que acesso é negado."
+      },
+      {
+        "id": 44,
+        "target": "100% de tentativas de acesso cruzado são registradas em logs; logs contêm usuario_id, tenant_id_executor, tenant_id_alvo, timestamp, tipo_operacao",
+        "category": "observability",
+        "requirement": "Logs de auditoria devem registrar todas as tentativas de acesso cruzado entre tenants para detecção de anomalias e investigação de segurança.",
+        "verification": "Gerar tentativas de acesso cruzado e validar que cada uma é registrada em logs de auditoria com informações completas. Validar que logs podem ser consultados para investigação."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 30,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T06:16:56.718Z",
+  "updatedAt": null
+}

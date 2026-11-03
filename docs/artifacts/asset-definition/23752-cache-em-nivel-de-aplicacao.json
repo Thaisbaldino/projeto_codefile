@@ -1,0 +1,373 @@
+{
+  "id": 23752,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 7,
+          "name": "Requisição de Leitura (Listagem, Filtro, Pesquisa)",
+          "format": "HTTP GET com parâmetros de filtro, pesquisa, ordenação e paginação",
+          "origin": "Camada de apresentação (frontend) ou handler de API",
+          "trigger": "Ação do usuário (carregamento de página, aplicação de filtro, digitação em pesquisa)"
+        },
+        {
+          "id": 8,
+          "name": "Evento de Escrita (Criação, Edição, Exclusão de Tarefa/Usuário/Tenant)",
+          "format": "Evento interno com identificação da entidade alterada, tipo de operação e tenant afetado",
+          "origin": "Handler de API após persistência bem-sucedida no banco de dados",
+          "trigger": "Conclusão de operação de escrita (POST, PUT, DELETE)"
+        },
+        {
+          "id": 9,
+          "name": "Configuração de Política de Cache",
+          "format": "JSON/YAML com TTL por tipo de cache, tamanho máximo, estratégia de evicção, backend (in-memory/Redis)",
+          "origin": "Arquivo de configuração da aplicação ou variáveis de ambiente",
+          "trigger": "Inicialização da aplicação ou recarregamento de configuração"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 16,
+          "name": "Resultado em Cache (Hit)",
+          "format": "JSON com dados solicitados (lista de tarefas, usuários, etc.) e metadados de cache (timestamp, TTL restante)",
+          "destination": "Camada de apresentação ou cliente de API"
+        },
+        {
+          "id": 17,
+          "name": "Resultado do Banco de Dados (Miss)",
+          "format": "JSON com dados solicitados e metadados de operação (latência, fonte: banco de dados)",
+          "destination": "Camada de apresentação ou cliente de API"
+        },
+        {
+          "id": 18,
+          "name": "Métricas de Cache",
+          "format": "Eventos estruturados com hit ratio, miss ratio, tamanho do cache, latência de acesso, taxa de invalidação",
+          "destination": "Camada de observabilidade (coletor de telemetria)"
+        }
+      ],
+      "processing": [
+        {
+          "id": 10,
+          "step": "Verificar Presença em Cache",
+          "description": "Ao receber requisição de leitura, gerar chave de cache (tenant_id + tipo de dado + parâmetros de filtro) e consultar cache (in-memory ou Redis) para verificar se resultado está disponível e não expirou."
+        },
+        {
+          "id": 11,
+          "step": "Retornar Resultado em Cache (Hit)",
+          "description": "Se resultado encontrado em cache e TTL não expirou, retornar imediatamente ao cliente sem consultar banco de dados; registrar métrica de cache hit."
+        },
+        {
+          "id": 12,
+          "step": "Consultar Banco de Dados (Miss)",
+          "description": "Se resultado não encontrado em cache ou TTL expirou, executar consulta no banco de dados com filtros, ordenação e paginação aplicados."
+        },
+        {
+          "id": 13,
+          "step": "Armazenar Resultado em Cache",
+          "description": "Após obter resultado do banco de dados, armazenar em cache com TTL configurado; aplicar política de evicção (LRU/LFU) se tamanho máximo atingido; registrar métrica de cache miss."
+        },
+        {
+          "id": 14,
+          "step": "Invalidar Cache Síncrono em Escrita",
+          "description": "Ao receber evento de escrita (criação, edição, exclusão), identificar todas as chaves de cache afetadas (ex: cache de listagem de tarefas do tenant, cache de contadores) e remover imediatamente; registrar métrica de invalidação."
+        },
+        {
+          "id": 15,
+          "step": "Monitorar Métricas de Cache",
+          "description": "Coletar continuamente hit ratio, miss ratio, tamanho do cache, latência de acesso e enviar para camada de observabilidade; gerar alertas se hit ratio cair abaixo de threshold ou tamanho exceder limite."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 19,
+        "category": "invariant",
+        "description": "Toda chave de cache deve incluir tenant_id como prefixo ou componente, garantindo que dados de um tenant nunca sejam retornados para requisição de outro tenant, mesmo em caso de colisão de hash ou erro de invalidação.",
+        "enforcement": "code",
+        "verification": "Teste unitário que valida geração de chave de cache com tenant_id; teste de integração que verifica isolamento de cache entre tenants; auditoria de código na geração de chaves."
+      },
+      {
+        "id": 20,
+        "category": "invariant",
+        "description": "Invalidação de cache em operações de escrita deve ser síncrona e completar antes de retornar sucesso ao cliente, garantindo que leitura subsequente não retorne dados obsoletos.",
+        "enforcement": "code",
+        "verification": "Teste de integração que cria tarefa, invalida cache, e verifica que listagem retorna dado atualizado; monitoramento de latência de invalidação; teste de race condition entre escrita e leitura."
+      },
+      {
+        "id": 21,
+        "category": "validation",
+        "description": "TTL de cache deve respeitar configuração por tipo de dado: listagem de tarefas máximo 5 minutos, usuários máximo 10 minutos, configuração de tenant máximo 30 minutos, filtros máximo 2 minutos; valores devem ser validados na inicialização.",
+        "enforcement": "code",
+        "verification": "Teste de configuração que valida TTL dentro de limites; monitoramento de TTL efetivo em cache; auditoria de arquivo de configuração."
+      },
+      {
+        "id": 22,
+        "category": "validation",
+        "description": "Tamanho máximo de cache em memória não deve exceder 512 MB por instância de aplicação; Redis não deve exceder 2 GB por instância; política de evicção LRU deve ser aplicada automaticamente ao atingir limite.",
+        "enforcement": "infra",
+        "verification": "Monitoramento contínuo de tamanho de cache via métrica cache_size_bytes; alertas se tamanho exceder 90% do limite; teste de carga que valida evicção automática."
+      },
+      {
+        "id": 23,
+        "category": "idempotency",
+        "description": "Múltiplas requisições simultâneas para mesma chave de cache durante miss devem resultar em uma única consulta ao banco de dados (cache stampede prevention); requisições subsequentes devem aguardar resultado da primeira consulta.",
+        "enforcement": "code",
+        "verification": "Teste de concorrência com múltiplas threads/corrotinas acessando mesma chave durante miss; verificar que apenas uma consulta ao banco é executada; monitoramento de cache stampede events."
+      },
+      {
+        "id": 24,
+        "category": "observability",
+        "description": "Toda operação de cache (hit, miss, invalidação, evicção) deve ser registrada em log estruturado com tenant_id, tipo de cache, chave (hash), operação, latência e resultado; logs devem ser enviados para camada de observabilidade.",
+        "enforcement": "code",
+        "verification": "Auditoria de código que verifica presença de log em cada ponto de cache; teste de integração que valida logs estruturados; análise de logs em observabilidade."
+      },
+      {
+        "id": 25,
+        "category": "compliance",
+        "description": "Cache não deve armazenar dados pessoais sensíveis (senhas, tokens de autenticação, dados de cartão de crédito); se dados pessoais forem cacheados (email, nome), devem ser redacionados em logs e monitoramento conforme política de PII da observabilidade.",
+        "enforcement": "code",
+        "verification": "Auditoria de código que identifica dados sensíveis em chaves/valores de cache; teste de segurança que valida redação de PII em logs; verificação de conformidade com LGPD."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "O Cache em Nível de Aplicação é um mecanismo de otimização de desempenho que armazena dados frequentemente acessados na memória da aplicação, reduzindo latência de consultas e carga no banco de dados. Implementa estratégias de invalidação baseadas em tempo (TTL) e eventos, suporta múltiplos backends (in-memory, Redis), e fornece políticas de evicção (LRU, LFU) para gerenciar tamanho máximo. Integra-se com a camada de observabilidade para monitorar taxa de acerto/erro (hit ratio), tamanho do cache e latência de acesso, permitindo ajuste dinâmico de configurações. Serve especificamente para acelerar operações críticas de leitura — listagem de tarefas com filtros, consultas de usuários ativos, validações de tenant — mantendo consistência eventual com o banco de dados através de invalidação síncrona em operações de escrita."
+    },
+    "definition": {
+      "optimizations": [
+        {
+          "id": 2,
+          "name": "Cache de Listagem de Tarefas por Tenant e Status",
+          "scope": "Visualização em lista e Kanban de tarefas",
+          "technique": "In-memory LRU com TTL de 5 minutos; invalidação síncrona ao criar, editar ou alterar status de tarefa",
+          "target_metric": "Reduzir latência de carregamento de lista de tarefas de p99 <= 500ms para p99 <= 100ms; aumentar hit ratio para >= 80% em tenants com >= 100 tarefas"
+        },
+        {
+          "id": 3,
+          "name": "Cache de Usuários Ativos por Tenant",
+          "scope": "Validação de responsável em atribuição de tarefas; listagem de colaboradores para seleção",
+          "technique": "In-memory com TTL de 10 minutos; invalidação síncrona ao ativar, desativar ou editar usuário",
+          "target_metric": "Reduzir latência de validação de responsável de p99 <= 50ms para p99 <= 10ms; manter hit ratio >= 85%"
+        },
+        {
+          "id": 4,
+          "name": "Cache de Configuração de Tenant (Níveis Hierárquicos, Status)",
+          "scope": "Validação de isolamento multi-tenant; resolução de nível hierárquico em formulários",
+          "technique": "In-memory com TTL de 30 minutos; invalidação síncrona ao provisionar, ativar ou desativar tenant",
+          "target_metric": "Reduzir latência de validação de tenant de p99 <= 30ms para p99 <= 5ms; manter hit ratio >= 90%"
+        },
+        {
+          "id": 5,
+          "name": "Cache de Resultados de Filtros e Pesquisa de Tarefas",
+          "scope": "Operações de filtragem combinada e pesquisa textual em lista e Kanban",
+          "technique": "Redis com TTL de 2 minutos; chave composta (tenant_id, filtros_hash, termo_pesquisa); invalidação síncrona ao alterar tarefa",
+          "target_metric": "Reduzir latência de filtro combinado de p99 <= 300ms para p99 <= 50ms; manter hit ratio >= 70% em filtros repetidos"
+        },
+        {
+          "id": 6,
+          "name": "Cache de Contadores de Tarefas (Críticas, Atrasadas, por Status)",
+          "scope": "Cálculo de destaques visuais e indicadores de dashboard",
+          "technique": "In-memory com TTL de 1 minuto; invalidação síncrona ao criar, editar status ou alterar prioridade/prazo de tarefa",
+          "target_metric": "Reduzir latência de cálculo de contadores de p99 <= 100ms para p99 <= 10ms; manter consistência eventual <= 1 minuto"
+        }
+      ]
+    },
+    "pendencies": [
+      {
+        "id": 39,
+        "section": "definition",
+        "description": "Não foi fornecida informação sobre qual backend de cache será utilizado como padrão (in-memory vs Redis) ou se ambos serão suportados simultaneamente. A decisão afeta arquitetura de invalidação, replicação entre instâncias e estratégia de fallback.",
+        "resolutionOptions": [
+          {
+            "id": 40,
+            "text": "Utilizar in-memory cache (Node.js Map ou similar) como padrão para MVP; suportar Redis como backend opcional para ambientes de produção com múltiplas instâncias."
+          },
+          {
+            "id": 41,
+            "text": "Utilizar Redis como backend único desde o início; implementar cliente Redis com retry e fallback para consulta ao banco de dados em caso de falha."
+          },
+          {
+            "id": 42,
+            "text": "Implementar abstração de cache que suporte múltiplos backends (in-memory, Redis, Memcached); permitir configuração por tipo de cache ou por ambiente."
+          }
+        ],
+        "recommendedOptionId": 42
+      },
+      {
+        "id": 43,
+        "section": "definition",
+        "description": "Estratégia de invalidação de cache para operações de edição de tarefa não está completamente definida. Quando um campo de tarefa é editado (ex: apenas prioridade), deve-se invalidar cache de listagem completa ou apenas cache de contadores de prioridade?",
+        "resolutionOptions": [
+          {
+            "id": 44,
+            "text": "Invalidar todos os caches relacionados ao tenant (listagem, filtros, contadores) em qualquer operação de escrita; estratégia conservadora mas simples."
+          },
+          {
+            "id": 45,
+            "text": "Implementar invalidação granular: edição de prioridade invalida apenas cache de contadores e filtros de prioridade; edição de status invalida listagem e Kanban; edição de prazo invalida cache de tarefas atrasadas."
+          }
+        ],
+        "recommendedOptionId": 45
+      },
+      {
+        "id": 46,
+        "section": "non_functional_requirements",
+        "description": "Não foi especificado o comportamento esperado de cache quando há múltiplas instâncias de aplicação (horizontal scaling). Como sincronizar invalidação de cache entre instâncias? Usar pub/sub, cache distribuído ou aceitar eventual consistency?",
+        "resolutionOptions": [
+          {
+            "id": 47,
+            "text": "Cada instância mantém seu próprio in-memory cache; invalidação é local; aceitar eventual consistency de até 5 minutos (TTL máximo) entre instâncias."
+          },
+          {
+            "id": 48,
+            "text": "Utilizar Redis como cache centralizado; todas as instâncias compartilham mesmo cache; invalidação é imediata e consistente entre instâncias."
+          },
+          {
+            "id": 49,
+            "text": "Implementar pub/sub para notificação de invalidação entre instâncias; cada instância invalida seu cache local ao receber notificação; latência de sincronização <= 100ms."
+          }
+        ],
+        "recommendedOptionId": 48
+      },
+      {
+        "id": 50,
+        "section": "rules",
+        "description": "Política de evicção de cache (LRU vs LFU) não foi especificada. LRU é mais simples mas pode evictar dados frequentemente acessados; LFU preserva dados frequentes mas requer mais overhead de rastreamento.",
+        "resolutionOptions": [
+          {
+            "id": 51,
+            "text": "Utilizar LRU (Least Recently Used) como padrão; simples de implementar e adequado para padrão de acesso típico de listagem de tarefas."
+          },
+          {
+            "id": 52,
+            "text": "Utilizar LFU (Least Frequently Used) para preservar dados mais acessados; melhor hit ratio mas maior overhead computacional."
+          },
+          {
+            "id": 53,
+            "text": "Permitir configuração de política por tipo de cache: LRU para listagem (acesso recente importante), LFU para contadores (frequência importante)."
+          }
+        ],
+        "recommendedOptionId": 51
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 32,
+        "then": "Chaves de cache geradas devem ser diferentes; cache hit de um tenant não deve retornar dados do outro tenant",
+        "type": "unit",
+        "when": "Duas requisições de tenants diferentes solicitam listagem de tarefas com mesmos filtros",
+        "given": "Função de geração de chave de cache com tenant_id, tipo de dado e parâmetros de filtro",
+        "scenario": "Validação de geração de chave de cache com isolamento de tenant",
+        "target_section": "definition"
+      },
+      {
+        "id": 33,
+        "then": "Cache de listagem do tenant é invalidado imediatamente; próxima requisição de listagem consulta banco de dados e retorna tarefa nova; latência de invalidação <= 50ms",
+        "type": "integration",
+        "when": "Requisição POST para criar tarefa é processada e persistida no banco de dados",
+        "given": "Cache com listagem de tarefas do tenant pré-carregado; nova tarefa pronta para ser criada",
+        "scenario": "Invalidação síncrona de cache ao criar tarefa",
+        "target_section": "flow"
+      },
+      {
+        "id": 34,
+        "then": "Apenas uma consulta ao banco de dados é executada; outras 9 requisições aguardam resultado da primeira; todas retornam mesmo resultado; latência total <= 150ms",
+        "type": "integration",
+        "when": "Todas as 10 requisições chegam ao mesmo tempo e tentam acessar cache",
+        "given": "Cache vazio; 10 requisições simultâneas para mesma chave de cache durante miss",
+        "scenario": "Cache stampede prevention com múltiplas requisições simultâneas",
+        "target_section": "flow"
+      },
+      {
+        "id": 35,
+        "then": "Hit ratio >= 75%; p99 latência de hit <= 10ms; p99 latência de miss <= 100ms; tamanho de cache <= 512 MB; nenhuma violação de isolamento de tenant",
+        "type": "performance",
+        "when": "Teste de carga executado por 10 minutos com padrão de acesso realista (80% leitura, 20% escrita)",
+        "given": "Cache configurado com TTL padrão; 100 tenants com 50 tarefas cada; 5.000 usuários simultâneos acessando listagem de tarefas",
+        "scenario": "Hit ratio e latência com 5.000 usuários simultâneos",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 36,
+        "then": "Acesso é negado; evento tenant_isolation_violation_attempt é registrado; usuário recebe erro 403 Forbidden; log de auditoria registra tentativa com identificação do usuário e timestamp",
+        "type": "security",
+        "when": "Requisição com tenant_id de B tenta acessar chave de cache de tenant A",
+        "given": "Cache com dados de tenant A; usuário autenticado de tenant B tenta acessar dados de tenant A",
+        "scenario": "Tentativa de acesso cross-tenant a cache",
+        "target_section": "rules"
+      },
+      {
+        "id": 37,
+        "then": "Fallback automático para in-memory cache ou consulta ao banco de dados ocorre em <= 100ms; requisição é processada normalmente; métrica cache_unavailable_events é incrementada; aplicação continua operacional",
+        "type": "integration",
+        "when": "Aplicação detecta que Redis não está respondendo",
+        "given": "Cache configurado com Redis como backend; Redis está indisponível; requisição de listagem de tarefas chega",
+        "scenario": "Fallback automático quando Redis está indisponível",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 38,
+        "then": "Cada tipo de cache recebe TTL correto; valores fora dos limites são rejeitados com erro de configuração; logs registram TTL aplicado para cada tipo",
+        "type": "unit",
+        "when": "Aplicação é inicializada e carrega configuração",
+        "given": "Configuração de cache com TTL definido para cada tipo (tarefas: 5min, usuários: 10min, tenant: 30min, filtros: 2min)",
+        "scenario": "Validação de TTL por tipo de cache",
+        "target_section": "rules"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 26,
+        "target": "p99 hit latency <= 10ms; p99 miss latency <= 100ms; p95 hit latency <= 5ms",
+        "category": "performance",
+        "requirement": "Latência de acesso a cache (hit) deve ser inferior a latência de consulta ao banco de dados em pelo menos 90%; para listagem de tarefas, hit deve retornar em <= 10ms, miss em <= 100ms.",
+        "verification": "Monitoramento contínuo de histograma de latência via métrica cache_access_duration_ms; teste de carga com 5.000 usuários simultâneos; análise de percentis em observabilidade."
+      },
+      {
+        "id": 27,
+        "target": "Overall hit ratio >= 75%; repeated filter hit ratio >= 80%; task list hit ratio >= 80%",
+        "category": "performance",
+        "requirement": "Taxa de acerto (hit ratio) de cache deve ser mantida acima de 70% para operações de leitura em tenants com >= 100 tarefas; para filtros repetidos, hit ratio deve ser >= 80%.",
+        "verification": "Métrica cache_hit_ratio segmentada por tipo de cache e tenant; dashboard de observabilidade com hit ratio por operação; alertas se hit ratio cair abaixo de 70%."
+      },
+      {
+        "id": 28,
+        "target": "Latency growth <= 5% com 10x aumento de dados; memory growth <= 10% com 10x aumento de tenants",
+        "category": "scalability",
+        "requirement": "Cache deve suportar crescimento de dados sem degradação linear de desempenho; com 10.000 tarefas por tenant, hit latency deve permanecer <= 10ms; com 100 tenants, cache total não deve exceder 2 GB.",
+        "verification": "Teste de carga progressivo com aumento de volume de dados; monitoramento de latência e memória em observabilidade; análise de crescimento em relatório mensal."
+      },
+      {
+        "id": 29,
+        "target": "Cache failure recovery time <= 100ms; application availability >= 99.9% mesmo com cache indisponível",
+        "category": "availability",
+        "requirement": "Falha de cache (Redis indisponível ou in-memory corrompido) não deve impedir operação da aplicação; fallback automático para consulta ao banco de dados deve ocorrer em <= 100ms.",
+        "verification": "Teste de falha de Redis com validação de fallback; monitoramento de cache_unavailable_events; teste de disponibilidade com cache desligado."
+      },
+      {
+        "id": 30,
+        "target": "Zero cross-tenant cache access incidents; cache access restricted to authenticated app processes only",
+        "category": "security",
+        "requirement": "Cache deve ser isolado por tenant; dados de um tenant nunca devem ser acessíveis por outro tenant mesmo em caso de colisão de chave ou erro de invalidação; acesso a cache deve ser restrito a processos autenticados da aplicação.",
+        "verification": "Teste de segurança com tentativa de acesso cross-tenant; auditoria de código de geração de chave; teste de penetração de cache; monitoramento de tenant_isolation_violation_attempt events."
+      },
+      {
+        "id": 31,
+        "target": "100% of cache operations logged; metrics available in observability within 5 seconds; dashboard refresh rate <= 10 seconds",
+        "category": "observability",
+        "requirement": "Todas as operações de cache devem ser observáveis através de métricas, logs e rastreamentos distribuídos; hit ratio, miss ratio, latência, tamanho e taxa de invalidação devem estar disponíveis em dashboard em tempo real.",
+        "verification": "Auditoria de código que valida logging em cada operação; teste de observabilidade que verifica presença de métricas; validação de dashboard com dados em tempo real."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 56,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T03:42:20.903Z",
+  "updatedAt": null
+}

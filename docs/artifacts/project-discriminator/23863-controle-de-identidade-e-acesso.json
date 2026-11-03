@@ -1,0 +1,82 @@
+{
+  "id": 23863,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 17,
+        "name": "Identificador de serviço ou componente que requer padrões de resiliência",
+        "value": [
+          "user-authentication"
+        ],
+        "method": "internal-inference",
+        "reasoning": "O serviço de E-mail é responsável por recuperar o token de recuperação de senha, um serviço de autenticação.",
+        "confidence": 0.7352,
+        "context_element_id": 2770
+      },
+      {
+        "id": 18,
+        "name": "Tipo principal de falha ou degradação que o padrão deve mitigar",
+        "value": [
+          "service-unavailability",
+          "network-latency"
+        ],
+        "method": "user-input",
+        "reasoning": "A falha de conexão com o banco de dados deve ser detectada em <= 5 segundos, com requisições rejeitadas com erro 503 Service Unavailable, caracterizando falha de serviço.\nA latência de Validação de Token é o tipo de falha ou degradação primário a ser mitigado.",
+        "confidence": 0.794,
+        "context_element_id": 2771
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 28,
+        "name": "Projetar a arquitetura para escalabilidade horizontal desde o início, com auto-scaling baseado em métricas de utilização",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Crescimento de 5.000 para 50.000 usuários sem reestruturação significativa de banco de dados ou índices é exigência de escalabilidade horizontal.",
+        "confidence": 0.7596,
+        "context_element_id": 2866
+      },
+      {
+        "id": 44,
+        "name": "Projete a arquitetura com baixo acoplamento, permitindo a evolução independente dos componentes",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Reconfigurar o perfil manualmente em cada nova configuração de tenant seria uma tarefa repetitiva e difícil de manter.",
+        "confidence": 0.7139,
+        "context_element_id": 2981
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 1,
+        "name": "Propósito Operacional",
+        "value": "arquivamento",
+        "method": "user-input",
+        "reasoning": "O job move logs com mais de 90 dias para storage de longo prazo (S3, etc.) e deleta os com mais de 1 ano, caracterizando um propósito de arquivamento operacional.",
+        "confidence": 0.7587,
+        "context_element_id": 1284
+      },
+      {
+        "id": 60,
+        "name": "Rate Limiting",
+        "value": "Rate Limiting",
+        "method": "user-input",
+        "reasoning": "O limite máximo de tentativas de login é configurado como 5, um limite de rate limiting.",
+        "confidence": 0.8441,
+        "context_element_id": 4502
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 5,
+  "active": true,
+  "sourceId": 23700,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T08:12:24.883Z",
+  "updatedAt": null
+}

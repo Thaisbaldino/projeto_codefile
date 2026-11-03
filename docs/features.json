@@ -1,0 +1,200 @@
+[
+  {
+    "id": 1,
+    "projectId": 4118,
+    "name": "Cadastrar Usuários",
+    "description": "Permite ao administrador do tenant registrar novos colaboradores na plataforma, informando dados como nome, e-mail e nível hierárquico dentro da organização.",
+    "state": "in_definition",
+    "businessStructureId": 2,
+    "createdAt": "2026-08-10T20:17:38.047Z",
+    "updatedAt": null,
+    "createdBy": null
+  },
+  {
+    "id": 2,
+    "projectId": 4118,
+    "name": "Definir Níveis Hierárquicos",
+    "description": "Permite configurar a estrutura hierárquica da organização, atribuindo níveis aos usuários para fins organizacionais, sem restringir a atribuição de tarefas entre eles.",
+    "state": "in_definition",
+    "businessStructureId": 2,
+    "createdAt": "2026-08-10T20:17:38.047Z",
+    "updatedAt": null,
+    "createdBy": null
+  },
+  {
+    "id": 3,
+    "projectId": 4118,
+    "name": "Gerenciar Perfis de Usuário",
+    "description": "Permite editar, ativar ou desativar usuários cadastrados no tenant, mantendo o controle sobre quem tem acesso ativo à plataforma.",
+    "state": "in_definition",
+    "businessStructureId": 2,
+    "createdAt": "2026-08-10T20:17:38.047Z",
+    "updatedAt": null,
+    "createdBy": null
+  },
+  {
+    "id": 4,
+    "projectId": 4118,
+    "name": "Autenticar Usuário",
+    "description": "Permite que o usuário acesse a plataforma mediante login com e-mail e senha próprios, garantindo que cada sessão esteja vinculada ao tenant correto. A arquitetura de autenticação deve ser projetada para suportar a integração futura com provedores externos via SSO/OAuth.",
+    "state": "in_definition",
+    "businessStructureId": 3,
+    "createdAt": "2026-08-10T20:17:38.047Z",
+    "updatedAt": null,
+    "createdBy": null
+  },
+  {
+    "id": 5,
+    "projectId": 4118,
+    "name": "Recuperar Senha",
+    "description": "Permite que o usuário solicite a redefinição de senha em caso de esquecimento, por meio de fluxo seguro de recuperação via e-mail.",
+    "state": "in_definition",
+    "businessStructureId": 3,
+    "createdAt": "2026-08-10T20:17:38.047Z",
+    "updatedAt": null,
+    "createdBy": null
+  },
+  {
+    "id": 6,
+    "projectId": 4118,
+    "name": "Provisionar Novo Tenant",
+    "description": "Permite ao administrador interno da plataforma criar e configurar uma nova organização (tenant) no sistema, sem que o cliente final tenha acesso a esse processo. O cadastro de novos tenants é realizado exclusivamente por operadores internos da plataforma.",
+    "state": "in_definition",
+    "businessStructureId": 4,
+    "createdAt": "2026-08-10T20:17:38.047Z",
+    "updatedAt": null,
+    "createdBy": null
+  },
+  {
+    "id": 7,
+    "projectId": 4118,
+    "name": "Ativar e Desativar Tenant",
+    "description": "Permite ao administrador interno habilitar ou desabilitar o acesso de uma organização à plataforma, controlando o ciclo de vida dos tenants cadastrados.",
+    "state": "in_definition",
+    "businessStructureId": 4,
+    "createdAt": "2026-08-10T20:17:38.047Z",
+    "updatedAt": null,
+    "createdBy": null
+  },
+  {
+    "id": 8,
+    "projectId": 4118,
+    "name": "Criar Tarefa",
+    "description": "Permite ao usuário registrar uma nova tarefa informando título, descrição, responsável, prioridade, status inicial e data limite para conclusão.",
+    "state": "in_definition",
+    "businessStructureId": 6,
+    "createdAt": "2026-08-10T20:17:38.047Z",
+    "updatedAt": null,
+    "createdBy": null
+  },
+  {
+    "id": 9,
+    "projectId": 4118,
+    "name": "Atribuir Tarefa a Usuário",
+    "description": "Permite vincular uma tarefa a um colaborador específico da organização, independentemente do nível hierárquico do criador ou do responsável.",
+    "state": "in_definition",
+    "businessStructureId": 6,
+    "createdAt": "2026-08-10T20:17:38.047Z",
+    "updatedAt": null,
+    "createdBy": null
+  },
+  {
+    "id": 10,
+    "projectId": 4118,
+    "name": "Definir Prioridade da Tarefa",
+    "description": "Permite classificar a tarefa por nível de prioridade (ex.: baixa, média, alta, urgente), facilitando a identificação de demandas críticas.",
+    "state": "in_definition",
+    "businessStructureId": 6,
+    "createdAt": "2026-08-10T20:17:38.047Z",
+    "updatedAt": null,
+    "createdBy": null
+  },
+  {
+    "id": 11,
+    "projectId": 4118,
+    "name": "Definir Prazo da Tarefa",
+    "description": "Permite estabelecer uma data limite para conclusão da tarefa, possibilitando o controle de prazos e a identificação de atividades em atraso.",
+    "state": "in_definition",
+    "businessStructureId": 6,
+    "createdAt": "2026-08-10T20:17:38.047Z",
+    "updatedAt": null,
+    "createdBy": null
+  },
+  {
+    "id": 12,
+    "projectId": 4118,
+    "name": "Atualizar Status da Tarefa",
+    "description": "Permite ao responsável ou criador da tarefa alterar seu status entre as colunas fixas do sistema (ex.: A Fazer, Em Andamento, Concluído), refletindo o progresso real da atividade. O modelo de dados de status deve ser projetado para suportar personalização de colunas em versões futuras.",
+    "state": "in_definition",
+    "businessStructureId": 7,
+    "createdAt": "2026-08-10T20:17:38.047Z",
+    "updatedAt": null,
+    "createdBy": null
+  },
+  {
+    "id": 13,
+    "projectId": 4118,
+    "name": "Editar Tarefa",
+    "description": "Permite modificar as informações de uma tarefa existente, como título, descrição, responsável, prioridade ou prazo, conforme necessidade.",
+    "state": "in_definition",
+    "businessStructureId": 7,
+    "createdAt": "2026-08-10T20:17:38.047Z",
+    "updatedAt": null,
+    "createdBy": null
+  },
+  {
+    "id": 14,
+    "projectId": 4118,
+    "name": "Concluir Tarefa",
+    "description": "Permite marcar uma tarefa como concluída, encerrando seu ciclo ativo e registrando a finalização da atividade.",
+    "state": "in_definition",
+    "businessStructureId": 7,
+    "createdAt": "2026-08-10T20:17:38.047Z",
+    "updatedAt": null,
+    "createdBy": null
+  },
+  {
+    "id": 15,
+    "projectId": 4118,
+    "name": "Destacar Tarefas Críticas ou Atrasadas",
+    "description": "O sistema identifica e destaca visualmente tarefas com alta prioridade ou com prazo vencido, facilitando a priorização de demandas urgentes.",
+    "state": "in_definition",
+    "businessStructureId": 7,
+    "createdAt": "2026-08-10T20:17:38.047Z",
+    "updatedAt": null,
+    "createdBy": null
+  },
+  {
+    "id": 16,
+    "projectId": 4118,
+    "name": "Visualizar Tarefas em Lista",
+    "description": "Exibe as tarefas em formato de lista tabular, permitindo consultas rápidas, aplicação de filtros e pesquisa por diferentes atributos como status, responsável, prioridade e prazo.",
+    "state": "in_definition",
+    "businessStructureId": 8,
+    "createdAt": "2026-08-10T20:17:38.047Z",
+    "updatedAt": null,
+    "createdBy": null
+  },
+  {
+    "id": 17,
+    "projectId": 4118,
+    "name": "Visualizar Tarefas em Kanban",
+    "description": "Exibe as tarefas organizadas em colunas fixas definidas pelo sistema (ex.: A Fazer, Em Andamento, Concluído), permitindo a movimentação das tarefas entre colunas de forma prática e oferecendo uma visão visual do andamento das atividades. A arquitetura deve estar preparada para suportar colunas configuráveis por tenant em versão futura.",
+    "state": "in_definition",
+    "businessStructureId": 8,
+    "createdAt": "2026-08-10T20:17:38.047Z",
+    "updatedAt": null,
+    "createdBy": null
+  },
+  {
+    "id": 18,
+    "projectId": 4118,
+    "name": "Filtrar e Pesquisar Tarefas",
+    "description": "Permite aplicar filtros combinados e realizar buscas nas tarefas por atributos como responsável, prioridade, status e data limite, facilitando a localização de atividades específicas.",
+    "state": "in_definition",
+    "businessStructureId": 8,
+    "createdAt": "2026-08-10T20:17:38.047Z",
+    "updatedAt": null,
+    "createdBy": null
+  }
+]

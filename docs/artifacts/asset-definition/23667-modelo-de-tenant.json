@@ -1,0 +1,405 @@
+{
+  "id": 23667,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 7,
+          "name": "Identificação de Tenant",
+          "format": "slug ou UUID do tenant",
+          "origin": "requisição HTTP (header, URL, sessão autenticada)",
+          "trigger": "toda requisição autenticada"
+        },
+        {
+          "id": 8,
+          "name": "Contexto de Usuário Autenticado",
+          "format": "{ user_id, tenant_id, perfil }",
+          "origin": "token de sessão ou JWT",
+          "trigger": "após autenticação bem-sucedida"
+        },
+        {
+          "id": 9,
+          "name": "Configurações de Tenant",
+          "format": "{ id, nome, slug, status, níveis_hierárquicos, permissões_por_perfil }",
+          "origin": "banco de dados (tabela tenants e configurações associadas)",
+          "trigger": "carregamento inicial e cache"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 15,
+          "name": "Contexto de Tenant Resolvido",
+          "format": "{ tenant_id, tenant_slug, status, níveis_hierárquicos, permissões_por_perfil, configurações_personalizadas }",
+          "destination": "middleware, handlers, repositórios de dados"
+        },
+        {
+          "id": 16,
+          "name": "Dados Isolados por Tenant",
+          "format": "JSON com escopo garantido ao tenant autenticado",
+          "destination": "resposta HTTP, cache, sessão do usuário"
+        },
+        {
+          "id": 17,
+          "name": "Erro de Isolamento ou Acesso Negado",
+          "format": "mensagem de erro genérica sem revelar detalhes internos",
+          "destination": "resposta HTTP (403 Forbidden ou 401 Unauthorized)"
+        }
+      ],
+      "processing": [
+        {
+          "id": 10,
+          "step": "Resolver Contexto de Tenant",
+          "description": "Identificar o tenant a partir da requisição (header X-Tenant-ID, slug em URL, ou sessão autenticada) e validar que o tenant está ativo."
+        },
+        {
+          "id": 11,
+          "step": "Validar Isolamento de Dados",
+          "description": "Garantir que o usuário autenticado pertence ao tenant identificado e que não há acesso cruzado a dados de outros tenants."
+        },
+        {
+          "id": 12,
+          "step": "Carregar Configurações de Personalização",
+          "description": "Recuperar níveis hierárquicos, permissões por perfil, status de ativação e demais configurações específicas do tenant do cache ou banco de dados."
+        },
+        {
+          "id": 13,
+          "step": "Aplicar Contexto de Tenant a Requisição",
+          "description": "Injetar o contexto de tenant (tenant_id, configurações, permissões) em toda operação subsequente, garantindo que queries, validações e respostas sejam escopadas ao tenant."
+        },
+        {
+          "id": 14,
+          "step": "Ativar Extensões e Variações por Tenant",
+          "description": "Ativar ou desativar extensões, plugins, temas e comportamentos customizados conforme a configuração específica do tenant."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 18,
+        "category": "authorization",
+        "description": "Toda requisição autenticada DEVE ser validada quanto ao tenant: o usuário autenticado DEVE pertencer ao tenant identificado na requisição, caso contrário acesso é negado com erro 403 Forbidden.",
+        "enforcement": "code",
+        "verification": "Teste de integração: tentar acessar recurso de tenant A com token de usuário do tenant B deve retornar 403; teste de unidade: validador de tenant rejeita mismatches."
+      },
+      {
+        "id": 19,
+        "category": "invariant",
+        "description": "Isolamento de dados por tenant DEVE ser garantido em todas as camadas (API, repositório, banco de dados): nenhuma query deve retornar dados de tenants diferentes, mesmo com manipulação de parâmetros.",
+        "enforcement": "db_constraint",
+        "verification": "Teste de segurança: injetar tenant_id manipulado em query string ou body deve ser ignorado; validação no repositório garante escopo ao tenant da sessão; índices e constraints no banco garantem segregação física."
+      },
+      {
+        "id": 20,
+        "category": "invariant",
+        "description": "Tenant inativo DEVE bloquear todas as operações de usuários: login, acesso a APIs, criação/edição de dados DEVE ser rejeitado com mensagem de erro genérica quando o tenant está inativo.",
+        "enforcement": "code",
+        "verification": "Teste de integração: login com usuário de tenant inativo retorna erro; teste de unidade: middleware de autenticação verifica status do tenant antes de permitir acesso."
+      },
+      {
+        "id": 21,
+        "category": "invariant",
+        "description": "Contexto de tenant DEVE ser imutável durante o ciclo de vida de uma requisição: uma vez resolvido, o tenant_id não pode ser alterado por lógica de aplicação ou manipulação de entrada.",
+        "enforcement": "code",
+        "verification": "Teste de unidade: contexto de tenant é armazenado em estrutura imutável (read-only context object); tentativas de modificação resultam em erro ou são ignoradas."
+      },
+      {
+        "id": 22,
+        "category": "invariant",
+        "description": "Níveis hierárquicos e permissões por perfil DEVEM ser carregados e cacheados por tenant: cada tenant possui sua própria configuração isolada, sem compartilhamento com outros tenants.",
+        "enforcement": "code",
+        "verification": "Teste de integração: alterar níveis hierárquicos no tenant A não afeta tenant B; teste de unidade: cache é escopado por tenant_id."
+      },
+      {
+        "id": 23,
+        "category": "validation",
+        "description": "Identificador de tenant (slug) DEVE ser validado quanto ao formato: apenas letras minúsculas, números e hífens, sem espaços ou caracteres especiais, comprimento entre 1 e 50 caracteres.",
+        "enforcement": "code",
+        "verification": "Teste de unidade: validador rejeita slugs com caracteres inválidos, espaços, maiúsculas; aceita slugs válidos como 'empresa-abc', 'tenant-123'."
+      },
+      {
+        "id": 24,
+        "category": "invariant",
+        "description": "Status de tenant (ativo/inativo) DEVE ser verificado em toda operação que envolva usuários ou dados do tenant: nenhuma operação é permitida em tenant inativo.",
+        "enforcement": "code",
+        "verification": "Teste de integração: criar tarefa, editar usuário, fazer login em tenant inativo retorna erro; teste de unidade: middleware valida status antes de rotear para handler."
+      },
+      {
+        "id": 25,
+        "category": "compliance",
+        "description": "Isolamento de dados por tenant DEVE estar em conformidade com LGPD: dados pessoais de usuários de um tenant não podem ser acessados por usuários de outro tenant, garantindo privacidade e proteção de dados.",
+        "enforcement": "db_constraint",
+        "verification": "Teste de segurança: auditoria de acesso confirma que queries são sempre escopadas ao tenant; teste de conformidade: dados pessoais de um tenant não aparecem em logs ou respostas de outro tenant."
+      },
+      {
+        "id": 26,
+        "category": "idempotency",
+        "description": "Resolução de contexto de tenant DEVE ser idempotente: chamar o resolver múltiplas vezes com a mesma entrada deve produzir o mesmo contexto, sem efeitos colaterais.",
+        "enforcement": "code",
+        "verification": "Teste de unidade: resolver contexto 10 vezes com mesmo tenant_id produz contexto idêntico; nenhuma modificação de estado global ocorre."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "O Modelo de Tenant é uma estrutura de configuração multi-tenant que define como a plataforma segrega e personaliza o comportamento para cada organização (tenant) cadastrada. Encapsula a estratégia de isolamento de dados (isolamento por tenant conforme discriminador), o tipo de modelo de tenancy (multi-tenant com banco de dados compartilhado ou esquemas separados), o nível de isolamento (soft ou strict), e os eixos de personalização aplicáveis a cada tenant (como locale, tema, região de mercado, extensões). Serve como ponto central de resolução de contexto tenant em toda a plataforma, garantindo que requisições sejam roteadas para os dados corretos, que configurações sejam aplicadas de forma isolada, e que extensões e variações de comportamento sejam ativadas conforme a configuração específica de cada organização."
+    },
+    "definition": {
+      "tenancy_model": {
+        "id": 2,
+        "kind": "multi_tenant_shared_db",
+        "isolation_level": "strict"
+      },
+      "personalization_axes": [
+        {
+          "id": 3,
+          "name": "Níveis Hierárquicos",
+          "scope": "por tenant",
+          "default": "estrutura padrão com colaborador, gestor, administrador"
+        },
+        {
+          "id": 4,
+          "name": "Permissões por Perfil",
+          "scope": "por tenant",
+          "default": "RBAC baseado em perfil: colaborador, gestor, administrador do tenant, administrador da plataforma"
+        },
+        {
+          "id": 5,
+          "name": "Status de Ativação de Usuário",
+          "scope": "por tenant",
+          "default": "ativo ou inativo, controlado pelo administrador do tenant"
+        },
+        {
+          "id": 6,
+          "name": "Status de Ativação de Tenant",
+          "scope": "por tenant",
+          "default": "ativo ou inativo, controlado pelo administrador da plataforma"
+        }
+      ]
+    },
+    "pendencies": [
+      {
+        "id": 41,
+        "section": "definition",
+        "description": "Definir se o modelo de tenancy será multi_tenant_shared_db (banco compartilhado com isolamento por schema ou row-level security) ou multi_tenant_separate_db (banco separado por tenant). A escolha afeta custo de infraestrutura, complexidade de backup/restore, e estratégia de isolamento de dados.",
+        "resolutionOptions": [
+          {
+            "id": 42,
+            "text": "multi_tenant_shared_db com isolamento por schema PostgreSQL: um banco de dados com múltiplos schemas (um por tenant), isolamento garantido por schema; menor custo, mais simples de gerenciar, recomendado para até 100 tenants."
+          },
+          {
+            "id": 43,
+            "text": "multi_tenant_shared_db com row-level security (RLS): um banco de dados com tabelas compartilhadas, isolamento garantido por RLS policies no PostgreSQL; máxima eficiência de custo, requer cuidado com configuração de policies."
+          },
+          {
+            "id": 44,
+            "text": "multi_tenant_separate_db: banco de dados separado por tenant; máximo isolamento, maior custo de infraestrutura, recomendado para tenants com requisitos de conformidade muito rigorosos ou dados sensíveis."
+          }
+        ],
+        "recommendedOptionId": 42
+      },
+      {
+        "id": 45,
+        "section": "definition",
+        "description": "Definir se o isolamento de tenant será soft (isolamento lógico, confiança em código de aplicação) ou strict (isolamento físico, garantido por banco de dados). Soft é mais simples mas menos seguro; strict é mais seguro mas mais complexo.",
+        "resolutionOptions": [
+          {
+            "id": 46,
+            "text": "soft: isolamento lógico apenas em código de aplicação; queries devem sempre incluir filtro WHERE tenant_id = ?; mais simples, mas risco de bug expor dados de outro tenant."
+          },
+          {
+            "id": 47,
+            "text": "strict: isolamento físico garantido por banco de dados (schema separation ou RLS); código de aplicação não consegue acessar dados de outro tenant mesmo com bug; mais seguro, recomendado para dados sensíveis."
+          }
+        ],
+        "recommendedOptionId": 47
+      },
+      {
+        "id": 48,
+        "section": "definition",
+        "description": "Definir quais eixos de personalização adicionais além de níveis hierárquicos e permissões por perfil serão suportados nesta versão. Exemplos: locale/idioma, tema visual, região de mercado, moeda, extensões/plugins.",
+        "resolutionOptions": [
+          {
+            "id": 49,
+            "text": "Apenas níveis hierárquicos e permissões por perfil nesta versão; outros eixos (locale, tema, região, moeda, extensões) são deixados para versões futuras."
+          },
+          {
+            "id": 50,
+            "text": "Adicionar suporte a locale/idioma e moeda nesta versão, pois há requisitos de internacionalização no escopo; deixar tema visual e extensões para futuro."
+          },
+          {
+            "id": 51,
+            "text": "Implementar framework completo de personalização (locale, tema, região, moeda, extensões) nesta versão; maior complexidade inicial, mas maior flexibilidade futura."
+          }
+        ],
+        "recommendedOptionId": 49
+      },
+      {
+        "id": 52,
+        "section": "rules",
+        "description": "Definir mecanismo de detecção e prevenção de tentativas de acesso cruzado entre tenants: deve ser implementado em middleware, repositório, ou ambos? Qual é o nível de logging/alerting para tentativas suspeitas?",
+        "resolutionOptions": [
+          {
+            "id": 53,
+            "text": "Implementar validação em middleware de autenticação: rejeitar requisição se tenant_id em parâmetro não corresponde ao tenant da sessão; log simples de tentativa."
+          },
+          {
+            "id": 54,
+            "text": "Implementar validação em repositório (data access layer): toda query é automaticamente escopada ao tenant da sessão; código de aplicação não precisa pensar em isolamento; mais seguro."
+          },
+          {
+            "id": 55,
+            "text": "Implementar em ambos os níveis (defense in depth): middleware rejeita mismatch óbvio, repositório garante escopo mesmo se middleware falhar; alerting em caso de tentativa suspeita."
+          }
+        ],
+        "recommendedOptionId": 55
+      },
+      {
+        "id": 56,
+        "section": "non_functional_requirements",
+        "description": "Definir estratégia de cache para configurações de tenant (níveis hierárquicos, permissões, status): TTL, invalidação, fallback se cache falhar.",
+        "resolutionOptions": [
+          {
+            "id": 57,
+            "text": "Cache em memória (Redis) com TTL de 5 minutos; invalidação manual ao alterar configuração; fallback para banco de dados se cache falhar."
+          },
+          {
+            "id": 58,
+            "text": "Cache em memória da aplicação (in-process) com TTL de 1 minuto; menor latência, mas requer sincronização entre instâncias; mais complexo."
+          },
+          {
+            "id": 59,
+            "text": "Sem cache: carregar configurações do banco a cada requisição; mais simples, mas latência maior; aceitável se volume de tenants é pequeno (<10)."
+          }
+        ],
+        "recommendedOptionId": 57
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 33,
+        "then": "Requisição é rejeitada com erro 403 Forbidden; dados de tenant B não são retornados; log de auditoria registra tentativa de acesso não autorizado",
+        "type": "integration",
+        "when": "Usuário tenta fazer requisição GET /tarefas?tenant_id=tenant-b ou POST /tarefas com body contendo tenant_id de outro tenant",
+        "given": "Usuário autenticado no tenant A com token válido",
+        "scenario": "Usuário de tenant A tenta acessar dados de tenant B manipulando parâmetro de tenant_id",
+        "target_section": "rules"
+      },
+      {
+        "id": 34,
+        "then": "Login é rejeitado com mensagem de erro genérica (ex: 'Acesso bloqueado'); usuário não consegue acessar nenhuma funcionalidade; log registra tentativa de acesso a tenant inativo",
+        "type": "integration",
+        "when": "Usuário do tenant inativo tenta fazer login com credenciais válidas",
+        "given": "Tenant com status inativo cadastrado no banco de dados",
+        "scenario": "Tenant inativo tenta fazer login e acessar plataforma",
+        "target_section": "rules"
+      },
+      {
+        "id": 35,
+        "then": "Contexto é resolvido com tenant_id correto, status ativo, níveis hierárquicos e permissões carregadas; nenhum erro é retornado",
+        "type": "unit",
+        "when": "Chamar resolver de contexto com slug 'empresa-abc'",
+        "given": "Slug de tenant válido 'empresa-abc' e banco de dados contém tenant com esse slug",
+        "scenario": "Resolver contexto de tenant com slug válido",
+        "target_section": "definition"
+      },
+      {
+        "id": 36,
+        "then": "Validador rejeita slug e retorna erro específico indicando formato inválido",
+        "type": "unit",
+        "when": "Chamar validador de slug com entrada inválida",
+        "given": "Slug contendo maiúsculas, espaços ou caracteres especiais (ex: 'Empresa ABC', 'empresa@123')",
+        "scenario": "Validar slug de tenant com caracteres inválidos",
+        "target_section": "rules"
+      },
+      {
+        "id": 37,
+        "then": "Query string é ignorada; contexto de tenant é resolvido a partir do token de sessão (tenant A); dados retornados pertencem apenas a tenant A",
+        "type": "security",
+        "when": "Fazer requisição GET /tarefas?tenant_id=tenant-b (tenant_id manipulado em query string)",
+        "given": "Usuário autenticado no tenant A com token válido",
+        "scenario": "Injeção de tenant_id em query string é ignorada",
+        "target_section": "rules"
+      },
+      {
+        "id": 38,
+        "then": "Todas as requisições são resolvidas em <= 5ms (p99); cache hit rate >= 95%; nenhuma query ao banco de dados é feita",
+        "type": "performance",
+        "when": "Fazer 100 requisições simultâneas para resolver contexto do mesmo tenant",
+        "given": "Configurações de tenant estão em cache com TTL válido",
+        "scenario": "Resolver contexto de tenant com cache hit",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 39,
+        "then": "Sessões ativas dos usuários são invalidadas; novas tentativas de login retornam erro; todas as operações de API retornam erro 403; quando tenant é reativado, login funciona novamente",
+        "type": "integration",
+        "when": "Administrador da plataforma desativa o tenant",
+        "given": "Tenant ativo com usuários autenticados",
+        "scenario": "Ativar e desativar tenant afeta acesso de usuários",
+        "target_section": "rules"
+      },
+      {
+        "id": 40,
+        "then": "Modificação é rejeitada ou ignorada; tenant_id permanece inalterado; erro é registrado se tentativa de modificação é detectada",
+        "type": "contract",
+        "when": "Lógica de aplicação tenta modificar tenant_id no contexto",
+        "given": "Contexto de tenant resolvido no início da requisição",
+        "scenario": "Contexto de tenant é imutável durante requisição",
+        "target_section": "rules"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 27,
+        "target": "p99 <= 5ms para resolver contexto e carregar configurações do cache; p99 <= 50ms se recarregar do banco de dados",
+        "category": "performance",
+        "requirement": "Resolução de contexto de tenant deve ser rápida e não degradar a latência de requisições",
+        "verification": "Teste de performance: medir latência de resolver contexto para 100 tenants simultâneos; benchmark de cache hit rate >= 95%."
+      },
+      {
+        "id": 28,
+        "target": "suportar até 50 tenants no primeiro ano, escalável para 500+ tenants com otimizações de cache e índices",
+        "category": "scalability",
+        "requirement": "Modelo de tenant deve suportar crescimento de tenants sem degradação de performance",
+        "verification": "Teste de carga: adicionar tenants progressivamente e medir latência de resolução; verificar que índices em tabela tenants mantêm performance."
+      },
+      {
+        "id": 29,
+        "target": "100% das queries devem ser escopadas ao tenant da sessão; nenhuma query deve retornar dados de outro tenant mesmo com parâmetros manipulados",
+        "category": "security",
+        "requirement": "Isolamento de tenant deve ser garantido em todas as camadas contra ataques de manipulação de parâmetros",
+        "verification": "Teste de segurança: injetar tenant_id manipulado em query string, body, headers; verificar que é ignorado e escopo correto é mantido."
+      },
+      {
+        "id": 30,
+        "target": "uptime >= 99.9% para serviço de resolução de tenant; falha em resolver contexto deve retornar erro 503 Service Unavailable, não 500",
+        "category": "availability",
+        "requirement": "Resolução de contexto de tenant deve estar disponível com alta disponibilidade",
+        "verification": "Teste de disponibilidade: simular falha de cache e banco de dados; verificar que erro apropriado é retornado; monitorar uptime em produção."
+      },
+      {
+        "id": 31,
+        "target": "todo log deve incluir tenant_id; métricas devem ser agregadas por tenant; traces distribuídos devem incluir tenant_id como tag",
+        "category": "observability",
+        "requirement": "Contexto de tenant deve ser rastreável em logs e métricas para auditoria e debugging",
+        "verification": "Teste de observabilidade: gerar requisição, verificar que tenant_id aparece em logs, métricas e traces; auditoria consegue rastrear todas as operações por tenant."
+      },
+      {
+        "id": 32,
+        "target": "usar single database com isolamento por schema ou row-level security; evitar provisionamento de banco por tenant para manter custo baixo",
+        "category": "cost",
+        "requirement": "Modelo de tenant com banco de dados compartilhado deve otimizar custo de infraestrutura",
+        "verification": "Análise de custo: comparar custo de single database vs multi-database; verificar que single database com isolamento é mais econômico."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 59,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T00:29:52.516Z",
+  "updatedAt": null
+}

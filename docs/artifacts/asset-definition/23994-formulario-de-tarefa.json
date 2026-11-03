@@ -1,0 +1,486 @@
+{
+  "id": 23994,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 11,
+          "name": "Dados de Entrada do Usuário",
+          "format": "form_fields_estruturados",
+          "origin": "usuario_preenchimento_formulario",
+          "trigger": "usuario_submete_formulario"
+        },
+        {
+          "id": 12,
+          "name": "Contexto de Autenticação",
+          "format": "jwt_token_com_tenant_id_e_usuario_id",
+          "origin": "sessao_autenticada",
+          "trigger": null
+        },
+        {
+          "id": 13,
+          "name": "Lista de Colaboradores Ativos",
+          "format": "array_usuarios_ativos_do_tenant",
+          "origin": "repositorio_usuarios",
+          "trigger": "carregamento_inicial_do_formulario"
+        },
+        {
+          "id": 14,
+          "name": "Regras de Validação de Tarefa",
+          "format": "regras_validacao_estruturadas",
+          "origin": "regras_negocio_prioridade_prazo",
+          "trigger": null
+        }
+      ],
+      "outputs": [
+        {
+          "id": 23,
+          "name": "Evento de Submissão de Formulário",
+          "format": "objeto_tarefa_com_campos_validados",
+          "destination": "fluxo_criacao_atribuicao_tarefa"
+        },
+        {
+          "id": 24,
+          "name": "Mensagem de Confirmação ou Erro",
+          "format": "mensagem_textual_localizada_pt_br",
+          "destination": "interface_usuario"
+        },
+        {
+          "id": 25,
+          "name": "Redirecionamento para Visualização",
+          "format": "navegacao_url_com_identificador_tarefa",
+          "destination": "pagina_tarefas_ou_detalhe_tarefa"
+        }
+      ],
+      "processing": [
+        {
+          "id": 15,
+          "step": "Validar Preenchimento de Campos Obrigatórios",
+          "description": "Verifica se título e responsável foram preenchidos antes de prosseguir com validações mais complexas."
+        },
+        {
+          "id": 16,
+          "step": "Validar Formato de Título",
+          "description": "Valida que o título não está vazio, não excede 255 caracteres e contém apenas caracteres permitidos."
+        },
+        {
+          "id": 17,
+          "step": "Validar Identificador do Responsável",
+          "description": "Valida que o responsável selecionado é um UUID válido e corresponde a um usuário ativo do tenant."
+        },
+        {
+          "id": 18,
+          "step": "Validar Prioridade",
+          "description": "Valida que a prioridade selecionada é um dos valores permitidos (baixa, média, alta, urgente)."
+        },
+        {
+          "id": 19,
+          "step": "Validar Data Limite",
+          "description": "Valida que a data limite (se fornecida) é uma data válida no calendário e não é retroativa."
+        },
+        {
+          "id": 20,
+          "step": "Invocar Regras de Negócio",
+          "description": "Executa as Regras de Prioridade e Prazo de Tarefas para validar combinação de prioridade e prazo, isolamento multi-tenant e elegibilidade para destaque."
+        },
+        {
+          "id": 21,
+          "step": "Exibir Feedback de Validação",
+          "description": "Exibe mensagens de erro específicas por campo quando validações falham, ou confirmação de sucesso quando todas as validações passam."
+        },
+        {
+          "id": 22,
+          "step": "Transmitir Dados Validados para Backend",
+          "description": "Envia os dados validados do formulário para o backend através de requisição HTTP autenticada com JWT."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 26,
+        "category": "validation",
+        "description": "Título da tarefa é obrigatório e deve ter entre 1 e 255 caracteres, contendo apenas caracteres permitidos (letras, números, espaços, pontuação básica).",
+        "enforcement": "code",
+        "verification": "Validação em cliente (JavaScript) e servidor (backend) rejeita submissão se título vazio, excede 255 caracteres ou contém caracteres inválidos; mensagem de erro específica é exibida."
+      },
+      {
+        "id": 27,
+        "category": "validation",
+        "description": "Responsável da tarefa é obrigatório e deve ser um usuário ativo pertencente ao mesmo tenant do criador.",
+        "enforcement": "code",
+        "verification": "Validação em cliente verifica se responsável foi selecionado; validação em servidor confirma que usuário existe, pertence ao tenant e possui status ativo; mensagem de erro específica é exibida se validação falha."
+      },
+      {
+        "id": 28,
+        "category": "validation",
+        "description": "Prioridade da tarefa é obrigatória e deve ser um dos valores fixos definidos pelo sistema (baixa, média, alta, urgente).",
+        "enforcement": "code",
+        "verification": "Validação em cliente restringe seletor a valores permitidos; validação em servidor rejeita valores fora do conjunto; mensagem de erro específica é exibida."
+      },
+      {
+        "id": 29,
+        "category": "validation",
+        "description": "Data limite da tarefa, quando fornecida, deve ser uma data válida no calendário e não pode ser anterior à data atual (não retroativa).",
+        "enforcement": "code",
+        "verification": "Validação em cliente usa date picker com restrição de datas futuras; validação em servidor rejeita datas retroativas; mensagem de erro específica é exibida."
+      },
+      {
+        "id": 30,
+        "category": "authorization",
+        "description": "Apenas usuários autenticados e ativos pertencentes ao tenant podem acessar e utilizar o formulário de criação de tarefa.",
+        "enforcement": "code",
+        "verification": "Guarda de autenticação em rota verifica presença de JWT válido; guarda de autorização verifica status ativo do usuário e tenant; acesso negado retorna erro 401 ou 403."
+      },
+      {
+        "id": 31,
+        "category": "invariant",
+        "description": "Tarefa criada através do formulário é sempre persistida no tenant do usuário criador, garantindo isolamento multi-tenant absoluto.",
+        "enforcement": "code",
+        "verification": "Backend extrai tenant_id do JWT do usuário autenticado e o associa à tarefa antes de persistência; consultas posteriores filtram por tenant_id; nenhuma tarefa de outro tenant é acessível."
+      },
+      {
+        "id": 32,
+        "category": "compliance",
+        "description": "Todas as operações de criação e edição de tarefa através do formulário são registradas em trilha de auditoria com identificação do usuário executor, tenant, timestamp e dados principais da tarefa, em conformidade com requisitos de rastreabilidade LGPD.",
+        "enforcement": "code",
+        "verification": "Backend registra entrada em tabela de auditoria imediatamente após persistência bem-sucedida; logs incluem user_id, tenant_id, timestamp, tarefa_id, campos alterados; auditoria é imutável e consultável."
+      },
+      {
+        "id": 33,
+        "category": "idempotency",
+        "description": "Submissão duplicada do formulário (duplo clique no botão de envio) não resulta em criação duplicada de tarefa.",
+        "enforcement": "code",
+        "verification": "Botão de envio é desabilitado após primeira submissão até resposta do servidor; requisição HTTP inclui token de idempotência único; backend rejeita requisições duplicadas com mesmo token."
+      },
+      {
+        "id": 34,
+        "category": "observability",
+        "description": "Erros de validação e persistência do formulário são registrados em logs de aplicação com contexto completo (usuário, tenant, campo afetado, motivo da falha) para diagnóstico e monitoramento.",
+        "enforcement": "code",
+        "verification": "Backend registra erro em log estruturado com nível apropriado (warn para validação, error para persistência); logs incluem stack trace, contexto de requisição e identificação do usuário; logs são consultáveis em sistema de observabilidade."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "O Formulário de Tarefa é uma superfície interativa especializada que materializa a captura estruturada de dados para criação e edição de atividades dentro do módulo Gerenciamento de Tarefas. Compõe-se de campos de entrada validados (título obrigatório com limite de 255 caracteres, descrição opcional, seletor de responsável restrito a colaboradores ativos do tenant, seletor de prioridade com valores fixos, seletor de status com valores fixos, campo de data limite com validação de calendário), validações em cliente e servidor (campos obrigatórios, formatos, unicidade de responsável ativo), feedback visual imediato de erros específicos por campo, e integração com fluxos de criação e edição de tarefas. Funciona como o ponto de entrada para registro e modificação de atividades, capturando intenções do usuário, validando dados conforme regras de negócio (Regras de Prioridade e Prazo, Regras de Transição de Status), e transmitindo dados validados para persistência isolada por tenant com rastreabilidade completa em trilha de auditoria."
+    },
+    "definition": {
+      "fields": [
+        {
+          "id": 2,
+          "name": "titulo",
+          "data_type": "string",
+          "filled_by": "usuario",
+          "aria_label": "Título da tarefa",
+          "input_type": "text",
+          "max_length": 255,
+          "min_length": 1,
+          "validation": "não_vazio AND comprimento_maximo_255_caracteres AND apenas_caracteres_permitidos",
+          "is_required": true,
+          "placeholder": "Digite o título da tarefa",
+          "help_text_key": "help_titulo_tarefa"
+        },
+        {
+          "id": 3,
+          "name": "descricao",
+          "data_type": "string",
+          "filled_by": "usuario",
+          "aria_label": "Descrição da tarefa",
+          "input_type": "textarea",
+          "max_length": 2000,
+          "validation": "comprimento_maximo_2000_caracteres_se_preenchido",
+          "is_required": false,
+          "placeholder": "Descreva o contexto, objetivo ou instruções da tarefa",
+          "help_text_key": "help_descricao_tarefa"
+        },
+        {
+          "id": 4,
+          "name": "responsavel_id",
+          "data_type": "uuid",
+          "filled_by": "usuario",
+          "aria_label": "Responsável pela tarefa",
+          "input_type": "select",
+          "validation": "uuid_valido AND usuario_existe_no_tenant AND usuario_ativo_no_tenant",
+          "is_required": true,
+          "help_text_key": "help_responsavel_tarefa"
+        },
+        {
+          "id": 5,
+          "name": "prioridade",
+          "data_type": "enum[baixa|media|alta|urgente]",
+          "filled_by": "usuario",
+          "aria_label": "Nível de prioridade da tarefa",
+          "input_type": "select",
+          "validation": "valor_em_conjunto_permitido",
+          "is_required": true,
+          "help_text_key": "help_prioridade_tarefa"
+        },
+        {
+          "id": 6,
+          "name": "status",
+          "data_type": "enum[a_fazer|em_andamento|concluido]",
+          "filled_by": "usuario",
+          "aria_label": "Status inicial da tarefa",
+          "input_type": "select",
+          "validation": "valor_em_conjunto_permitido_se_preenchido",
+          "is_required": false,
+          "default_value": "a_fazer",
+          "help_text_key": "help_status_tarefa"
+        },
+        {
+          "id": 7,
+          "name": "data_limite",
+          "data_type": "date",
+          "filled_by": "usuario",
+          "aria_label": "Data limite para conclusão da tarefa",
+          "input_type": "date",
+          "validation": "data_valida_se_preenchida AND nao_retroativa",
+          "is_required": false,
+          "help_text_key": "help_data_limite_tarefa"
+        }
+      ],
+      "submit_button": {
+        "id": 8,
+        "label_keys": [
+          {
+            "id": 9,
+            "value": "Criar Tarefa",
+            "locale": "pt-BR"
+          }
+        ],
+        "aria_label_keys": [
+          {
+            "id": 10,
+            "value": "Botão para criar nova tarefa após validação de todos os campos",
+            "locale": "pt-BR"
+          }
+        ],
+        "is_disabled_when": "validacao_em_progresso OR algum_campo_obrigatorio_vazio OR alguma_validacao_falhou"
+      }
+    },
+    "pendencies": [
+      {
+        "id": 51,
+        "section": "definition",
+        "description": "Necessário confirmar se o campo de status inicial da tarefa deve ser editável no formulário de criação ou se deve ser sempre 'A Fazer' por padrão. Atualmente o campo está marcado como opcional com default 'a_fazer', mas a feature de Criação de Tarefa não menciona explicitamente se o usuário pode selecionar status inicial diferente.",
+        "resolutionOptions": [
+          {
+            "id": 52,
+            "text": "Status inicial é sempre 'A Fazer' (padrão fixo); campo de status é removido do formulário de criação e fica disponível apenas em edição posterior."
+          },
+          {
+            "id": 53,
+            "text": "Status inicial é editável no formulário de criação; usuário pode selecionar entre 'A Fazer', 'Em Andamento' e 'Concluído' no momento da criação."
+          },
+          {
+            "id": 54,
+            "text": "Status inicial é editável apenas para usuários com perfil de administrador; colaboradores comuns sempre criam tarefas com status 'A Fazer'."
+          }
+        ],
+        "recommendedOptionId": 52
+      },
+      {
+        "id": 55,
+        "section": "definition",
+        "description": "Necessário definir o comportamento exato do seletor de responsável quando a lista de colaboradores é muito grande (ex: 100+ usuários). Atualmente não há especificação de busca/filtragem textual ou paginação no seletor.",
+        "resolutionOptions": [
+          {
+            "id": 56,
+            "text": "Seletor implementa busca textual em tempo real (debounced) que filtra colaboradores por nome ou e-mail conforme usuário digita."
+          },
+          {
+            "id": 57,
+            "text": "Seletor carrega todos os colaboradores de uma vez; se lista for muito grande (>50), implementa scroll virtual para otimização de performance."
+          },
+          {
+            "id": 58,
+            "text": "Seletor implementa paginação com 20 colaboradores por página; usuário navega entre páginas para encontrar responsável desejado."
+          }
+        ],
+        "recommendedOptionId": 56
+      },
+      {
+        "id": 59,
+        "section": "rules",
+        "description": "Necessário confirmar se o formulário deve permitir criação de tarefa sem data limite (campo opcional) ou se data limite deve ser obrigatória. Atualmente campo está marcado como opcional, mas nenhuma feature especifica explicitamente se tarefas sem prazo são permitidas.",
+        "resolutionOptions": [
+          {
+            "id": 60,
+            "text": "Data limite é obrigatória; todas as tarefas devem ter prazo definido no momento da criação."
+          },
+          {
+            "id": 61,
+            "text": "Data limite é opcional; tarefas podem ser criadas sem prazo; campo pode ser preenchido posteriormente em edição."
+          },
+          {
+            "id": 62,
+            "text": "Data limite é obrigatória apenas para tarefas com prioridade 'alta' ou 'urgente'; tarefas com prioridade 'baixa' ou 'média' podem ser criadas sem prazo."
+          }
+        ],
+        "recommendedOptionId": 61
+      },
+      {
+        "id": 63,
+        "section": "non_functional_requirements",
+        "description": "Necessário definir o comportamento de validação em tempo real (debounce) para o campo de título. Atualmente não há especificação de quando validação deve ocorrer (ao sair do campo, após digitação, etc) e qual deve ser o intervalo de debounce para evitar requisições excessivas ao servidor.",
+        "resolutionOptions": [
+          {
+            "id": 64,
+            "text": "Validação ocorre apenas ao submeter o formulário; nenhuma validação em tempo real é implementada."
+          },
+          {
+            "id": 65,
+            "text": "Validação ocorre em tempo real com debounce de 500ms após última alteração do campo; requisições de validação ao servidor são limitadas a máximo 1 por segundo."
+          },
+          {
+            "id": 66,
+            "text": "Validação ocorre ao sair do campo (blur event); nenhuma validação em tempo real durante digitação."
+          }
+        ],
+        "recommendedOptionId": 65
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 43,
+        "then": "Validação em cliente rejeita entrada e exibe mensagem de erro específica; caracteres inválidos não são aceitos no campo",
+        "type": "unit",
+        "when": "Usuário digita título contendo caracteres especiais inválidos (ex: '<script>', '${injection}')",
+        "given": "Formulário de criação de tarefa está carregado e pronto para entrada",
+        "scenario": "Validação de título com caracteres inválidos",
+        "target_section": "definition"
+      },
+      {
+        "id": 44,
+        "then": "Date picker desabilita datas passadas; se usuário tenta inserir data manualmente, validação em servidor rejeita e exibe mensagem de erro",
+        "type": "unit",
+        "when": "Usuário tenta selecionar uma data anterior à data atual (retroativa)",
+        "given": "Formulário de criação de tarefa está carregado com date picker exibido",
+        "scenario": "Validação de data limite retroativa",
+        "target_section": "definition"
+      },
+      {
+        "id": 45,
+        "then": "Validações em cliente passam; requisição é enviada ao backend; backend valida dados, persiste tarefa no banco de dados, registra auditoria e retorna sucesso; usuário vê mensagem de confirmação e é redirecionado para visualização da tarefa criada",
+        "type": "integration",
+        "when": "Usuário preenche título, seleciona responsável ativo, seleciona prioridade e submete o formulário",
+        "given": "Usuário autenticado e ativo está no formulário de criação de tarefa; lista de colaboradores foi carregada",
+        "scenario": "Criação bem-sucedida de tarefa com todos os campos obrigatórios preenchidos",
+        "target_section": "flow"
+      },
+      {
+        "id": 46,
+        "then": "Validação em cliente permite seleção (lista não filtra); validação em servidor detecta que responsável está inativo; requisição é rejeitada com erro 400; mensagem de erro específica é exibida ao usuário",
+        "type": "integration",
+        "when": "Usuário seleciona um colaborador inativo como responsável e submete o formulário",
+        "given": "Usuário autenticado está no formulário de criação; lista de colaboradores inclui usuários ativos e inativos",
+        "scenario": "Rejeição de submissão quando responsável selecionado está inativo",
+        "target_section": "rules"
+      },
+      {
+        "id": 47,
+        "then": "Validação em cliente rejeita caracteres especiais; se payload conseguir passar, backend sanitiza entrada antes de persistência; nenhum script é executado no navegador do usuário ou de outros usuários",
+        "type": "security",
+        "when": "Usuário tenta injetar payload XSS no campo de título (ex: '<img src=x onerror=alert(1)>')",
+        "given": "Formulário de criação de tarefa está carregado",
+        "scenario": "Prevenção de XSS através de injeção de script no título",
+        "target_section": "rules"
+      },
+      {
+        "id": 48,
+        "then": "Lista de colaboradores é carregada e renderizada em <= 500ms; formulário fica responsivo e pronto para entrada do usuário",
+        "type": "performance",
+        "when": "Página carrega e requisição para listar colaboradores é enviada ao backend",
+        "given": "Tenant contém 100 usuários ativos; usuário autenticado navega para página de criação de tarefa",
+        "scenario": "Carregamento do formulário com 100 usuários no tenant",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 49,
+        "then": "Tarefa é criada com sucesso; dados aparecem na listagem e Kanban; formulário de edição carrega com dados pré-preenchidos; usuário pode modificar qualquer campo e salvar alterações; auditoria registra ambas as operações (criação e edição)",
+        "type": "e2e",
+        "when": "Usuário cria tarefa com título 'Implementar Feature X', responsável 'João Silva', prioridade 'alta', prazo em 7 dias; após confirmação, usuário acessa a tarefa criada e abre formulário de edição",
+        "given": "Usuário autenticado está na página de tarefas; formulário de criação está acessível",
+        "scenario": "Fluxo completo de criação de tarefa com edição subsequente",
+        "target_section": "definition"
+      },
+      {
+        "id": 50,
+        "then": "Servidor responde com status 201; corpo da resposta contém tarefa criada com id, tenant_id, timestamps de criação e todos os campos enviados; resposta segue schema definido em Endpoints de Tarefas",
+        "type": "contract",
+        "when": "Cliente envia payload com título, responsável_id, prioridade e data_limite válidos",
+        "given": "Cliente HTTP autenticado com JWT válido prepara requisição POST /api/tasks",
+        "scenario": "Contrato de API para criação de tarefa",
+        "target_section": "flow"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 35,
+        "target": "p95 <= 500ms para carregamento da página contendo o formulário, mesmo em tenants com até 100 usuários ativos.",
+        "category": "performance",
+        "requirement": "Carregamento inicial do formulário com lista de colaboradores ativos deve ocorrer em tempo adequado, sem degradação perceptível na experiência do usuário.",
+        "verification": "Teste de carga com 100 usuários simultâneos; medição de tempo de resposta da requisição GET para listar colaboradores; monitoramento de p95 em produção."
+      },
+      {
+        "id": 36,
+        "target": "Feedback visual de validação exibido em <= 100ms após alteração de campo.",
+        "category": "performance",
+        "requirement": "Validação de campos em cliente deve ocorrer com feedback imediato ao usuário, sem atraso perceptível.",
+        "verification": "Teste de performance de validação em cliente; medição de tempo entre evento de mudança de campo e exibição de mensagem de erro; monitoramento em navegadores reais."
+      },
+      {
+        "id": 37,
+        "target": "p95 <= 2000ms para conclusão da operação de criação de tarefa (validação servidor + persistência + auditoria), mesmo com 5.000 usuários ativos e 10.000 tarefas por tenant.",
+        "category": "performance",
+        "requirement": "Submissão do formulário e persistência da tarefa deve ocorrer em tempo adequado, mesmo sob carga de múltiplos usuários.",
+        "verification": "Teste de carga com múltiplos usuários simultâneos criando tarefas; medição de tempo de resposta POST /api/tasks; monitoramento de p95 em produção."
+      },
+      {
+        "id": 38,
+        "target": "100% das entradas de usuário são validadas em cliente e servidor; caracteres especiais são escapados ou rejeitados; nenhuma entrada é executada como código.",
+        "category": "security",
+        "requirement": "Formulário deve validar e sanitizar todas as entradas de usuário para prevenir injeção de código (XSS, SQL injection) e outros ataques de entrada.",
+        "verification": "Teste de segurança com payloads de XSS e SQL injection; análise estática de código para validação de entrada; teste de penetração."
+      },
+      {
+        "id": 39,
+        "target": "Formulário não contém campos de senha ou dados sensíveis; transmissão de dados ocorre exclusivamente via HTTPS com TLS 1.2+.",
+        "category": "security",
+        "requirement": "Senhas e dados sensíveis nunca são armazenados ou transmitidos através do formulário de tarefa.",
+        "verification": "Revisão de código do formulário; teste de rede para verificar protocolo HTTPS; análise de payload de requisição HTTP."
+      },
+      {
+        "id": 40,
+        "target": "Formulário renderiza corretamente em breakpoints mobile (320px), tablet (768px) e desktop (1024px); todos os campos são acessíveis e preenchíveis em toque.",
+        "category": "availability",
+        "requirement": "Formulário deve ser acessível e utilizável em dispositivos móveis (smartphones e tablets) com telas de diferentes tamanhos.",
+        "verification": "Teste de responsividade em múltiplos dispositivos e tamanhos de tela; teste de usabilidade em touch; validação de acessibilidade WCAG 2.1 AA."
+      },
+      {
+        "id": 41,
+        "target": "Mensagens de erro de rede exibidas em <= 5 segundos; mensagens incluem orientação de ação (tentar novamente, contatar suporte); erros são registrados em logs com contexto completo.",
+        "category": "observability",
+        "requirement": "Erros de rede, timeout e falhas de persistência devem ser capturados e exibidos ao usuário com mensagem clara e orientação de ação.",
+        "verification": "Teste de falha de rede (simular timeout, erro 500); verificação de mensagem exibida ao usuário; análise de logs de erro."
+      },
+      {
+        "id": 42,
+        "target": "Tamanho da página contendo formulário <= 200KB (gzipped); requisições de validação em servidor são debounced para máximo 1 requisição por segundo por campo.",
+        "category": "cost",
+        "requirement": "Formulário deve ser otimizado para minimizar consumo de banda e processamento, reduzindo custos de infraestrutura.",
+        "verification": "Medição de tamanho de página com ferramentas de análise; teste de debounce de validação; monitoramento de consumo de banda em produção."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 19,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T17:54:37.769Z",
+  "updatedAt": null
+}

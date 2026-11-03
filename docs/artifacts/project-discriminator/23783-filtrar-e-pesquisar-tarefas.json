@@ -1,0 +1,124 @@
+{
+  "id": 23783,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 4,
+        "name": "Requisito de consistência de dados da operação",
+        "value": [
+          "strong-consistency"
+        ],
+        "method": "internal-inference",
+        "reasoning": "Os resultados de filtragem e pesquisa entre as visualizações de lista e Kanban são garantidos por consistência dos critérios aplicados, o que exige forte consistência de dados.",
+        "confidence": 0.7451,
+        "context_element_id": 2784
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 6,
+        "name": "Reduzir a superfície de ataque desabilitando serviços desnecessários, removendo funcionalidades não utilizadas e minimizando pontos de entrada",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem ação direcionada, o sistema fica preso em uma configuração que só pode ser revertida por um administrador, não por um usuário.",
+        "confidence": 0.8336,
+        "context_element_id": 2932
+      },
+      {
+        "id": 9,
+        "name": "Implemente operações em lote para permitir que os usuários executem múltiplas ações semelhantes simultaneamente com uma única confirmação",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem confirmação, o usuário limparia todos os filtros em vez de restaurar a exibição completa, o que não é a intenção.",
+        "confidence": 0.8986,
+        "context_element_id": 3044
+      },
+      {
+        "id": 10,
+        "name": "Mantenha um modelo de tarefas do usuário com rastreamento do contexto atual, histórico de ações e sugestões de próximos passos com base no fluxo de trabalho",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem a restauração automática, o usuário teria que reaplicar manualmente cada filtro e pesquisa que já tinha feito, ocupando tempo e esquecendo o que havia feito.",
+        "confidence": 0.7767,
+        "context_element_id": 3045
+      },
+      {
+        "id": 11,
+        "name": "Use padrões e componentes consistentes por meio de design systems e bibliotecas compartilhadas para garantir a uniformidade da experiência",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Cada visualização tem seu próprio estado, e alternar entre elas sem salvar o que foi selecionado deixa o usuário sem saber o que viu.",
+        "confidence": 0.7719,
+        "context_element_id": 3056
+      },
+      {
+        "id": 12,
+        "name": "Garanta a operabilidade por meio de navegação por teclado, tempos de leitura ajustáveis e prevenção de conteúdo que possa causar convulsões",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Controle de visualização de dados em tela cheia pode causar convulsão, e a barreira de navegação depende exclusivamente de mouse.",
+        "confidence": 0.7174,
+        "context_element_id": 3059
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 14,
+        "name": "Momento de Execução",
+        "value": "sob demanda",
+        "method": "user-input",
+        "reasoning": "A seleção de condições predefinidas como tarefas em atraso, tarefas sem prazo definido ou tarefas com vencimento em um intervalo específico é realizada em tempo on-demand, sem envio de dados para processamento automático.",
+        "confidence": 0.7402,
+        "context_element_id": 4325
+      },
+      {
+        "id": 16,
+        "name": "Modelo de Estado",
+        "value": "estado persistente",
+        "method": "internal-inference",
+        "reasoning": "Os filtros de cada visualização (lista e Kanban) mantêm seu próprio estado de filtros, independentes entre si, sem transferência de estado ao alternar entre elas.",
+        "confidence": 0.8599,
+        "context_element_id": 4367
+      },
+      {
+        "id": 18,
+        "name": "Estratégia de Carregamento",
+        "value": "lazy loading",
+        "method": "user-input",
+        "reasoning": "A lista de responsáveis disponível para seleção no filtro é carregada uma única vez ao abrir o campo, em vez de carregada dinamicamente com busca em tempo real no servidor, indicando que a estratégia de carregamento é lazy-loading.",
+        "confidence": 0.8174,
+        "context_element_id": 4497
+      },
+      {
+        "id": 21,
+        "name": "Estratégia de Busca",
+        "value": "recuperação híbrida",
+        "method": "user-input",
+        "reasoning": "A pesquisa textual amplia o escopo da busca para o título e a descrição, um método de busca híbrida.",
+        "confidence": 0.7651,
+        "context_element_id": 4787
+      },
+      {
+        "id": 24,
+        "name": "Natureza da Interação",
+        "value": "busca e descoberta",
+        "method": "user-input",
+        "reasoning": "A pesquisa textual é executada de forma imediata à medida que o usuário digita, ou após pressionar Enter ou clicar em um botão de busca explícito, caracterizando um tipo de interação de descoberta de pesquisa.",
+        "confidence": 0.7034,
+        "context_element_id": 4945
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 3,
+  "active": true,
+  "sourceId": 23631,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T05:29:54.418Z",
+  "updatedAt": null
+}

@@ -1,0 +1,1332 @@
+{
+  "id": 23700,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 97,
+          "name": "Credenciais de Login",
+          "format": "JSON { email: string, password: string }",
+          "origin": "Formulário de Login (ASSET-12) ou cliente HTTP",
+          "trigger": "POST /api/auth/login"
+        },
+        {
+          "id": 98,
+          "name": "Refresh Token",
+          "format": "String opaco (token)",
+          "origin": "Cliente HTTP (cookie ou header)",
+          "trigger": "POST /api/auth/refresh"
+        },
+        {
+          "id": 99,
+          "name": "E-mail para Recuperação",
+          "format": "JSON { email: string }",
+          "origin": "Formulário de Recuperação de Senha (ASSET-13)",
+          "trigger": "POST /api/auth/password-recovery"
+        },
+        {
+          "id": 100,
+          "name": "Token de Recuperação e Nova Senha",
+          "format": "JSON { token: string, new_password: string, password_confirmation: string }",
+          "origin": "Link de e-mail + Formulário de Redefinição (ASSET-13)",
+          "trigger": "POST /api/auth/password-recovery/reset"
+        },
+        {
+          "id": 101,
+          "name": "Access Token",
+          "format": "JWT RS256",
+          "origin": "Cliente HTTP (header Authorization: Bearer)",
+          "trigger": "GET /api/auth/me ou qualquer requisição autenticada"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 120,
+          "name": "Tokens de Sessão",
+          "format": "JSON { access_token: string, refresh_token: string, user: {...}, tenant: {...} }",
+          "destination": "Cliente HTTP (response body ou cookie)"
+        },
+        {
+          "id": 121,
+          "name": "Erro de Autenticação",
+          "format": "JSON { error: string, retry_after_seconds?: integer }",
+          "destination": "Cliente HTTP (response body)"
+        },
+        {
+          "id": 122,
+          "name": "Contexto de Autenticação",
+          "format": "AuthContext { user_id, email, tenant_id, perfil, permissions, authenticated_at, token_expires_at }",
+          "destination": "Middleware de Autenticação (contexto de requisição)"
+        },
+        {
+          "id": 123,
+          "name": "Link de Recuperação de Senha",
+          "format": "E-mail transacional com URL contendo token",
+          "destination": "Serviço de E-mail (ASSET-37 Worker de Envio de E-mail)"
+        },
+        {
+          "id": 124,
+          "name": "Confirmação de Redefinição de Senha",
+          "format": "JSON { message: string }",
+          "destination": "Cliente HTTP (response body)"
+        },
+        {
+          "id": 125,
+          "name": "Dados do Usuário Autenticado",
+          "format": "JSON { user: {...}, tenant: {...}, permissions: string[] }",
+          "destination": "Cliente HTTP (GET /api/auth/me response)"
+        }
+      ],
+      "processing": [
+        {
+          "id": 102,
+          "step": "Validação de Formato de Entrada",
+          "description": "Valida formato de e-mail, comprimento de senha, presença de campos obrigatórios antes de processar autenticação."
+        },
+        {
+          "id": 103,
+          "step": "Identificação de Tenant pelo E-mail",
+          "description": "Consulta tabela de usuários para identificar o tenant ao qual o e-mail pertence, garantindo isolamento multi-tenant."
+        },
+        {
+          "id": 104,
+          "step": "Verificação de Rate Limit",
+          "description": "Verifica se o IP ou e-mail atingiu limite de tentativas falhadas (5 em 15 minutos), bloqueando temporariamente se necessário."
+        },
+        {
+          "id": 105,
+          "step": "Busca de Usuário e Validação de Status",
+          "description": "Consulta tabela de usuários pelo e-mail e tenant, verificando se usuário existe, está ativo e tenant está ativo."
+        },
+        {
+          "id": 106,
+          "step": "Validação de Senha com Argon2id",
+          "description": "Compara hash da senha fornecida com hash armazenado usando argon2id (m=64MiB, t=3, p=4), resistindo a ataques de força bruta."
+        },
+        {
+          "id": 107,
+          "step": "Geração de Tokens JWT",
+          "description": "Gera access token (RS256, 3600s) e refresh token opaco, incluindo claims de user_id, email, tenant_id, exp."
+        },
+        {
+          "id": 108,
+          "step": "Persistência de Sessão",
+          "description": "Armazena refresh token hash, IP, user-agent e data de expiração na tabela sessions para rastreamento e revogação."
+        },
+        {
+          "id": 109,
+          "step": "Emissão de Evento de Auditoria",
+          "description": "Emite evento user_authenticated ou authentication_failed para trilha de auditoria e detecção de anomalias."
+        },
+        {
+          "id": 110,
+          "step": "Validação de Token JWT",
+          "description": "Valida assinatura RS256, expiração, claims obrigatórios e integridade do token em requisições autenticadas."
+        },
+        {
+          "id": 111,
+          "step": "Resolução de Contexto de Autenticação",
+          "description": "Extrai user_id, tenant_id, email do token e resolve perfil do usuário para determinar permissões aplicáveis."
+        },
+        {
+          "id": 112,
+          "step": "Validação de Isolamento de Tenant",
+          "description": "Verifica se tenant_id do token corresponde ao tenant_id da requisição (header X-Tenant-ID ou contexto), impedindo acesso cruzado."
+        },
+        {
+          "id": 113,
+          "step": "Geração de Token de Recuperação de Senha",
+          "description": "Gera token criptograficamente seguro (32 bytes), armazena hash SHA-256 com expiração de 30 minutos."
+        },
+        {
+          "id": 114,
+          "step": "Envio de E-mail de Recuperação",
+          "description": "Enfileira e-mail transacional com link contendo token de recuperação para o endereço informado (integração com ASSET-37 Worker de E-mail)."
+        },
+        {
+          "id": 115,
+          "step": "Validação de Token de Recuperação",
+          "description": "Valida token de recuperação (existência, expiração, integridade), rejeitando tokens inválidos ou expirados."
+        },
+        {
+          "id": 116,
+          "step": "Validação de Complexidade de Nova Senha",
+          "description": "Valida nova senha contra regras (mín. 8 caracteres, maiúscula, minúscula, número), rejeitando senhas fracas."
+        },
+        {
+          "id": 117,
+          "step": "Hash e Persistência de Nova Senha",
+          "description": "Calcula hash argon2id da nova senha e persiste na tabela de usuários, substituindo hash anterior."
+        },
+        {
+          "id": 118,
+          "step": "Invalidação de Sessões Ativas",
+          "description": "Marca todas as sessões ativas do usuário como revogadas (motivo: password_reset), forçando novo login."
+        },
+        {
+          "id": 119,
+          "step": "Resolução de Variante de Permissão",
+          "description": "Consulta ASSET-60 (Variante de Permissão por Perfil) para determinar endpoints acessíveis, campos visíveis e ações permitidas conforme perfil do usuário."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 126,
+        "category": "authorization",
+        "description": "Isolamento de Tenant: Toda operação de leitura ou escrita de dados deve ser escopada ao tenant_id do usuário autenticado. Requisições que tentarem acessar dados de outro tenant devem ser rejeitadas com erro 403 Forbidden.",
+        "enforcement": "code",
+        "verification": "Middleware de isolamento de tenant valida tenant_id em cada requisição; testes de integração verificam que usuário de tenant A não consegue acessar dados de tenant B."
+      },
+      {
+        "id": 127,
+        "category": "authorization",
+        "description": "Controle de Acesso por Perfil: Apenas usuários com perfil apropriado podem acessar endpoints e funcionalidades específicas. Colaboradores não podem acessar endpoints de gerenciamento de usuários ou tenants; administradores de tenant não podem acessar endpoints de provisionamento de tenants.",
+        "enforcement": "code",
+        "verification": "Middleware de autorização valida perfil do usuário contra lista de permissões do endpoint; testes de segurança verificam que usuário sem permissão recebe erro 403."
+      },
+      {
+        "id": 128,
+        "category": "validation",
+        "description": "Validação de Formato de E-mail: Todo e-mail fornecido em formulários de login, cadastro ou recuperação de senha deve estar em formato válido (RFC 5322 simplificado). E-mails inválidos devem ser rejeitados antes de processar autenticação.",
+        "enforcement": "code",
+        "verification": "Validador de entrada rejeita e-mails malformados; testes unitários verificam padrão regex contra casos válidos e inválidos."
+      },
+      {
+        "id": 129,
+        "category": "validation",
+        "description": "Validação de Complexidade de Senha: Senhas devem ter mínimo 8 caracteres, incluir pelo menos uma letra maiúscula, uma letra minúscula e um número. Senhas que não atendem aos critérios devem ser rejeitadas com mensagem específica.",
+        "enforcement": "code",
+        "verification": "Validador de senha rejeita senhas fracas; testes unitários verificam cada critério individualmente."
+      },
+      {
+        "id": 130,
+        "category": "invariant",
+        "description": "Unicidade de E-mail por Tenant: Não podem existir dois usuários com o mesmo e-mail dentro do mesmo tenant. Tentativas de cadastro ou edição com e-mail duplicado devem ser rejeitadas.",
+        "enforcement": "db_constraint",
+        "verification": "Índice único (tenant_id, email) na tabela usuarios; testes de integração tentam inserir e-mail duplicado e verificam erro de constraint."
+      },
+      {
+        "id": 131,
+        "category": "invariant",
+        "description": "Unicidade de Slug de Tenant: Não podem existir dois tenants com o mesmo slug na plataforma. Tentativas de provisionamento com slug duplicado devem ser rejeitadas.",
+        "enforcement": "db_constraint",
+        "verification": "Índice único sobre slug na tabela tenants; testes de integração tentam provisionar tenant com slug duplicado e verificam erro de constraint."
+      },
+      {
+        "id": 132,
+        "category": "idempotency",
+        "description": "Idempotência de Logout: Múltiplas requisições de logout com o mesmo token devem retornar sucesso (200) sem efeito colateral, não causando erro na segunda tentativa.",
+        "enforcement": "code",
+        "verification": "Endpoint POST /api/auth/logout verifica se sessão já foi revogada e retorna 200 em ambos os casos; testes de integração executam logout duas vezes."
+      },
+      {
+        "id": 133,
+        "category": "rate_limit",
+        "description": "Rate Limiting de Login: Máximo de 5 tentativas falhadas de login por IP em janela de 15 minutos. Após atingir o limite, novas tentativas devem ser bloqueadas por 15 minutos com resposta 429 Too Many Requests.",
+        "enforcement": "code",
+        "verification": "Middleware de rate limiting rastreia tentativas por IP; testes de segurança executam 6 tentativas falhadas e verificam bloqueio na 6ª."
+      },
+      {
+        "id": 134,
+        "category": "rate_limit",
+        "description": "Rate Limiting de Recuperação de Senha: Máximo de 3 requisições de recuperação de senha por e-mail em janela de 1 hora. Após atingir o limite, novas requisições devem ser bloqueadas com resposta 429.",
+        "enforcement": "code",
+        "verification": "Middleware de rate limiting rastreia requisições por e-mail; testes de segurança executam 4 requisições e verificam bloqueio na 4ª."
+      },
+      {
+        "id": 135,
+        "category": "compliance",
+        "description": "Conformidade com LGPD - Minimização de Dados: Dados pessoais de usuários (nome, e-mail) devem ser armazenados apenas quando necessário para operação do sistema. Senhas devem ser armazenadas exclusivamente em formato de hash, nunca em texto simples ou formato reversível.",
+        "enforcement": "code",
+        "verification": "Auditoria de código verifica que senhas nunca são armazenadas em texto simples; testes de segurança verificam que hash é irreversível."
+      },
+      {
+        "id": 136,
+        "category": "compliance",
+        "description": "Conformidade com LGPD - Proteção de Dados em Trânsito: Todas as comunicações contendo dados pessoais devem ser transmitidas exclusivamente por HTTPS com TLS 1.2 ou superior. Certificados devem ser válidos e verificados.",
+        "enforcement": "infra",
+        "verification": "Configuração de servidor HTTPS força TLS 1.2+; testes de segurança verificam que HTTP não é aceito e certificado é válido."
+      },
+      {
+        "id": 137,
+        "category": "observability",
+        "description": "Rastreabilidade de Autenticação: Toda tentativa de login (bem-sucedida ou falhada) deve ser registrada em log de auditoria com identificação do usuário, tenant, IP, timestamp e resultado. Logs devem ser imutáveis e retenção mínima de 90 dias.",
+        "enforcement": "code",
+        "verification": "Eventos user_authenticated e authentication_failed são emitidos para trilha de auditoria; testes verificam que logs contêm campos obrigatórios."
+      },
+      {
+        "id": 138,
+        "category": "observability",
+        "description": "Rastreabilidade de Recuperação de Senha: Toda solicitação de recuperação de senha e redefinição bem-sucedida deve ser registrada em log de auditoria com identificação do usuário, tenant, timestamp e resultado.",
+        "enforcement": "code",
+        "verification": "Eventos password_recovery_requested e password_reset_completed são emitidos; testes verificam que logs contêm campos obrigatórios."
+      },
+      {
+        "id": 139,
+        "category": "invariant",
+        "description": "Integridade de Sessão: Uma sessão ativa não pode ser compartilhada entre múltiplos usuários. Cada refresh token deve estar vinculado a exatamente um usuário e um tenant.",
+        "enforcement": "db_constraint",
+        "verification": "Índice único sobre refresh_token_hash na tabela sessions; testes verificam que dois usuários não podem usar o mesmo refresh token."
+      },
+      {
+        "id": 140,
+        "category": "invariant",
+        "description": "Expiração de Token de Recuperação: Token de recuperação de senha deve expirar automaticamente após 30 minutos. Tokens expirados devem ser rejeitados com mensagem de erro clara.",
+        "enforcement": "code",
+        "verification": "Validação de token verifica data_expiracao; testes de integração aguardam 31 minutos e verificam que token é rejeitado."
+      },
+      {
+        "id": 141,
+        "category": "invariant",
+        "description": "Invalidação de Token de Recuperação Anterior: Ao gerar novo token de recuperação para um usuário, qualquer token anterior ainda ativo deve ser invalidado. Apenas o token mais recente é válido.",
+        "enforcement": "code",
+        "verification": "Ao gerar novo token, marca tokens anteriores como revogados; testes verificam que token antigo é rejeitado após novo ser gerado."
+      },
+      {
+        "id": 142,
+        "category": "authorization",
+        "description": "Prevenção de Enumeração de Usuários: Endpoints de login e recuperação de senha devem retornar mensagens genéricas que não revelam se um e-mail existe ou não na base. Mensagens de erro não devem diferenciar entre 'e-mail não encontrado' e 'senha incorreta'.",
+        "enforcement": "code",
+        "verification": "Testes de segurança verificam que mensagens de erro são idênticas para e-mail inexistente e senha incorreta; testes verificam que recuperação retorna mensagem genérica."
+      },
+      {
+        "id": 143,
+        "category": "invariant",
+        "description": "Invalidação de Sessões ao Desativar Usuário: Quando um usuário é desativado por administrador, todas as suas sessões ativas devem ser revogadas imediatamente, impedindo o uso continuado da plataforma.",
+        "enforcement": "code",
+        "verification": "Ao desativar usuário, marca todas as sessões como revogadas; testes verificam que usuário desativado não consegue fazer requisições autenticadas."
+      },
+      {
+        "id": 144,
+        "category": "invariant",
+        "description": "Invalidação de Sessões ao Desativar Tenant: Quando um tenant é desativado, todas as sessões de usuários daquele tenant devem ser revogadas imediatamente.",
+        "enforcement": "code",
+        "verification": "Ao desativar tenant, marca todas as sessões do tenant como revogadas; testes verificam que usuários do tenant desativado não conseguem fazer requisições."
+      },
+      {
+        "id": 145,
+        "category": "invariant",
+        "description": "Invalidação de Sessões ao Redefinir Senha: Quando um usuário redefine sua senha, todas as suas sessões ativas devem ser revogadas, forçando novo login com a nova credencial.",
+        "enforcement": "code",
+        "verification": "Ao redefinir senha, marca todas as sessões como revogadas; testes verificam que usuário não consegue usar token antigo após redefinição."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "O Controle de Identidade e Acesso (IAM) é o componente central de segurança que gerencia autenticação de usuários, autorização baseada em perfil, gestão de sessões e tokens, isolamento de dados por tenant e conformidade com LGPD. Implementa validação de credenciais (e-mail e senha com hash argon2id), emissão de tokens JWT com expiração configurável, controle de acesso granular por perfil (colaborador, gestor, administrador de tenant, administrador de plataforma), rate limiting contra força bruta, e rastreabilidade completa de ações críticas. Integra-se com a camada de validação de entrada para sanitização de payloads, com a camada de criptografia para proteção de dados em trânsito e em repouso, e com a trilha de auditoria para conformidade regulatória. Serve como guardiã do acesso à plataforma, garantindo que apenas usuários autenticados e autorizados acessem funcionalidades e dados pertencentes ao seu tenant."
+    },
+    "definition": {
+      "emits": [
+        {
+          "id": 92,
+          "name": "user_authenticated",
+          "delivery": "at_least_once",
+          "description": "Emitido quando um usuário realiza login bem-sucedido, para auditoria e detecção de anomalias.",
+          "payload_shape": "{ user_id: uuid, email: string, tenant_id: uuid, ip_address: string, timestamp: timestamp }"
+        },
+        {
+          "id": 93,
+          "name": "authentication_failed",
+          "delivery": "at_least_once",
+          "description": "Emitido quando uma tentativa de login falha, para auditoria e detecção de força bruta.",
+          "payload_shape": "{ email: string, tenant_id: uuid, reason: enum[invalid_credentials|user_inactive|tenant_inactive|rate_limited], ip_address: string, timestamp: timestamp }"
+        },
+        {
+          "id": 94,
+          "name": "session_revoked",
+          "delivery": "at_least_once",
+          "description": "Emitido quando uma sessão é revogada, para auditoria e sincronização de estado.",
+          "payload_shape": "{ user_id: uuid, tenant_id: uuid, reason: enum[logout|user_deactivated|tenant_deactivated|token_expired], timestamp: timestamp }"
+        },
+        {
+          "id": 95,
+          "name": "password_recovery_requested",
+          "delivery": "at_least_once",
+          "description": "Emitido quando um usuário solicita recuperação de senha, para auditoria.",
+          "payload_shape": "{ email: string, tenant_id: uuid, ip_address: string, timestamp: timestamp }"
+        },
+        {
+          "id": 96,
+          "name": "password_reset_completed",
+          "delivery": "at_least_once",
+          "description": "Emitido quando uma redefinição de senha é concluída com sucesso, para auditoria e invalidação de sessões.",
+          "payload_shape": "{ user_id: uuid, email: string, tenant_id: uuid, timestamp: timestamp }"
+        }
+      ],
+      "params": [
+        {
+          "id": 36,
+          "name": "password_hash_algorithm",
+          "value": "argon2id"
+        },
+        {
+          "id": 37,
+          "name": "password_hash_memory_mib",
+          "value": "64"
+        },
+        {
+          "id": 38,
+          "name": "password_hash_time_cost",
+          "value": "3"
+        },
+        {
+          "id": 39,
+          "name": "password_hash_parallelism",
+          "value": "4"
+        },
+        {
+          "id": 40,
+          "name": "access_token_ttl_seconds",
+          "value": "3600"
+        },
+        {
+          "id": 41,
+          "name": "refresh_token_ttl_days",
+          "value": "7"
+        },
+        {
+          "id": 42,
+          "name": "password_recovery_token_ttl_minutes",
+          "value": "30"
+        },
+        {
+          "id": 43,
+          "name": "login_rate_limit_max_attempts",
+          "value": "5"
+        },
+        {
+          "id": 44,
+          "name": "login_rate_limit_window_minutes",
+          "value": "15"
+        },
+        {
+          "id": 45,
+          "name": "password_recovery_rate_limit_per_hour",
+          "value": "3"
+        },
+        {
+          "id": 46,
+          "name": "jwt_algorithm",
+          "value": "RS256"
+        },
+        {
+          "id": 47,
+          "name": "jwt_issuer",
+          "value": "plataforma-tarefas"
+        },
+        {
+          "id": 48,
+          "name": "jwt_audience",
+          "value": "plataforma-tarefas-api"
+        },
+        {
+          "id": 49,
+          "name": "password_min_length",
+          "value": "8"
+        },
+        {
+          "id": 50,
+          "name": "password_requires_uppercase",
+          "value": "true"
+        },
+        {
+          "id": 51,
+          "name": "password_requires_lowercase",
+          "value": "true"
+        },
+        {
+          "id": 52,
+          "name": "password_requires_number",
+          "value": "true"
+        },
+        {
+          "id": 53,
+          "name": "tls_min_version",
+          "value": "1.2"
+        },
+        {
+          "id": 54,
+          "name": "hsts_max_age_seconds",
+          "value": "31536000"
+        }
+      ],
+      "tokens": {
+        "access_jwt": {
+          "id": 22,
+          "claims": [
+            {
+              "id": 23,
+              "name": "sub",
+              "value": "user_id (uuid)"
+            },
+            {
+              "id": 24,
+              "name": "email",
+              "value": "user_email (string)"
+            },
+            {
+              "id": 25,
+              "name": "tenant_id",
+              "value": "tenant_id (uuid)"
+            },
+            {
+              "id": 26,
+              "name": "nivel_hierarquico_id",
+              "value": "nivel_hierarquico_id (uuid)"
+            },
+            {
+              "id": 27,
+              "name": "iat",
+              "value": "issued_at_timestamp (integer)"
+            },
+            {
+              "id": 28,
+              "name": "exp",
+              "value": "expiration_timestamp (integer, iat + 3600)"
+            }
+          ],
+          "algorithm": "RS256",
+          "ttl_seconds": 3600,
+          "scope_values": [
+            {
+              "id": 29,
+              "scope": "tasks:read"
+            },
+            {
+              "id": 30,
+              "scope": "tasks:write"
+            },
+            {
+              "id": 31,
+              "scope": "users:read"
+            },
+            {
+              "id": 32,
+              "scope": "users:write"
+            },
+            {
+              "id": 33,
+              "scope": "tenants:read"
+            },
+            {
+              "id": 34,
+              "scope": "tenants:write"
+            }
+          ]
+        },
+        "refresh_token": {
+          "id": 35,
+          "ttl": 604800,
+          "storage": "session_storage table com coluna refresh_token_hash",
+          "strategy": "opaque_token_stored_server_side"
+        }
+      },
+      "endpoints": [
+        {
+          "id": 2,
+          "auth": "none",
+          "path": "/api/auth/login",
+          "method": "POST",
+          "responses": [
+            {
+              "id": 3,
+              "body": "{ access_token: string, refresh_token: string, user: { id: uuid, email: string, tenant_id: uuid, nivel_hierarquico_id: uuid, status: enum[ativo|inativo] }, tenant: { id: uuid, slug: string, status: enum[ativo|inativo] } }",
+              "status_code": 200
+            },
+            {
+              "id": 4,
+              "body": "{ error: string }",
+              "status_code": 401
+            },
+            {
+              "id": 5,
+              "body": "{ error: string, retry_after_seconds: integer }",
+              "status_code": 429
+            }
+          ],
+          "description": "Autentica um usuário com e-mail e senha, validando credenciais contra o tenant identificado pelo e-mail, retornando tokens de sessão e dados do usuário autenticado. Implementa rate limiting após 5 tentativas falhadas em 15 minutos por IP.",
+          "request_body": "{ email: string, password: string }"
+        },
+        {
+          "id": 6,
+          "auth": "bearer",
+          "path": "/api/auth/logout",
+          "method": "POST",
+          "responses": [
+            {
+              "id": 7,
+              "body": "{ message: string }",
+              "status_code": 200
+            },
+            {
+              "id": 8,
+              "body": "{ error: string }",
+              "status_code": 401
+            }
+          ],
+          "description": "Encerra a sessão autenticada do usuário, invalidando o token de acesso e refresh token ativos."
+        },
+        {
+          "id": 9,
+          "auth": "none",
+          "path": "/api/auth/refresh",
+          "method": "POST",
+          "responses": [
+            {
+              "id": 10,
+              "body": "{ access_token: string, refresh_token: string }",
+              "status_code": 200
+            },
+            {
+              "id": 11,
+              "body": "{ error: string }",
+              "status_code": 401
+            }
+          ],
+          "description": "Renova o token de acesso expirado utilizando um refresh token válido, emitindo novo par de tokens.",
+          "request_body": "{ refresh_token: string }"
+        },
+        {
+          "id": 12,
+          "auth": "none",
+          "path": "/api/auth/password-recovery",
+          "method": "POST",
+          "responses": [
+            {
+              "id": 13,
+              "body": "{ message: string }",
+              "status_code": 200
+            },
+            {
+              "id": 14,
+              "body": "{ error: string, retry_after_seconds: integer }",
+              "status_code": 429
+            }
+          ],
+          "description": "Inicia fluxo de recuperação de senha gerando token único e enviando link de redefinição por e-mail. Retorna mensagem genérica independentemente de o e-mail existir (prevenção de enumeração). Implementa rate limiting de 3 requisições por hora por e-mail.",
+          "request_body": "{ email: string }"
+        },
+        {
+          "id": 15,
+          "auth": "none",
+          "path": "/api/auth/password-recovery/reset",
+          "method": "POST",
+          "responses": [
+            {
+              "id": 16,
+              "body": "{ message: string }",
+              "status_code": 200
+            },
+            {
+              "id": 17,
+              "body": "{ error: string }",
+              "status_code": 400
+            },
+            {
+              "id": 18,
+              "body": "{ error: string }",
+              "status_code": 401
+            }
+          ],
+          "description": "Conclui fluxo de recuperação de senha validando token, redefinindo senha com hash seguro e invalidando todas as sessões ativas do usuário. Valida complexidade mínima de senha (8 caracteres, incluindo maiúscula, minúscula, número).",
+          "request_body": "{ token: string, new_password: string, password_confirmation: string }"
+        },
+        {
+          "id": 19,
+          "auth": "bearer",
+          "path": "/api/auth/me",
+          "method": "GET",
+          "responses": [
+            {
+              "id": 20,
+              "body": "{ user: { id: uuid, email: string, nome_completo: string, tenant_id: uuid, nivel_hierarquico_id: uuid, status: enum[ativo|inativo] }, tenant: { id: uuid, slug: string, status: enum[ativo|inativo] }, permissions: string[] }",
+              "status_code": 200
+            },
+            {
+              "id": 21,
+              "body": "{ error: string }",
+              "status_code": 401
+            }
+          ],
+          "description": "Retorna dados do usuário autenticado, tenant e conjunto de permissões resolvidas conforme seu perfil."
+        }
+      ],
+      "state_machine": {
+        "states": [
+          {
+            "id": 55,
+            "name": "unauthenticated",
+            "description": "Usuário não autenticado, sem token de sessão válido."
+          },
+          {
+            "id": 56,
+            "name": "authenticating",
+            "description": "Processo de autenticação em andamento, credenciais sendo validadas."
+          },
+          {
+            "id": 57,
+            "name": "authenticated",
+            "description": "Usuário autenticado com token de acesso válido e tenant resolvido."
+          },
+          {
+            "id": 58,
+            "name": "token_expired",
+            "description": "Token de acesso expirado, refresh token ainda válido."
+          },
+          {
+            "id": 59,
+            "name": "session_revoked",
+            "description": "Sessão revogada por logout explícito ou desativação de usuário/tenant."
+          },
+          {
+            "id": 60,
+            "name": "password_recovery_pending",
+            "description": "Fluxo de recuperação de senha iniciado, aguardando redefinição via link."
+          }
+        ],
+        "transitions": [
+          {
+            "id": 61,
+            "to": "authenticating",
+            "from": "unauthenticated",
+            "trigger": "POST /api/auth/login com credenciais válidas"
+          },
+          {
+            "id": 62,
+            "to": "authenticated",
+            "from": "authenticating",
+            "trigger": "Validação de credenciais bem-sucedida, tokens emitidos"
+          },
+          {
+            "id": 63,
+            "to": "unauthenticated",
+            "from": "authenticating",
+            "trigger": "Validação de credenciais falhou ou tenant inativo"
+          },
+          {
+            "id": 64,
+            "to": "token_expired",
+            "from": "authenticated",
+            "trigger": "Access token expirou (3600 segundos)"
+          },
+          {
+            "id": 65,
+            "to": "authenticated",
+            "from": "token_expired",
+            "trigger": "POST /api/auth/refresh com refresh token válido"
+          },
+          {
+            "id": 66,
+            "to": "unauthenticated",
+            "from": "token_expired",
+            "trigger": "Refresh token expirou ou inválido"
+          },
+          {
+            "id": 67,
+            "to": "session_revoked",
+            "from": "authenticated",
+            "trigger": "POST /api/auth/logout ou desativação de usuário/tenant"
+          },
+          {
+            "id": 68,
+            "to": "unauthenticated",
+            "from": "session_revoked",
+            "trigger": "Sessão revogada, redirecionamento para login"
+          },
+          {
+            "id": 69,
+            "to": "password_recovery_pending",
+            "from": "unauthenticated",
+            "trigger": "POST /api/auth/password-recovery com e-mail válido"
+          },
+          {
+            "id": 70,
+            "to": "unauthenticated",
+            "from": "password_recovery_pending",
+            "trigger": "POST /api/auth/password-recovery/reset com token válido e nova senha"
+          },
+          {
+            "id": 71,
+            "to": "unauthenticated",
+            "from": "password_recovery_pending",
+            "trigger": "Token de recuperação expirou (30 minutos)"
+          }
+        ]
+      },
+      "session_storage": {
+        "id": 72,
+        "table": "sessions",
+        "columns": [
+          {
+            "id": 73,
+            "name": "id",
+            "type": "uuid",
+            "nullable": false,
+            "description": "Identificador único da sessão.",
+            "primary_key": true
+          },
+          {
+            "id": 74,
+            "name": "user_id",
+            "type": "uuid",
+            "nullable": false,
+            "description": "Referência ao usuário proprietário da sessão."
+          },
+          {
+            "id": 75,
+            "name": "tenant_id",
+            "type": "uuid",
+            "nullable": false,
+            "description": "Referência ao tenant da sessão, garantindo isolamento."
+          },
+          {
+            "id": 76,
+            "name": "refresh_token_hash",
+            "type": "string",
+            "nullable": false,
+            "description": "Hash SHA-256 do refresh token (nunca armazenar em texto simples)."
+          },
+          {
+            "id": 77,
+            "name": "access_token_jti",
+            "type": "string",
+            "nullable": true,
+            "description": "JTI (JWT ID) do access token para rastreamento e revogação."
+          },
+          {
+            "id": 78,
+            "name": "ip_address",
+            "type": "string",
+            "nullable": true,
+            "description": "Endereço IP da requisição de login para auditoria e detecção de fraude."
+          },
+          {
+            "id": 79,
+            "name": "user_agent",
+            "type": "string",
+            "nullable": true,
+            "description": "User-Agent do navegador/cliente para auditoria."
+          },
+          {
+            "id": 80,
+            "name": "data_criacao",
+            "type": "timestamp",
+            "nullable": false,
+            "description": "Data e hora de criação da sessão (login)."
+          },
+          {
+            "id": 81,
+            "name": "data_expiracao",
+            "type": "timestamp",
+            "nullable": false,
+            "description": "Data e hora de expiração do refresh token (data_criacao + 7 dias)."
+          },
+          {
+            "id": 82,
+            "name": "data_revogacao",
+            "type": "timestamp",
+            "nullable": true,
+            "description": "Data e hora de revogação da sessão (logout ou desativação); null se ativa."
+          },
+          {
+            "id": 83,
+            "name": "motivo_revogacao",
+            "type": "string",
+            "nullable": true,
+            "description": "Motivo da revogação (logout, desativação de usuário, desativação de tenant, etc.)."
+          }
+        ],
+        "indexes": [
+          {
+            "id": 84,
+            "name": "idx_sessions_user_tenant",
+            "unique": false,
+            "columns": [
+              {
+                "id": 85,
+                "column_name": "user_id"
+              },
+              {
+                "id": 86,
+                "column_name": "tenant_id"
+              }
+            ],
+            "description": "Índice composto para otimizar buscas de sessões ativas de um usuário em um tenant."
+          },
+          {
+            "id": 87,
+            "name": "idx_sessions_data_expiracao",
+            "unique": false,
+            "columns": [
+              {
+                "id": 88,
+                "column_name": "data_expiracao"
+              }
+            ],
+            "description": "Índice para otimizar limpeza de sessões expiradas (job de manutenção)."
+          },
+          {
+            "id": 89,
+            "name": "idx_sessions_refresh_token_hash",
+            "unique": true,
+            "columns": [
+              {
+                "id": 90,
+                "column_name": "refresh_token_hash"
+              }
+            ],
+            "description": "Índice único para validação rápida de refresh tokens durante renovação."
+          }
+        ]
+      },
+      "auth_context_type": {
+        "id": 91,
+        "name": "AuthContext",
+        "shape": "{ user_id: uuid, email: string, tenant_id: uuid, nivel_hierarquico_id: uuid, status: enum[ativo|inativo], perfil: enum[colaborador|gestor|administrador_tenant|administrador_plataforma], permissions: string[], authenticated_at: timestamp, token_expires_at: timestamp }"
+      }
+    },
+    "pendencies": [
+      {
+        "id": 186,
+        "section": "definition",
+        "description": "Definição de Perfis de Usuário: O asset_definition não especifica explicitamente como os perfis de usuário (colaborador, gestor, administrador_tenant, administrador_plataforma) são armazenados e resolvidos. Atualmente, assume-se que perfil é derivado de nível_hierarquico_id ou de uma coluna separada na tabela usuarios, mas a estrutura exata não está clara.",
+        "resolutionOptions": [
+          {
+            "id": 187,
+            "text": "Adicionar coluna 'perfil' enum[colaborador|gestor|administrador_tenant|administrador_plataforma] na tabela usuarios, com índice para otimizar consultas de autorização."
+          },
+          {
+            "id": 188,
+            "text": "Criar tabela separada 'user_roles' com relacionamento many-to-many entre usuarios e roles, permitindo que um usuário tenha múltiplos perfis."
+          },
+          {
+            "id": 189,
+            "text": "Derivar perfil dinamicamente a partir de nível_hierarquico_id e configuração de tenant, sem armazenar perfil explicitamente (abordagem mais flexível mas mais complexa)."
+          }
+        ],
+        "recommendedOptionId": 187
+      },
+      {
+        "id": 190,
+        "section": "definition",
+        "description": "Integração com Serviço de E-mail: O asset_definition menciona que e-mails de recuperação de senha são enfileirados para envio, mas não especifica a integração exata com ASSET-37 (Worker de Envio de E-mail). Detalhes como formato de mensagem, template de e-mail, retry policy não estão definidos.",
+        "resolutionOptions": [
+          {
+            "id": 191,
+            "text": "Definir contrato de fila de mensagens (RabbitMQ, SQS, etc.) que ASSET-028 publica e ASSET-37 consome, incluindo schema de payload e retry policy."
+          },
+          {
+            "id": 192,
+            "text": "Documentar template de e-mail de recuperação de senha (HTML, variáveis, branding) e política de retry (máximo 3 tentativas, backoff exponencial)."
+          }
+        ],
+        "recommendedOptionId": 191
+      },
+      {
+        "id": 193,
+        "section": "flow",
+        "description": "Fluxo de Resolução de Variante de Permissão: O flow menciona 'Resolução de Variante de Permissão' (step 119) que consulta ASSET-60, mas o fluxo exato de como permissões são aplicadas a endpoints e campos de formulário não está detalhado. Não está claro se a resolução ocorre no middleware de autenticação ou em cada endpoint.",
+        "resolutionOptions": [
+          {
+            "id": 194,
+            "text": "Resolver variante de permissão no middleware de autenticação (após validação de token), armazenar no contexto de requisição, e usar em cada endpoint para validar acesso."
+          },
+          {
+            "id": 195,
+            "text": "Resolver variante de permissão em cada endpoint individualmente, consultando ASSET-60 dinamicamente (mais flexível mas menos eficiente)."
+          }
+        ],
+        "recommendedOptionId": 194
+      },
+      {
+        "id": 196,
+        "section": "rules",
+        "description": "Política de Retenção de Logs de Auditoria: A regra 137 menciona retenção mínima de 90 dias para logs de autenticação, mas não especifica como logs antigos são arquivados ou deletados. Não está claro se há conformidade com LGPD para direito ao esquecimento.",
+        "resolutionOptions": [
+          {
+            "id": 197,
+            "text": "Implementar job de arquivamento que move logs com > 90 dias para storage de longo prazo (S3, etc.) e deleta logs com > 1 ano."
+          },
+          {
+            "id": 198,
+            "text": "Implementar mecanismo de anonimização de logs antigos (remover IP, user-agent) após 90 dias, mantendo apenas timestamp e resultado da operação."
+          },
+          {
+            "id": 199,
+            "text": "Implementar direito ao esquecimento (LGPD) permitindo que usuários solicitem deleção de seus logs de autenticação após período de retenção."
+          }
+        ],
+        "recommendedOptionId": 197
+      },
+      {
+        "id": 200,
+        "section": "non_functional_requirements",
+        "description": "Estratégia de Cache de Permissões: O asset não especifica se permissões resolvidas (ASSET-60) são cacheadas ou consultadas a cada requisição. Caching poderia melhorar performance mas complica invalidação quando permissões mudam.",
+        "resolutionOptions": [
+          {
+            "id": 201,
+            "text": "Cachear permissões em memória (Redis) com TTL de 5 minutos; invalidar cache quando usuário é desativado ou perfil muda."
+          },
+          {
+            "id": 202,
+            "text": "Não cachear permissões; resolver a cada requisição consultando ASSET-60 (mais simples, menos performance)."
+          },
+          {
+            "id": 203,
+            "text": "Cachear permissões no JWT como claim adicional; renovar ao fazer refresh (trade-off entre performance e complexidade)."
+          }
+        ],
+        "recommendedOptionId": 201
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 159,
+        "then": "Validação retorna true; entrada de 'usuario@invalid' retorna false",
+        "type": "unit",
+        "when": "Entrada de e-mail 'usuario@example.com' é validada",
+        "given": "Um validador de e-mail com padrão regex RFC 5322 simplificado",
+        "scenario": "Validação de Formato de E-mail",
+        "target_section": "definition"
+      },
+      {
+        "id": 160,
+        "then": "Validação retorna true; entrada de 'senha123' (sem maiúscula) retorna false",
+        "type": "unit",
+        "when": "Entrada de senha 'Senha123' é validada",
+        "given": "Um validador de senha com regras: mín. 8 caracteres, maiúscula, minúscula, número",
+        "scenario": "Validação de Complexidade de Senha",
+        "target_section": "definition"
+      },
+      {
+        "id": 161,
+        "then": "Hash é gerado com salt aleatório; mesmo hash nunca é gerado duas vezes; hash não pode ser revertido para senha original",
+        "type": "unit",
+        "when": "Senha 'Senha123' é hasheada",
+        "given": "Um hasher de senha usando argon2id com m=64MiB, t=3, p=4",
+        "scenario": "Hash de Senha com Argon2id",
+        "target_section": "definition"
+      },
+      {
+        "id": 162,
+        "then": "Resposta 200 com access_token, refresh_token, user e tenant; sessão é criada na tabela sessions; evento user_authenticated é emitido",
+        "type": "integration",
+        "when": "POST /api/auth/login é chamado com email='usuario@example.com' e password='Senha123'",
+        "given": "Um usuário 'usuario@example.com' cadastrado no tenant 'acme' com senha 'Senha123' (hasheada)",
+        "scenario": "Login Bem-Sucedido com Credenciais Válidas",
+        "target_section": "flow"
+      },
+      {
+        "id": 163,
+        "then": "Resposta 401 com mensagem genérica 'Credenciais inválidas'; evento authentication_failed é emitido; tentativa é contabilizada para rate limiting",
+        "type": "integration",
+        "when": "POST /api/auth/login é chamado com email='usuario@example.com' e password='SenhaErrada'",
+        "given": "Um usuário 'usuario@example.com' cadastrado com senha 'Senha123'",
+        "scenario": "Login Falha com Senha Incorreta",
+        "target_section": "flow"
+      },
+      {
+        "id": 164,
+        "then": "Resposta 429 Too Many Requests com retry_after_seconds=900; requisição é rejeitada sem validar credenciais",
+        "type": "integration",
+        "when": "POST /api/auth/login é chamado pela 6ª vez do mesmo IP",
+        "given": "Um usuário que já falhou 5 tentativas de login no IP 192.168.1.1 nos últimos 15 minutos",
+        "scenario": "Login Bloqueado por Rate Limiting",
+        "target_section": "rules"
+      },
+      {
+        "id": 165,
+        "then": "Resposta 200; sessão é marcada como revogada na tabela sessions; requisições subsequentes com mesmo token retornam 401",
+        "type": "integration",
+        "when": "POST /api/auth/logout é chamado com token no header Authorization",
+        "given": "Um usuário autenticado com access_token válido",
+        "scenario": "Logout Revoga Sessão",
+        "target_section": "flow"
+      },
+      {
+        "id": 166,
+        "then": "Resposta 200 com novo access_token e novo refresh_token; sessão é atualizada na tabela sessions",
+        "type": "integration",
+        "when": "POST /api/auth/refresh é chamado com refresh_token",
+        "given": "Um usuário com refresh_token válido (não expirado)",
+        "scenario": "Refresh Token Renova Access Token",
+        "target_section": "flow"
+      },
+      {
+        "id": 167,
+        "then": "Resposta 401 com mensagem 'Token inválido ou expirado'; usuário deve fazer login novamente",
+        "type": "integration",
+        "when": "POST /api/auth/refresh é chamado com refresh_token expirado",
+        "given": "Um usuário com refresh_token expirado (> 7 dias)",
+        "scenario": "Refresh Token Expirado é Rejeitado",
+        "target_section": "flow"
+      },
+      {
+        "id": 168,
+        "then": "Resposta 200 com mensagem genérica; token de recuperação é gerado e armazenado (hash); e-mail é enfileirado para envio com link contendo token",
+        "type": "integration",
+        "when": "POST /api/auth/password-recovery é chamado com email='usuario@example.com'",
+        "given": "Um usuário 'usuario@example.com' cadastrado no tenant 'acme'",
+        "scenario": "Recuperação de Senha Envia E-mail",
+        "target_section": "flow"
+      },
+      {
+        "id": 169,
+        "then": "Resposta 200 com mensagem genérica idêntica ao caso de sucesso; nenhum e-mail é enviado; nenhuma informação revela que e-mail não existe",
+        "type": "integration",
+        "when": "POST /api/auth/password-recovery é chamado com email='inexistente@example.com'",
+        "given": "Um e-mail 'inexistente@example.com' que não existe em nenhum tenant",
+        "scenario": "Recuperação de Senha com E-mail Inexistente Retorna Mensagem Genérica",
+        "target_section": "rules"
+      },
+      {
+        "id": 170,
+        "then": "Resposta 200; nova senha é hasheada e persistida; token é invalidado; todas as sessões ativas do usuário são revogadas; evento password_reset_completed é emitido",
+        "type": "integration",
+        "when": "POST /api/auth/password-recovery/reset é chamado com token, new_password='NovaSenha123', password_confirmation='NovaSenha123'",
+        "given": "Um token de recuperação válido (não expirado) gerado para usuário 'usuario@example.com'",
+        "scenario": "Redefinição de Senha com Token Válido",
+        "target_section": "flow"
+      },
+      {
+        "id": 171,
+        "then": "Resposta 401 com mensagem 'Link de recuperação expirado'; usuário deve solicitar novo link",
+        "type": "integration",
+        "when": "POST /api/auth/password-recovery/reset é chamado com token expirado",
+        "given": "Um token de recuperação expirado (> 30 minutos)",
+        "scenario": "Redefinição de Senha com Token Expirado",
+        "target_section": "flow"
+      },
+      {
+        "id": 172,
+        "then": "Resposta 400 com mensagem 'Senhas não correspondem'; senha não é alterada",
+        "type": "integration",
+        "when": "POST /api/auth/password-recovery/reset é chamado com new_password='NovaSenha123' e password_confirmation='OutraSenha123'",
+        "given": "Um token de recuperação válido",
+        "scenario": "Redefinição de Senha com Senhas Não Correspondentes",
+        "target_section": "rules"
+      },
+      {
+        "id": 173,
+        "then": "Resposta 400 com mensagem descrevendo critérios não atendidos; senha não é alterada",
+        "type": "integration",
+        "when": "POST /api/auth/password-recovery/reset é chamado com new_password='senha' (sem maiúscula, número)",
+        "given": "Um token de recuperação válido",
+        "scenario": "Redefinição de Senha com Senha Fraca",
+        "target_section": "rules"
+      },
+      {
+        "id": 174,
+        "then": "Sistema identifica tenant pelo e-mail; login retorna dados do tenant correto; usuário não consegue acessar dados do outro tenant",
+        "type": "integration",
+        "when": "POST /api/auth/login é chamado com email='usuario@example.com' (sem especificar tenant)",
+        "given": "Dois tenants 'acme' e 'globex' com usuários 'usuario@example.com' em cada um",
+        "scenario": "Isolamento de Tenant em Login",
+        "target_section": "rules"
+      },
+      {
+        "id": 175,
+        "then": "Resposta 200 com dados do usuário autenticado; assinatura RS256 é validada; claims (sub, tenant_id, exp) são verificados",
+        "type": "integration",
+        "when": "GET /api/auth/me é chamado com header Authorization: Bearer <token>",
+        "given": "Um access_token válido emitido para usuário do tenant 'acme'",
+        "scenario": "Validação de Token JWT em Requisição Autenticada",
+        "target_section": "flow"
+      },
+      {
+        "id": 176,
+        "then": "Resposta 401 com mensagem 'Token inválido'; requisição é rejeitada",
+        "type": "integration",
+        "when": "GET /api/auth/me é chamado com token inválido",
+        "given": "Um token JWT com assinatura inválida ou claims ausentes",
+        "scenario": "Rejeição de Token JWT Inválido",
+        "target_section": "rules"
+      },
+      {
+        "id": 177,
+        "then": "Sessão é marcada como revogada; requisições subsequentes com token antigo retornam 401; evento session_revoked é emitido",
+        "type": "integration",
+        "when": "Administrador do tenant desativa o usuário via PUT /api/users/{id} com status='inativo'",
+        "given": "Um usuário 'usuario@example.com' com sessão ativa (access_token válido)",
+        "scenario": "Invalidação de Sessões ao Desativar Usuário",
+        "target_section": "rules"
+      },
+      {
+        "id": 178,
+        "then": "Todas as sessões do tenant são marcadas como revogadas; requisições subsequentes retornam 401; evento session_revoked é emitido para cada sessão",
+        "type": "integration",
+        "when": "Administrador da plataforma desativa o tenant via PATCH /api/tenants/{id} com status='inativo'",
+        "given": "Múltiplos usuários do tenant 'acme' com sessões ativas",
+        "scenario": "Invalidação de Sessões ao Desativar Tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 179,
+        "then": "Payload é sanitizado; consulta ao banco de dados usa prepared statements; nenhuma injeção SQL é executada; resposta 401 é retornada",
+        "type": "security",
+        "when": "E-mail contém payload de injeção SQL: 'usuario@example.com' OR '1'='1'",
+        "given": "Um endpoint POST /api/auth/login com entrada de e-mail",
+        "scenario": "Proteção contra Injeção SQL em Login",
+        "target_section": "definition"
+      },
+      {
+        "id": 180,
+        "then": "Nome é escapado em HTML; script não é executado no navegador; resposta contém nome escapado como string literal",
+        "type": "security",
+        "when": "GET /api/auth/me retorna dados do usuário",
+        "given": "Um usuário com nome contendo script: '<script>alert(1)</script>'",
+        "scenario": "Proteção contra XSS em Exibição de Nome de Usuário",
+        "target_section": "definition"
+      },
+      {
+        "id": 181,
+        "then": "Requisição é rejeitada com erro 403; CSRF token é validado; logout não é executado",
+        "type": "security",
+        "when": "Site malicioso tenta fazer POST /api/auth/logout sem CSRF token",
+        "given": "Um usuário autenticado em site malicioso que tenta fazer logout",
+        "scenario": "Proteção contra CSRF em Logout",
+        "target_section": "definition"
+      },
+      {
+        "id": 182,
+        "then": "p99 de latência é <= 200ms; p95 é <= 150ms; taxa de erro é < 0.1%",
+        "type": "performance",
+        "when": "Teste de carga executa 5.000 requisições POST /api/auth/login em paralelo",
+        "given": "5.000 usuários simultâneos tentando fazer login",
+        "scenario": "Latência de Login sob Carga",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 183,
+        "then": "p99 de latência é <= 50ms; p95 é <= 30ms; taxa de erro é < 0.1%",
+        "type": "performance",
+        "when": "Teste de carga executa 5.000 requisições GET /api/auth/me em paralelo",
+        "given": "5.000 usuários com tokens válidos fazendo requisições autenticadas",
+        "scenario": "Latência de Validação de Token",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 184,
+        "then": "Resposta contém campos obrigatórios: access_token (string), refresh_token (string), user (object com id, email, tenant_id), tenant (object com id, slug, status)",
+        "type": "contract",
+        "when": "Resposta 200 é retornada",
+        "given": "Especificação de contrato para POST /api/auth/login",
+        "scenario": "Contrato de Resposta de Login",
+        "target_section": "definition"
+      },
+      {
+        "id": 185,
+        "then": "Resposta contém campo error (string) com mensagem genérica; não contém informações que revelam se e-mail ou senha está incorreto",
+        "type": "contract",
+        "when": "Resposta 401 é retornada",
+        "given": "Especificação de contrato para POST /api/auth/login com credenciais inválidas",
+        "scenario": "Contrato de Resposta de Erro de Login",
+        "target_section": "definition"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 146,
+        "target": "p99 <= 200ms para POST /api/auth/login, mesmo sob carga de 5.000 usuários ativos simultâneos",
+        "category": "performance",
+        "requirement": "Latência de Autenticação",
+        "verification": "Testes de carga com k6 ou JMeter simulam 5.000 usuários simultâneos e medem latência p99 de login."
+      },
+      {
+        "id": 147,
+        "target": "p99 <= 50ms para validação de token JWT em requisições autenticadas",
+        "category": "performance",
+        "requirement": "Latência de Validação de Token",
+        "verification": "Testes de carga medem latência de middleware de autenticação em requisições subsequentes."
+      },
+      {
+        "id": 148,
+        "target": "p99 <= 300ms para POST /api/auth/password-recovery (incluindo enfileiramento de e-mail)",
+        "category": "performance",
+        "requirement": "Latência de Recuperação de Senha",
+        "verification": "Testes de carga medem latência de requisição de recuperação de senha."
+      },
+      {
+        "id": 149,
+        "target": "Arquitetura deve suportar crescimento de 5.000 para 50.000 usuários sem reestruturação significativa de banco de dados ou índices",
+        "category": "scalability",
+        "requirement": "Suporte a Crescimento de Usuários",
+        "verification": "Análise de índices e plano de execução de queries; testes de carga com 50.000 usuários simulados."
+      },
+      {
+        "id": 150,
+        "target": "Rate limiting de 5 tentativas falhadas em 15 minutos por IP; bloqueio de 15 minutos após limite atingido",
+        "category": "security",
+        "requirement": "Resistência a Força Bruta",
+        "verification": "Testes de segurança executam 6 tentativas falhadas e verificam bloqueio na 6ª; verificam que bloqueio expira após 15 minutos."
+      },
+      {
+        "id": 151,
+        "target": "Argon2id com m=64MiB, t=3, p=4; resistência mínima de 2^128 operações para quebra de hash",
+        "category": "security",
+        "requirement": "Força de Hash de Senha",
+        "verification": "Auditoria de código verifica parâmetros de argon2id; testes de segurança verificam que hash não pode ser quebrado em tempo razoável."
+      },
+      {
+        "id": 152,
+        "target": "RS256 com chaves de 2048 bits; expiração de access token em 3600 segundos; refresh token com TTL de 7 dias",
+        "category": "security",
+        "requirement": "Segurança de Token JWT",
+        "verification": "Auditoria de código verifica algoritmo e tamanho de chave; testes verificam expiração de tokens."
+      },
+      {
+        "id": 153,
+        "target": "HTTPS com TLS 1.2 ou superior; certificado válido; HSTS com max-age de 31536000 segundos",
+        "category": "security",
+        "requirement": "Criptografia em Trânsito",
+        "verification": "Testes de segurança verificam que HTTP é redirecionado para HTTPS; verificam certificado válido; verificam header HSTS."
+      },
+      {
+        "id": 154,
+        "target": "Serviço de autenticação deve estar disponível 99.9% do tempo (máximo 43 minutos de downtime por mês)",
+        "category": "availability",
+        "requirement": "Disponibilidade de Autenticação",
+        "verification": "Monitoramento contínuo de disponibilidade; alertas para indisponibilidade; SLA de 99.9% em contrato."
+      },
+      {
+        "id": 155,
+        "target": "Falha de conexão com banco de dados deve ser detectada em <= 5 segundos; requisições devem ser rejeitadas com erro 503 Service Unavailable",
+        "category": "availability",
+        "requirement": "Recuperação de Falhas de Banco de Dados",
+        "verification": "Testes de resiliência desligam banco de dados e verificam que erro 503 é retornado em <= 5 segundos."
+      },
+      {
+        "id": 156,
+        "target": "Todos os eventos de autenticação devem ser registrados em formato JSON estruturado com campos: timestamp, user_id, tenant_id, event_type, ip_address, result",
+        "category": "observability",
+        "requirement": "Logs de Auditoria Estruturados",
+        "verification": "Testes verificam que logs contêm todos os campos obrigatórios em formato JSON válido."
+      },
+      {
+        "id": 157,
+        "target": "Cada requisição deve carregar trace_id único; logs e métricas devem ser correlacionados por trace_id para facilitar debugging",
+        "category": "observability",
+        "requirement": "Rastreamento Distribuído",
+        "verification": "Testes verificam que trace_id é propagado em logs e métricas; ferramentas de observabilidade conseguem correlacionar eventos por trace_id."
+      },
+      {
+        "id": 158,
+        "target": "Sessões expiradas devem ser limpas automaticamente; retenção máxima de 7 dias (TTL de refresh token)",
+        "category": "cost",
+        "requirement": "Otimização de Armazenamento de Sessões",
+        "verification": "Job de manutenção executa limpeza de sessões expiradas; testes verificam que sessões antigas são removidas."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 7,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T01:35:29.751Z",
+  "updatedAt": null
+}

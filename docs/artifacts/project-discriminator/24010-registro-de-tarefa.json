@@ -1,0 +1,134 @@
+{
+  "id": 24010,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 32,
+        "name": "Duplicação e Baixo Reúso",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem a chave única, cada requisição seria tratada como nova, e a aplicação teria que reprocessar toda a sequência de chamadas para evitar duplicatas.",
+        "confidence": 0.8724,
+        "context_element_id": 2840
+      }
+    ],
+    "attributes": [
+      {
+        "id": 18,
+        "name": "Critério ou dimensão que determina qual variante deve ser ativada",
+        "value": [
+          "tenant-id"
+        ],
+        "method": "user-input",
+        "reasoning": "O requisito de seleção do responsável é validado com base no tenant_id correspondente do usuário ativo.",
+        "confidence": 0.7382,
+        "context_element_id": 2687
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 33,
+        "name": "Configurar filas de prioridade para processar eventos críticos primeiro, estabelecendo políticas de priorização baseadas em SLA",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Prioridade 'crítica' é aplicada acima de 'urgente', e destaque visual é aplicado a 'urgente'. Sem essa configuração, a prioridade seria confundida com a ordem de processamento.",
+        "confidence": 0.8335,
+        "context_element_id": 2861
+      },
+      {
+        "id": 34,
+        "name": "Configurar o escalonamento de recursos com políticas FIFO, de prioridade ou baseadas em deadline conforme a criticidade das operações",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Prioridade é definida no momento da criação, e a ordem é configurada com base nessa prioridade, sem que a prioridade mudasse depois.",
+        "confidence": 0.7562,
+        "context_element_id": 2870
+      },
+      {
+        "id": 38,
+        "name": "Implementar identificação única de atores com sistemas de identidade centralizados e gerenciamento unificado de credenciais",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Cada tarefa é identificada por um UUID único, e a integridade é garantida por uma chave primária única, evitando duplicatas e confusão de identificação.",
+        "confidence": 0.798,
+        "context_element_id": 2928
+      },
+      {
+        "id": 40,
+        "name": "Usar checksums e funções de hash para verificar a integridade dos dados durante a transmissão e o armazenamento",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem checagem de duplicatas, o sistema aceita dois registros com o mesmo título e responsável, e a diferença só aparece depois que o pagamento é feito.",
+        "confidence": 0.8006,
+        "context_element_id": 2955
+      },
+      {
+        "id": 41,
+        "name": "Implemente operações idempotentes que podem ser executadas múltiplas vezes sem efeitos colaterais",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Repetição de requisição é tratada na aplicação, não no banco, e a chave única é definida lá, não em cada chamada.",
+        "confidence": 0.8988,
+        "context_element_id": 2968
+      },
+      {
+        "id": 42,
+        "name": "Garanta a analisabilidade por meio de código legível, estrutura compreensível e documentação adequada",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem documentar o limite, qualquer revisor ou revisora teria que descobrir o valor a cada alteração, o que tornaria a revisão lenta e confiável.",
+        "confidence": 0.7105,
+        "context_element_id": 3005
+      },
+      {
+        "id": 45,
+        "name": "Implemente checkpoints obrigatórios onde operadores humanos devem aprovar decisões críticas antes da execução, especialmente para ações irreversíveis ou de alto impacto",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Rejeitar um colaborador inativo sem a validação correponde a um erro de execução irreversível, sem chance de correção posterior.",
+        "confidence": 0.7756,
+        "context_element_id": 3064
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 14,
+        "name": "Tipo de Relacionamento",
+        "value": "propriedade",
+        "method": "user-input",
+        "reasoning": "A relação entre a tarefa e o tenant pertencente é de ownership, garantindo que o tenant exista na tabela de tenants.",
+        "confidence": 0.7009,
+        "context_element_id": 1547
+      },
+      {
+        "id": 56,
+        "name": "Escopo de Compressão",
+        "value": "compressão seletiva",
+        "method": "internal-inference",
+        "reasoning": "A compressão de dados históricos é realizada em função do uso selectivo dos registros, caracterizando seleção de dados.",
+        "confidence": 0.8651,
+        "context_element_id": 4500
+      },
+      {
+        "id": 60,
+        "name": "Modalidade de Conteúdo",
+        "value": "somente texto",
+        "method": "user-input",
+        "reasoning": "A constante MAX_TITULO_LENGTH é definida como texto simples, sem suporte a imagens ou outros modais.",
+        "confidence": 0.7058,
+        "context_element_id": 4712
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 6,
+  "active": true,
+  "sourceId": 23738,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}

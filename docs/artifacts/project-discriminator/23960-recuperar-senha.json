@@ -1,0 +1,113 @@
+{
+  "id": 23960,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 10,
+        "name": "Proteção de Dados e Vazamento",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Dados pessoais tratados em um processo de recuperação de senha são tratados em conformidade com a LGPD, e a exposição desses dados é uma violação de privacidade.",
+        "confidence": 0.7455,
+        "context_element_id": 2826
+      }
+    ],
+    "attributes": [],
+    "best_practices": [
+      {
+        "id": 11,
+        "name": "Definir timeouts configuráveis para todas as operações críticas e monitorar orçamentos de tempo por transação/endpoint",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O tempo de expiração de 15 minutos é configurável e monitorado, garantindo que a senha recuperação seja usada apenas uma vez.",
+        "confidence": 0.8703,
+        "context_element_id": 2863
+      },
+      {
+        "id": 14,
+        "name": "Implementar identificação única de atores com sistemas de identidade centralizados e gerenciamento unificado de credenciais",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Uma chave de identificação única é gerada e exposta ao usuário, e a redefinição só pode ser feita com essa chave, garantindo que o processo esteja estritamente vinculado à organização correta.",
+        "confidence": 0.804,
+        "context_element_id": 2928
+      },
+      {
+        "id": 16,
+        "name": "Implementar validação rigorosa de entradas com sanitização, whitelists de caracteres permitidos e prevenção contra ataques de injeção",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem essa regra, o campo aceita qualquer combinação de letras e números, o que torna a validação manual impossível.",
+        "confidence": 0.7976,
+        "context_element_id": 2936
+      },
+      {
+        "id": 18,
+        "name": "Configurar segurança específica para APIs e web services com rate limiting, validação de schema e autenticação por endpoint",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem limitação, o serviço de e-mail seria sobrecarregado com múltiplas solicitações de recuperação de senha, e o ataque de enumeração seria mais efetivo.",
+        "confidence": 0.803,
+        "context_element_id": 2945
+      },
+      {
+        "id": 19,
+        "name": "Configurar revogação automática de acesso para contas comprometidas com invalidação imediata de tokens e sessões ativas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Reutilização de token após redefinição de senha é uma falha de segurança que permite acesso indevido a recursos protegidos.",
+        "confidence": 0.9848,
+        "context_element_id": 2946
+      },
+      {
+        "id": 20,
+        "name": "Usar checksums e funções de hash para verificar a integridade dos dados durante a transmissão e o armazenamento",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A senha é substituída em vez de ser atualizada, evitando que o usuário reconheça o que foi alterado.",
+        "confidence": 0.8135,
+        "context_element_id": 2955
+      },
+      {
+        "id": 22,
+        "name": "Implemente restrições operacionais que limitem as ações do sistema com base em critérios de segurança predefinidos, incluindo rate limits, limites de operação e políticas de acesso restritivas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem limite, o mesmo endereço de e-mail poderia tentar múltiplas vezes, o que tornaria a recuperação de senha uma operação de confiança.",
+        "confidence": 0.9265,
+        "context_element_id": 3062
+      },
+      {
+        "id": 23,
+        "name": "Configure controles de privacidade rigorosos incluindo minimização de dados, anonimização automática, controles de acesso granulares e auditoria do uso de informações pessoais sensíveis",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "A LGPD exige proteção de dados pessoais tratados em um processo de recuperação de senha, e a configuração de controle de acesso restrito é uma prática recomendada.",
+        "confidence": 0.949,
+        "context_element_id": 3075
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 1,
+        "name": "Direção da Comunicação",
+        "value": "somente saída",
+        "method": "user-input",
+        "reasoning": "O e-mail é enviado para o endereço informado, sem comunicação de volta entre o sistema e o serviço externo.",
+        "confidence": 0.7229,
+        "context_element_id": 2026
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 9,
+  "active": true,
+  "sourceId": 23595,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T15:08:46.395Z",
+  "updatedAt": null
+}

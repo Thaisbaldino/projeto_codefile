@@ -1,0 +1,333 @@
+{
+  "id": 23625,
+  "projectId": 4118,
+  "type": "feature_definition",
+  "content": {
+    "pendencies": [
+      {
+        "id": 37,
+        "section": "functional",
+        "description": "Qual deve ser a ordenação padrão aplicada à lista de tarefas no carregamento inicial, quando nenhuma ordenação explícita for selecionada pelo usuário? Por exemplo, tarefas ordenadas por data de criação decrescente, por data limite crescente ou por prioridade decrescente.",
+        "resolutionOptions": [
+          {
+            "id": 38,
+            "text": "Ordenar por data de criação decrescente como padrão, exibindo as tarefas mais recentes no topo da lista."
+          },
+          {
+            "id": 39,
+            "text": "Ordenar por data limite crescente como padrão, exibindo as tarefas com prazo mais próximo no topo da lista."
+          },
+          {
+            "id": 40,
+            "text": "Ordenar por prioridade decrescente como padrão, exibindo as tarefas mais críticas no topo da lista."
+          }
+        ],
+        "recommendedOptionId": 39
+      },
+      {
+        "id": 41,
+        "section": "functional",
+        "description": "A lista de tarefas deve exibir todas as tarefas do tenant independentemente do responsável (visão global), ou cada usuário visualiza por padrão apenas as tarefas atribuídas a ele, com opção de expandir para ver todas?",
+        "resolutionOptions": [
+          {
+            "id": 42,
+            "text": "Exibir por padrão todas as tarefas do tenant sem filtro de responsável; o usuário pode aplicar o filtro de responsável para restringir a visualização às suas próprias tarefas."
+          },
+          {
+            "id": 43,
+            "text": "Exibir por padrão apenas as tarefas atribuídas ao usuário autenticado; o usuário pode remover o filtro para visualizar todas as tarefas do tenant."
+          },
+          {
+            "id": 44,
+            "text": "Exibir por padrão todas as tarefas do tenant para gestores e administradores, e apenas as tarefas do próprio usuário para colaboradores, com opção de expandir a visualização."
+          }
+        ],
+        "recommendedOptionId": 42
+      },
+      {
+        "id": 45,
+        "section": "functional",
+        "description": "Quais colunas devem ser exibidas na lista tabular além das essenciais (título, responsável, prioridade, status e data limite)? Por exemplo, deve haver coluna de data de criação, criador da tarefa ou outras informações?",
+        "resolutionOptions": [
+          {
+            "id": 46,
+            "text": "Exibir apenas as colunas essenciais: título, responsável, prioridade, status e data limite; nenhuma coluna adicional é necessária nesta versão."
+          },
+          {
+            "id": 47,
+            "text": "Incluir também a coluna de data de criação da tarefa além das colunas essenciais."
+          },
+          {
+            "id": 48,
+            "text": "Incluir colunas de data de criação e criador da tarefa além das colunas essenciais."
+          }
+        ],
+        "recommendedOptionId": 47
+      },
+      {
+        "id": 49,
+        "section": "functional",
+        "description": "O mecanismo de paginação deve ser baseado em páginas numeradas (paginação clássica) ou em carregamento incremental ao rolar a página (scroll infinito)? Qual deve ser o número de tarefas exibidas por página ou por lote de carregamento?",
+        "resolutionOptions": [
+          {
+            "id": 50,
+            "text": "Utilizar paginação clássica com páginas numeradas, exibindo 20 tarefas por página."
+          },
+          {
+            "id": 51,
+            "text": "Utilizar paginação clássica com páginas numeradas, exibindo 50 tarefas por página."
+          },
+          {
+            "id": 52,
+            "text": "Utilizar scroll infinito com carregamento incremental de 20 tarefas por lote ao rolar a página."
+          }
+        ],
+        "recommendedOptionId": 50
+      },
+      {
+        "id": 53,
+        "section": "functional",
+        "description": "A pesquisa textual deve ser executada de forma imediata à medida que o usuário digita (busca em tempo real com debounce) ou apenas após o usuário pressionar Enter ou clicar em um botão de busca?",
+        "resolutionOptions": [
+          {
+            "id": 54,
+            "text": "Executar a pesquisa em tempo real à medida que o usuário digita, aplicando debounce de 300 a 500 milissegundos para evitar requisições excessivas."
+          },
+          {
+            "id": 55,
+            "text": "Executar a pesquisa apenas após o usuário pressionar Enter ou clicar em botão de busca explícito, sem atualização automática durante a digitação."
+          }
+        ],
+        "recommendedOptionId": 54
+      },
+      {
+        "id": 56,
+        "section": "functional",
+        "description": "O filtro por data limite deve suportar seleção de intervalo de datas (data inicial e data final), condições predefinidas (como 'Atrasadas', 'Vence hoje', 'Vence esta semana') ou ambas as abordagens?",
+        "resolutionOptions": [
+          {
+            "id": 57,
+            "text": "Suportar apenas condições predefinidas: Atrasadas, Vence hoje, Vence esta semana e Sem prazo definido."
+          },
+          {
+            "id": 58,
+            "text": "Suportar apenas seleção de intervalo de datas (data inicial e data final) por meio de seletor de calendário."
+          },
+          {
+            "id": 59,
+            "text": "Suportar ambas as abordagens: condições predefinidas e seleção de intervalo de datas personalizado."
+          }
+        ],
+        "recommendedOptionId": 57
+      },
+      {
+        "id": 60,
+        "section": "non-functional",
+        "description": "Os filtros e a ordenação selecionados pelo usuário devem ser preservados ao navegar para outra tela e retornar à lista (persistência de estado de sessão), ou a lista deve sempre ser carregada com os valores padrão ao ser acessada novamente?",
+        "resolutionOptions": [
+          {
+            "id": 61,
+            "text": "Preservar os filtros e a ordenação ativos durante a sessão do usuário, restaurando-os ao retornar à lista sem necessidade de reaplicação manual."
+          },
+          {
+            "id": 62,
+            "text": "Sempre carregar a lista com os valores padrão ao ser acessada, sem preservação do estado de filtros e ordenação entre navegações."
+          }
+        ],
+        "recommendedOptionId": 61
+      }
+    ],
+    "functional_requirements": [
+      {
+        "group": {
+          "id": 1,
+          "name": "Exibição da Lista de Tarefas",
+          "items": [
+            {
+              "id": 2,
+              "description": "Exibir as tarefas do tenant do usuário autenticado em formato de lista tabular, apresentando cada tarefa como uma linha com suas informações principais dispostas em colunas."
+            },
+            {
+              "id": 3,
+              "description": "Exibir ao menos as seguintes colunas na lista tabular: título da tarefa, responsável, prioridade, status e data limite para conclusão."
+            },
+            {
+              "id": 4,
+              "description": "Exibir indicação visual diferenciada para tarefas com prazo vencido e para tarefas com prioridade elevada diretamente na linha da lista, integrando os destaques definidos pela feature Destacar Tarefas Críticas ou Atrasadas."
+            },
+            {
+              "id": 5,
+              "description": "Exibir mensagem informativa ao usuário quando nenhuma tarefa for encontrada para os filtros ou critérios de pesquisa aplicados, orientando-o a ajustar os parâmetros de busca."
+            },
+            {
+              "id": 6,
+              "description": "Permitir que o usuário acesse a visualização detalhada de uma tarefa a partir da seleção de sua linha na lista tabular."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 7,
+          "name": "Ordenação da Lista",
+          "items": [
+            {
+              "id": 8,
+              "description": "Permitir ao usuário ordenar a lista de tarefas por coluna, incluindo ao menos título, responsável, prioridade, status e data limite, alternando entre ordem crescente e decrescente."
+            },
+            {
+              "id": 9,
+              "description": "Exibir indicação visual na coluna atualmente utilizada como critério de ordenação, sinalizando a direção da ordenação aplicada (crescente ou decrescente)."
+            },
+            {
+              "id": 10,
+              "description": "Aplicar uma ordenação padrão à lista quando nenhuma ordenação explícita for selecionada pelo usuário, garantindo uma apresentação consistente das tarefas no carregamento inicial."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 11,
+          "name": "Filtragem de Tarefas",
+          "items": [
+            {
+              "id": 12,
+              "description": "Permitir ao usuário filtrar as tarefas exibidas na lista por status, apresentando apenas as tarefas que correspondam ao status selecionado."
+            },
+            {
+              "id": 13,
+              "description": "Permitir ao usuário filtrar as tarefas exibidas na lista por responsável, apresentando apenas as tarefas atribuídas ao colaborador selecionado."
+            },
+            {
+              "id": 14,
+              "description": "Permitir ao usuário filtrar as tarefas exibidas na lista por nível de prioridade, apresentando apenas as tarefas que correspondam ao nível selecionado."
+            },
+            {
+              "id": 15,
+              "description": "Permitir ao usuário filtrar as tarefas exibidas na lista por data limite, possibilitando a seleção de um intervalo de datas ou de condições como tarefas em atraso ou tarefas sem prazo definido."
+            },
+            {
+              "id": 16,
+              "description": "Permitir a aplicação simultânea de múltiplos filtros combinados, exibindo apenas as tarefas que satisfaçam todos os critérios selecionados ao mesmo tempo."
+            },
+            {
+              "id": 17,
+              "description": "Exibir indicação visual clara dos filtros ativos no momento, permitindo ao usuário identificar quais critérios estão sendo aplicados à lista."
+            },
+            {
+              "id": 18,
+              "description": "Permitir ao usuário remover filtros individualmente ou limpar todos os filtros de uma só vez, restaurando a exibição completa das tarefas do tenant."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 19,
+          "name": "Pesquisa de Tarefas",
+          "items": [
+            {
+              "id": 20,
+              "description": "Disponibilizar campo de pesquisa textual que permita ao usuário buscar tarefas por texto contido no título ou na descrição da tarefa."
+            },
+            {
+              "id": 21,
+              "description": "Atualizar a lista de tarefas exibida em resposta ao texto digitado no campo de pesquisa, apresentando apenas as tarefas cujos atributos correspondam ao termo informado."
+            },
+            {
+              "id": 22,
+              "description": "Permitir a combinação da pesquisa textual com os filtros ativos, de modo que o resultado exibido satisfaça simultaneamente o termo pesquisado e os critérios de filtro selecionados."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 23,
+          "name": "Controle de Acesso e Isolamento",
+          "items": [
+            {
+              "id": 24,
+              "description": "Exibir na lista apenas as tarefas pertencentes ao tenant do usuário autenticado, garantindo que tarefas de outras organizações não sejam visíveis ou acessíveis."
+            },
+            {
+              "id": 25,
+              "description": "Impedir que usuários não autenticados ou pertencentes a tenants inativos acessem a visualização em lista de tarefas."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 26,
+          "name": "Paginação e Carregamento",
+          "items": [
+            {
+              "id": 27,
+              "description": "Implementar mecanismo de paginação ou carregamento incremental na lista de tarefas, evitando o carregamento simultâneo de todas as tarefas do tenant em uma única requisição."
+            },
+            {
+              "id": 28,
+              "description": "Exibir controles de navegação entre páginas ou indicador de carregamento de mais itens, permitindo ao usuário navegar pelo conjunto completo de tarefas de forma intuitiva."
+            }
+          ]
+        }
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "group": {
+          "id": 29,
+          "name": "Desempenho",
+          "items": [
+            {
+              "id": 30,
+              "description": "Carregar e renderizar a lista de tarefas com os filtros e ordenações aplicados em tempo adequado, mesmo em tenants com até 10.000 tarefas, sem degradação perceptível na experiência do usuário."
+            },
+            {
+              "id": 31,
+              "description": "Executar as operações de filtragem e pesquisa de tarefas com tempo de resposta adequado, garantindo que a atualização da lista após a aplicação de critérios ocorra de forma fluida e sem atrasos perceptíveis."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 32,
+          "name": "Segurança e Isolamento",
+          "items": [
+            {
+              "id": 33,
+              "description": "Garantir que as consultas de listagem, filtragem e pesquisa de tarefas sejam sempre escopadas ao tenant do usuário autenticado, impedindo o acesso ou a exposição de dados de outros tenants por meio de manipulação de parâmetros."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 34,
+          "name": "Usabilidade e Responsividade",
+          "items": [
+            {
+              "id": 35,
+              "description": "Renderizar a visualização em lista tabular de forma responsiva e adaptativa, garantindo usabilidade adequada em dispositivos móveis (smartphones e tablets) e em desktops, com ajuste de colunas visíveis conforme o tamanho da tela."
+            },
+            {
+              "id": 36,
+              "description": "Garantir que os controles de filtragem, pesquisa e ordenação sejam acessíveis e utilizáveis em dispositivos de toque (touch), sem dependência exclusiva de interações de mouse."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 16,
+  "sourceType": "feature",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-10T21:44:01.826Z",
+  "updatedAt": null
+}

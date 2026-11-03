@@ -1,0 +1,699 @@
+{
+  "id": 23834,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 36,
+          "name": "Solicitação de Edição de Perfil",
+          "format": "{ usuario_id: uuid, tenant_id: uuid, nome_completo?: string, email?: string, nivel_hierarquico_id?: uuid }",
+          "origin": "Interface de Gerenciamento de Perfil de Usuário",
+          "trigger": "Clique do administrador em botão de salvar após editar dados do usuário"
+        },
+        {
+          "id": 37,
+          "name": "Solicitação de Ativação de Usuário",
+          "format": "{ usuario_id: uuid, tenant_id: uuid, acao: 'ativar' }",
+          "origin": "Interface de Gerenciamento de Perfil de Usuário",
+          "trigger": "Clique do administrador em botão de ativar usuário desativado"
+        },
+        {
+          "id": 38,
+          "name": "Solicitação de Desativação de Usuário",
+          "format": "{ usuario_id: uuid, tenant_id: uuid, acao: 'desativar' }",
+          "origin": "Interface de Gerenciamento de Perfil de Usuário",
+          "trigger": "Clique do administrador em botão de desativar usuário ativo"
+        },
+        {
+          "id": 39,
+          "name": "Contexto de Autenticação do Executor",
+          "format": "{ usuario_executor_id: uuid, tenant_executor_id: uuid, perfil: enum[colaborador|gestor|administrador_tenant|administrador_plataforma], status: enum[ativo|inativo] }",
+          "origin": "Sessão Autenticada do Administrador",
+          "trigger": null
+        }
+      ],
+      "outputs": [
+        {
+          "id": 63,
+          "name": "Confirmação de Edição de Perfil",
+          "format": "{ sucesso: true, mensagem: string, usuario_atualizado: { id: uuid, nome_completo: string, email: string, nivel_hierarquico_id: uuid, status: enum[ativo|inativo] } }",
+          "destination": "Interface de Gerenciamento de Perfil de Usuário"
+        },
+        {
+          "id": 64,
+          "name": "Confirmação de Ativação de Usuário",
+          "format": "{ sucesso: true, mensagem: string, usuario_id: uuid, novo_status: 'ativo' }",
+          "destination": "Interface de Gerenciamento de Perfil de Usuário"
+        },
+        {
+          "id": 65,
+          "name": "Confirmação de Desativação de Usuário",
+          "format": "{ sucesso: true, mensagem: string, usuario_id: uuid, novo_status: 'inativo' }",
+          "destination": "Interface de Gerenciamento de Perfil de Usuário"
+        },
+        {
+          "id": 66,
+          "name": "Erro de Validação",
+          "format": "{ sucesso: false, mensagem_erro: string, campo_invalido?: string, tipo_validacao_falhada?: enum[preenchimento|formato|unicidade|referencia|acesso|restricao_negocio|isolamento] }",
+          "destination": "Interface de Gerenciamento de Perfil de Usuário"
+        },
+        {
+          "id": 67,
+          "name": "Erro de Persistência",
+          "format": "{ sucesso: false, mensagem_erro: string, codigo_erro?: string }",
+          "destination": "Interface de Gerenciamento de Perfil de Usuário"
+        },
+        {
+          "id": 68,
+          "name": "Evento de Auditoria de Edição",
+          "format": "{ tipo_operacao: 'edicao_usuario', usuario_executor_id: uuid, tenant_id: uuid, usuario_alvo_id: uuid, timestamp: timestamp, campos_alterados: [{ campo: string, valor_anterior: string, valor_novo: string }] }",
+          "destination": "Trilha de Auditoria de Ações"
+        },
+        {
+          "id": 69,
+          "name": "Evento de Auditoria de Ativação/Desativação",
+          "format": "{ tipo_operacao: enum['ativacao_usuario'|'desativacao_usuario'], usuario_executor_id: uuid, tenant_id: uuid, usuario_alvo_id: uuid, novo_status: enum[ativo|inativo], timestamp: timestamp }",
+          "destination": "Trilha de Auditoria de Ações"
+        }
+      ],
+      "processing": [
+        {
+          "id": 40,
+          "step": "Autenticar e Validar Acesso",
+          "description": "Validar que o usuário executor está autenticado, ativo e possui perfil de administrador do tenant; validar que o tenant está ativo."
+        },
+        {
+          "id": 41,
+          "step": "Carregar Dados do Usuário Alvo",
+          "description": "Buscar no repositório os dados cadastrais atuais do usuário a ser editado, validando que pertence ao mesmo tenant do executor."
+        },
+        {
+          "id": 42,
+          "step": "Validar Campos Obrigatórios",
+          "description": "Verificar que todos os campos obrigatórios (nome completo, e-mail, nível hierárquico) estão preenchidos e não estão em branco."
+        },
+        {
+          "id": 43,
+          "step": "Validar Formato de E-mail",
+          "description": "Validar que o endereço de e-mail informado segue o formato válido conforme padrão RFC 5322."
+        },
+        {
+          "id": 44,
+          "step": "Validar Unicidade de E-mail por Tenant",
+          "description": "Verificar que o e-mail não está duplicado em outro usuário do mesmo tenant, excluindo o usuário sendo editado."
+        },
+        {
+          "id": 45,
+          "step": "Validar Referência ao Nível Hierárquico",
+          "description": "Verificar que o nível hierárquico selecionado existe e pertence ao tenant do executor."
+        },
+        {
+          "id": 46,
+          "step": "Aplicar Regras de Validação de Usuário",
+          "description": "Executar o conjunto completo de regras de validação de usuário para operação de edição, incluindo validações de preenchimento, formato, unicidade, referência e isolamento."
+        },
+        {
+          "id": 47,
+          "step": "Aplicar Regras de Controle de Acesso",
+          "description": "Executar regras de controle de acesso por perfil para garantir que apenas administrador do tenant pode editar perfis de outros usuários."
+        },
+        {
+          "id": 48,
+          "step": "Aplicar Regra de Isolamento Multi-tenant",
+          "description": "Validar que o usuário alvo pertence ao mesmo tenant do executor, impedindo operações cruzadas entre organizações."
+        },
+        {
+          "id": 49,
+          "step": "Persistir Alterações no Banco de Dados",
+          "description": "Atualizar os dados do usuário no repositório, registrando data e hora da edição e identificação do usuário executor."
+        },
+        {
+          "id": 50,
+          "step": "Registrar Auditoria de Edição",
+          "description": "Registrar em log de auditoria a operação de edição, incluindo identificação do executor, timestamp, identificação do usuário editado e campos alterados."
+        },
+        {
+          "id": 51,
+          "step": "Retornar Confirmação de Sucesso",
+          "description": "Exibir mensagem de confirmação ao administrador informando que a edição foi concluída com sucesso."
+        },
+        {
+          "id": 52,
+          "step": "Validar Acesso para Ativação/Desativação",
+          "description": "Validar que o usuário executor está autenticado, ativo, é administrador do tenant e que o tenant está ativo."
+        },
+        {
+          "id": 53,
+          "step": "Carregar Dados do Usuário para Ativação/Desativação",
+          "description": "Buscar no repositório os dados atuais do usuário a ser ativado ou desativado, validando que pertence ao mesmo tenant."
+        },
+        {
+          "id": 54,
+          "step": "Validar Restrição de Auto-desativação",
+          "description": "Impedir que o administrador desative seu próprio perfil quando é o único administrador ativo no tenant."
+        },
+        {
+          "id": 55,
+          "step": "Aplicar Regras de Controle de Acesso para Ativação/Desativação",
+          "description": "Executar regras de controle de acesso para garantir que apenas administrador do tenant pode ativar ou desativar usuários."
+        },
+        {
+          "id": 56,
+          "step": "Aplicar Regra de Isolamento Multi-tenant para Ativação/Desativação",
+          "description": "Validar que o usuário alvo pertence ao mesmo tenant do executor."
+        },
+        {
+          "id": 57,
+          "step": "Persistir Alteração de Status",
+          "description": "Atualizar o status do usuário no repositório (ativo ou inativo), registrando data e hora da alteração."
+        },
+        {
+          "id": 58,
+          "step": "Invalidar Sessões Ativas (se Desativação)",
+          "description": "Se o usuário está sendo desativado, invalidar imediatamente todas as suas sessões ativas, bloqueando acesso à plataforma."
+        },
+        {
+          "id": 59,
+          "step": "Registrar Auditoria de Ativação/Desativação",
+          "description": "Registrar em log de auditoria a operação de ativação ou desativação, incluindo identificação do executor, timestamp, identificação do usuário afetado e novo status."
+        },
+        {
+          "id": 60,
+          "step": "Retornar Confirmação de Ativação/Desativação",
+          "description": "Exibir mensagem de confirmação ao administrador informando que a ativação ou desativação foi concluída com sucesso."
+        },
+        {
+          "id": 61,
+          "step": "Tratar Erro de Validação",
+          "description": "Capturar erros de validação (campos obrigatórios, formato, unicidade, referência, acesso, isolamento) e retornar mensagem de erro específica ao administrador."
+        },
+        {
+          "id": 62,
+          "step": "Tratar Erro de Persistência",
+          "description": "Capturar erros de banco de dados ou falhas de persistência e retornar mensagem de erro clara ao administrador."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 70,
+        "category": "authorization",
+        "description": "Apenas usuários com perfil de administrador do tenant podem editar, ativar ou desativar perfis de outros usuários.",
+        "enforcement": "code",
+        "verification": "Validar no início de cada operação que usuario_executor.perfil == 'administrador_tenant' e usuario_executor.tenant_id == usuario_alvo.tenant_id; rejeitar com mensagem de erro se condição não for satisfeita."
+      },
+      {
+        "id": 71,
+        "category": "validation",
+        "description": "Todos os campos obrigatórios (nome completo, e-mail, nível hierárquico) devem estar preenchidos e não podem estar em branco.",
+        "enforcement": "code",
+        "verification": "Validar antes de persistir que nome_completo.trim().length > 0, email.trim().length > 0 e nivel_hierarquico_id não é null; exibir mensagem de erro específica por campo se validação falhar."
+      },
+      {
+        "id": 72,
+        "category": "validation",
+        "description": "O endereço de e-mail deve estar em formato válido conforme padrão RFC 5322.",
+        "enforcement": "code",
+        "verification": "Validar antes de persistir que email corresponde a padrão regex de e-mail válido (ex: /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}$/); exibir mensagem de erro se formato for inválido."
+      },
+      {
+        "id": 73,
+        "category": "validation",
+        "description": "O endereço de e-mail deve ser único dentro do tenant, impedindo duplicação de e-mails na mesma organização.",
+        "enforcement": "db_constraint",
+        "verification": "Consultar repositório com verificarUnicidadeEmailPorTenant(email, tenant_id, usuario_id_para_excluir) antes de persistir; rejeitar com mensagem de erro se e-mail já existe em outro usuário do tenant."
+      },
+      {
+        "id": 74,
+        "category": "validation",
+        "description": "O nível hierárquico selecionado deve existir e pertencer ao tenant do executor.",
+        "enforcement": "code",
+        "verification": "Validar antes de persistir que nivel_hierarquico_id existe na tabela de niveis_hierarquicos e seu tenant_id corresponde ao tenant_executor; rejeitar com mensagem de erro se nível não existe ou pertence a outro tenant."
+      },
+      {
+        "id": 75,
+        "category": "authorization",
+        "description": "Um administrador não pode desativar seu próprio perfil quando é o único administrador ativo no tenant.",
+        "enforcement": "code",
+        "verification": "Antes de desativar, validar se usuario_executor.id == usuario_alvo.id; se verdadeiro, contar quantos administradores ativos existem no tenant; rejeitar com mensagem de erro se count == 1."
+      },
+      {
+        "id": 76,
+        "category": "invariant",
+        "description": "Operações de edição, ativação e desativação de usuário devem respeitar isolamento multi-tenant, impedindo acesso cruzado entre organizações.",
+        "enforcement": "code",
+        "verification": "Validar antes de qualquer operação que usuario_executor.tenant_id == usuario_alvo.tenant_id; rejeitar com mensagem de erro genérica se tenants não correspondem."
+      },
+      {
+        "id": 77,
+        "category": "compliance",
+        "description": "Todas as operações de edição, ativação e desativação de usuário devem ser registradas em log de auditoria com identificação do executor, timestamp, identificação do usuário afetado e dados alterados.",
+        "enforcement": "code",
+        "verification": "Após persistir com sucesso, registrar em trilha de auditoria com campos: tipo_operacao, usuario_executor_id, tenant_id, usuario_alvo_id, timestamp, campos_alterados (para edição) ou novo_status (para ativação/desativação); verificar que entrada foi registrada consultando log de auditoria."
+      },
+      {
+        "id": 78,
+        "category": "invariant",
+        "description": "Quando um usuário é desativado, todas as suas sessões ativas devem ser invalidadas imediatamente, bloqueando acesso à plataforma.",
+        "enforcement": "code",
+        "verification": "Ao desativar usuário, consultar gerenciador de sessões para identificar todas as sessões ativas do usuario_alvo.id; invalidar cada sessão registrando timestamp de invalidação; verificar que usuário não consegue executar operações subsequentes com token anterior."
+      },
+      {
+        "id": 79,
+        "category": "observability",
+        "description": "Erros de validação devem retornar mensagens específicas e categorizadas, facilitando diagnóstico e correção pelo administrador.",
+        "enforcement": "code",
+        "verification": "Quando validação falhar, retornar resposta com campo tipo_validacao_falhada contendo um dos valores: preenchimento, formato, unicidade, referencia, acesso, restricao_negocio, isolamento; verificar que mensagem de erro é específica e não genérica."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "O Fluxo de Gerenciamento de Perfil de Usuário é um fluxo de negócio que orquestra as operações de edição, ativação e desativação de perfis de usuários existentes dentro de um tenant. Coordena a validação de dados cadastrais (nome, e-mail, nível hierárquico), a verificação de unicidade de e-mail por tenant, a aplicação de regras de controle de acesso (apenas administradores podem editar perfis alheios), o isolamento multi-tenant, a persistência de alterações no banco de dados, o registro de auditoria de operações, e a invalidação de sessões quando um usuário é desativado. Materializa as funcionalidades de visualização de usuários, edição de perfil, ativação e desativação definidas nas features de gerenciamento de perfil, integrando validações de negócio, regras de conformidade com LGPD e rastreabilidade completa de ações administrativas."
+    },
+    "definition": {
+      "params": [
+        {
+          "id": 2,
+          "name": "flow_name",
+          "value": "gerenciamento-perfil-usuario"
+        },
+        {
+          "id": 3,
+          "name": "owner_module",
+          "value": "gestao-usuarios-organizacoes"
+        },
+        {
+          "id": 4,
+          "name": "execution_context",
+          "value": "tenant_scoped_synchronous"
+        },
+        {
+          "id": 5,
+          "name": "primary_actor",
+          "value": "administrador_tenant"
+        }
+      ],
+      "flow_spec": {
+        "steps": [
+          {
+            "id": 6,
+            "name": "Autenticar e Validar Acesso",
+            "description": "Validar que o usuário executor está autenticado, ativo e possui perfil de administrador do tenant; validar que o tenant está ativo."
+          },
+          {
+            "id": 7,
+            "name": "Carregar Dados do Usuário Alvo",
+            "description": "Buscar no repositório os dados cadastrais atuais do usuário a ser editado, validando que pertence ao mesmo tenant do executor."
+          },
+          {
+            "id": 8,
+            "name": "Validar Campos Obrigatórios",
+            "description": "Verificar que todos os campos obrigatórios (nome completo, e-mail, nível hierárquico) estão preenchidos e não estão em branco."
+          },
+          {
+            "id": 9,
+            "name": "Validar Formato de E-mail",
+            "description": "Validar que o endereço de e-mail informado segue o formato válido conforme padrão RFC 5322."
+          },
+          {
+            "id": 10,
+            "name": "Validar Unicidade de E-mail por Tenant",
+            "description": "Verificar que o e-mail não está duplicado em outro usuário do mesmo tenant, excluindo o usuário sendo editado."
+          },
+          {
+            "id": 11,
+            "name": "Validar Referência ao Nível Hierárquico",
+            "description": "Verificar que o nível hierárquico selecionado existe e pertence ao tenant do executor."
+          },
+          {
+            "id": 12,
+            "name": "Aplicar Regras de Validação de Usuário",
+            "description": "Executar o conjunto completo de regras de validação de usuário para operação de edição, incluindo validações de preenchimento, formato, unicidade, referência e isolamento."
+          },
+          {
+            "id": 13,
+            "name": "Aplicar Regras de Controle de Acesso",
+            "description": "Executar regras de controle de acesso por perfil para garantir que apenas administrador do tenant pode editar perfis de outros usuários."
+          },
+          {
+            "id": 14,
+            "name": "Aplicar Regra de Isolamento Multi-tenant",
+            "description": "Validar que o usuário alvo pertence ao mesmo tenant do executor, impedindo operações cruzadas entre organizações."
+          },
+          {
+            "id": 15,
+            "name": "Persistir Alterações no Banco de Dados",
+            "description": "Atualizar os dados do usuário no repositório, registrando data e hora da edição e identificação do usuário executor."
+          },
+          {
+            "id": 16,
+            "name": "Registrar Auditoria de Edição",
+            "description": "Registrar em log de auditoria a operação de edição, incluindo identificação do executor, timestamp, identificação do usuário editado e campos alterados."
+          },
+          {
+            "id": 17,
+            "name": "Retornar Confirmação de Sucesso",
+            "description": "Exibir mensagem de confirmação ao administrador informando que a edição foi concluída com sucesso."
+          },
+          {
+            "id": 18,
+            "name": "Validar Acesso para Ativação/Desativação",
+            "description": "Validar que o usuário executor está autenticado, ativo, é administrador do tenant e que o tenant está ativo."
+          },
+          {
+            "id": 19,
+            "name": "Carregar Dados do Usuário para Ativação/Desativação",
+            "description": "Buscar no repositório os dados atuais do usuário a ser ativado ou desativado, validando que pertence ao mesmo tenant."
+          },
+          {
+            "id": 20,
+            "name": "Validar Restrição de Auto-desativação",
+            "description": "Impedir que o administrador desative seu próprio perfil quando é o único administrador ativo no tenant."
+          },
+          {
+            "id": 21,
+            "name": "Aplicar Regras de Controle de Acesso para Ativação/Desativação",
+            "description": "Executar regras de controle de acesso para garantir que apenas administrador do tenant pode ativar ou desativar usuários."
+          },
+          {
+            "id": 22,
+            "name": "Aplicar Regra de Isolamento Multi-tenant para Ativação/Desativação",
+            "description": "Validar que o usuário alvo pertence ao mesmo tenant do executor."
+          },
+          {
+            "id": 23,
+            "name": "Persistir Alteração de Status",
+            "description": "Atualizar o status do usuário no repositório (ativo ou inativo), registrando data e hora da alteração."
+          },
+          {
+            "id": 24,
+            "name": "Invalidar Sessões Ativas (se Desativação)",
+            "description": "Se o usuário está sendo desativado, invalidar imediatamente todas as suas sessões ativas, bloqueando acesso à plataforma."
+          },
+          {
+            "id": 25,
+            "name": "Registrar Auditoria de Ativação/Desativação",
+            "description": "Registrar em log de auditoria a operação de ativação ou desativação, incluindo identificação do executor, timestamp, identificação do usuário afetado e novo status."
+          },
+          {
+            "id": 26,
+            "name": "Retornar Confirmação de Ativação/Desativação",
+            "description": "Exibir mensagem de confirmação ao administrador informando que a ativação ou desativação foi concluída com sucesso."
+          },
+          {
+            "id": 27,
+            "name": "Tratar Erro de Validação",
+            "description": "Capturar erros de validação (campos obrigatórios, formato, unicidade, referência, acesso, isolamento) e retornar mensagem de erro específica ao administrador."
+          },
+          {
+            "id": 28,
+            "name": "Tratar Erro de Persistência",
+            "description": "Capturar erros de banco de dados ou falhas de persistência e retornar mensagem de erro clara ao administrador."
+          }
+        ],
+        "branches": [
+          {
+            "id": 29,
+            "condition": "tipo_operacao == 'edicao'",
+            "description": "Fluxo de edição de dados cadastrais do usuário",
+            "target_step": 6
+          },
+          {
+            "id": 30,
+            "condition": "tipo_operacao == 'ativacao' OR tipo_operacao == 'desativacao'",
+            "description": "Fluxo de ativação ou desativação de usuário",
+            "target_step": 18
+          },
+          {
+            "id": 31,
+            "condition": "validacao_falhou",
+            "description": "Desvio para tratamento de erro de validação",
+            "target_step": 27
+          },
+          {
+            "id": 32,
+            "condition": "persistencia_falhou",
+            "description": "Desvio para tratamento de erro de persistência",
+            "target_step": 28
+          }
+        ],
+        "compensations": [
+          {
+            "id": 33,
+            "action": "Reverter alterações de dados do usuário no banco de dados",
+            "trigger": "Falha na persistência após validações bem-sucedidas"
+          },
+          {
+            "id": 34,
+            "action": "Restaurar sessões invalidadas do usuário desativado",
+            "trigger": "Falha na persistência de desativação após invalidação de sessões"
+          },
+          {
+            "id": 35,
+            "action": "Remover entrada de auditoria de operação falhada",
+            "trigger": "Falha crítica que impede conclusão da operação"
+          }
+        ]
+      }
+    },
+    "pendencies": [
+      {
+        "id": 97,
+        "section": "definition",
+        "description": "Definição de quais campos de usuário são editáveis e quais são imutáveis após criação (ex: tenant_id, data_criacao, criador_id devem ser imutáveis). Necessário para determinar quais campos podem ser alterados no fluxo de edição.",
+        "resolutionOptions": [
+          {
+            "id": 98,
+            "text": "Apenas nome_completo, email e nivel_hierarquico_id são editáveis; tenant_id, data_criacao, criador_id, status são imutáveis após criação"
+          },
+          {
+            "id": 99,
+            "text": "Permitir edição de todos os campos exceto id e data_criacao; avaliar impacto de permitir mudança de tenant_id"
+          },
+          {
+            "id": 100,
+            "text": "Criar matriz de editabilidade por perfil: administrador_plataforma pode editar mais campos que administrador_tenant"
+          }
+        ],
+        "recommendedOptionId": 98
+      },
+      {
+        "id": 101,
+        "section": "flow",
+        "description": "Definição de comportamento quando um administrador tenta editar seu próprio perfil (ex: pode editar nome e e-mail, mas não pode desativar a si mesmo). Necessário para determinar se fluxo de edição e fluxo de ativação/desativação têm validações diferentes para auto-edição.",
+        "resolutionOptions": [
+          {
+            "id": 102,
+            "text": "Permitir que administrador edite seu próprio nome e e-mail, mas impedir auto-desativação apenas quando é o único administrador ativo"
+          },
+          {
+            "id": 103,
+            "text": "Impedir completamente que administrador edite seu próprio perfil; exigir que outro administrador realize edições"
+          },
+          {
+            "id": 104,
+            "text": "Permitir auto-edição de nome e e-mail, mas exigir confirmação adicional (ex: re-autenticação) para desativação"
+          }
+        ],
+        "recommendedOptionId": 102
+      },
+      {
+        "id": 105,
+        "section": "rules",
+        "description": "Definição de regra para validação de força de senha quando um usuário altera sua própria senha durante edição de perfil. Necessário para determinar se fluxo de edição de perfil inclui alteração de senha ou se isso é delegado a fluxo separado de recuperação de senha.",
+        "resolutionOptions": [
+          {
+            "id": 106,
+            "text": "Fluxo de edição de perfil não inclui alteração de senha; alteração de senha é realizada exclusivamente através do fluxo de recuperação de senha"
+          },
+          {
+            "id": 107,
+            "text": "Fluxo de edição de perfil permite que administrador altere senha de outro usuário sem exigir senha anterior"
+          },
+          {
+            "id": 108,
+            "text": "Fluxo de edição de perfil permite que usuário altere sua própria senha exigindo senha anterior como validação"
+          }
+        ],
+        "recommendedOptionId": 106
+      },
+      {
+        "id": 109,
+        "section": "non_functional_requirements",
+        "description": "Definição de limite de tempo para invalidação de sessões após desativação de usuário. Necessário para determinar se invalidação é síncrona (imediata) ou assíncrona (com delay aceitável).",
+        "resolutionOptions": [
+          {
+            "id": 110,
+            "text": "Invalidação síncrona: sessões são invalidadas imediatamente no mesmo fluxo de desativação, antes de retornar confirmação ao administrador"
+          },
+          {
+            "id": 111,
+            "text": "Invalidação assíncrona: sessões são invalidadas em background job dentro de 5 segundos após desativação"
+          },
+          {
+            "id": 112,
+            "text": "Invalidação assíncrona com notificação: sessões são invalidadas em background job e usuário recebe notificação de logout forçado"
+          }
+        ],
+        "recommendedOptionId": 110
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 85,
+        "then": "A operação é rejeitada com mensagem de erro 'Campo nome completo é obrigatório' e tipo_validacao_falhada = 'preenchimento'",
+        "type": "unit",
+        "when": "O fluxo executa a validação de campos obrigatórios",
+        "given": "Um administrador do tenant A tenta editar um usuário com campo nome_completo vazio",
+        "scenario": "Validação de preenchimento obrigatório de nome completo",
+        "target_section": "rules"
+      },
+      {
+        "id": 86,
+        "then": "A operação é rejeitada com mensagem de erro 'Formato de e-mail inválido' e tipo_validacao_falhada = 'formato'",
+        "type": "unit",
+        "when": "O fluxo executa a validação de formato de e-mail",
+        "given": "Um administrador do tenant A tenta editar um usuário com e-mail em formato inválido (ex: 'usuario@')",
+        "scenario": "Validação de formato de e-mail inválido",
+        "target_section": "rules"
+      },
+      {
+        "id": 87,
+        "then": "A operação é rejeitada com mensagem de erro 'E-mail já cadastrado nesta organização' e tipo_validacao_falhada = 'unicidade'",
+        "type": "unit",
+        "when": "O fluxo executa a validação de unicidade de e-mail por tenant",
+        "given": "Um administrador do tenant A tenta editar um usuário alterando seu e-mail para um valor já existente em outro usuário do tenant A",
+        "scenario": "Validação de unicidade de e-mail dentro do tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 88,
+        "then": "A operação é rejeitada com mensagem de erro 'Nível hierárquico selecionado não existe nesta organização' e tipo_validacao_falhada = 'referencia'",
+        "type": "unit",
+        "when": "O fluxo executa a validação de referência ao nível hierárquico",
+        "given": "Um administrador do tenant A tenta editar um usuário atribuindo um nível hierárquico que não existe no tenant A",
+        "scenario": "Validação de referência válida ao nível hierárquico",
+        "target_section": "rules"
+      },
+      {
+        "id": 89,
+        "then": "A operação é rejeitada com mensagem de erro 'Acesso negado. Apenas administradores podem editar perfis de outros usuários' e tipo_validacao_falhada = 'acesso'",
+        "type": "unit",
+        "when": "O fluxo executa a validação de controle de acesso",
+        "given": "Um usuário com perfil de colaborador tenta editar o perfil de outro usuário do tenant A",
+        "scenario": "Controle de acesso: apenas administrador pode editar perfil",
+        "target_section": "rules"
+      },
+      {
+        "id": 90,
+        "then": "A operação é rejeitada com mensagem de erro 'Não é permitido desativar o próprio perfil de administrador' e tipo_validacao_falhada = 'restricao_negocio'",
+        "type": "unit",
+        "when": "O fluxo executa a validação de restrição de auto-desativação",
+        "given": "O único administrador ativo do tenant A tenta desativar seu próprio perfil",
+        "scenario": "Restrição de auto-desativação de administrador único",
+        "target_section": "rules"
+      },
+      {
+        "id": 91,
+        "then": "A operação é rejeitada com mensagem de erro genérica 'Acesso negado' sem revelar que o usuário pertence a outro tenant",
+        "type": "integration",
+        "when": "O fluxo executa a validação de isolamento multi-tenant",
+        "given": "Um administrador do tenant A tenta editar um usuário que pertence ao tenant B",
+        "scenario": "Isolamento multi-tenant: usuário de tenant A não pode editar usuário de tenant B",
+        "target_section": "rules"
+      },
+      {
+        "id": 92,
+        "then": "Os dados do usuário são atualizados no repositório, data_ultima_edicao e ultimo_editor_id são registrados, e uma entrada de auditoria é criada com tipo_operacao = 'edicao_usuario'",
+        "type": "integration",
+        "when": "O fluxo persiste as alterações no banco de dados e registra auditoria",
+        "given": "Um administrador do tenant A edita com sucesso o nome e e-mail de um usuário do tenant A",
+        "scenario": "Persistência bem-sucedida de edição de perfil",
+        "target_section": "flow"
+      },
+      {
+        "id": 93,
+        "then": "O status do usuário é alterado para 'inativo', todas as suas sessões ativas são invalidadas, e uma entrada de auditoria é criada com tipo_operacao = 'desativacao_usuario'",
+        "type": "integration",
+        "when": "O fluxo persiste a desativação e invalida as sessões",
+        "given": "Um administrador do tenant A desativa um usuário que possui sessões ativas",
+        "scenario": "Invalidação de sessões ao desativar usuário",
+        "target_section": "flow"
+      },
+      {
+        "id": 94,
+        "then": "A operação é rejeitada com mensagem de erro genérica 'Acesso negado' sem revelar que o tenant foi manipulado",
+        "type": "security",
+        "when": "O fluxo valida que tenant_id da requisição corresponde ao tenant do executor",
+        "given": "Um administrador do tenant A tenta editar um usuário do tenant B manipulando o parâmetro tenant_id na requisição",
+        "scenario": "Tentativa de manipulação de parâmetro tenant_id para acessar outro tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 95,
+        "then": "A operação é concluída e retorna confirmação em tempo <= 500ms (p99)",
+        "type": "performance",
+        "when": "O fluxo executa todas as validações e persiste as alterações",
+        "given": "Um administrador do tenant A edita o perfil de um usuário em ambiente com 5.000 usuários ativos e 50 tenants",
+        "scenario": "Tempo de resposta de edição de perfil sob carga normal",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 96,
+        "then": "A operação é concluída e retorna confirmação em tempo <= 300ms (p99)",
+        "type": "performance",
+        "when": "O fluxo executa validações, persiste a alteração e invalida sessões (se desativação)",
+        "given": "Um administrador do tenant A ativa ou desativa um usuário em ambiente com 5.000 usuários ativos e 50 tenants",
+        "scenario": "Tempo de resposta de ativação/desativação de usuário sob carga normal",
+        "target_section": "non_functional_requirements"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 80,
+        "target": "p99 <= 500ms para edição de perfil; p99 <= 300ms para ativação/desativação, mesmo sob carga de até 5.000 usuários ativos e 50 tenants na plataforma",
+        "category": "performance",
+        "requirement": "Operações de edição, ativação e desativação de perfil devem ser concluídas e retornar confirmação ao administrador em tempo adequado.",
+        "verification": "Medir tempo de resposta end-to-end (desde recebimento da requisição até retorno da confirmação) em ambiente de teste com carga simulada; registrar p99 em logs de performance; alertar se p99 exceder limites definidos."
+      },
+      {
+        "id": 81,
+        "target": "100% das operações devem passar por validação de acesso e isolamento; zero operações não autorizadas devem ser executadas",
+        "category": "security",
+        "requirement": "Validações de acesso e isolamento multi-tenant devem ser aplicadas em tempo de execução antes de qualquer operação de leitura ou escrita.",
+        "verification": "Revisar código para garantir que validações de acesso e isolamento são executadas antes de qualquer operação de banco de dados; executar testes de segurança tentando contornar validações com manipulação de parâmetros; verificar logs de auditoria para confirmar que operações não autorizadas foram bloqueadas."
+      },
+      {
+        "id": 82,
+        "target": "99,9% de disponibilidade (máximo 43 minutos de downtime por mês); tempo de recuperação após falha <= 5 minutos",
+        "category": "availability",
+        "requirement": "O fluxo de gerenciamento de perfil deve estar disponível com alta disponibilidade, dado que sua indisponibilidade impede administradores de gerenciar usuários.",
+        "verification": "Monitorar disponibilidade do serviço continuamente; registrar tempo de resposta e taxa de erro; alertar se disponibilidade cair abaixo de 99,9%; testar recuperação após falha simulada e medir tempo de retorno à operação normal."
+      },
+      {
+        "id": 83,
+        "target": "100% das operações registradas em log com timestamp, identificação do executor, tenant, usuário alvo e resultado; logs estruturados em formato JSON com campos padronizados",
+        "category": "observability",
+        "requirement": "Todas as operações do fluxo devem ser rastreáveis através de logs estruturados e trilha de auditoria, permitindo diagnóstico de problemas e conformidade.",
+        "verification": "Verificar que cada operação gera entrada em log de auditoria; consultar logs para confirmar que campos obrigatórios estão presentes; validar que logs podem ser consultados e filtrados por executor, tenant, usuário alvo e tipo de operação."
+      },
+      {
+        "id": 84,
+        "target": "Mensagens de erro devem indicar qual campo falhou na validação e por qual motivo (preenchimento, formato, unicidade, referência, acesso, restrição de negócio, isolamento), sem revelar dados de outros usuários ou tenants",
+        "category": "security",
+        "requirement": "Mensagens de erro devem ser específicas o suficiente para guiar o administrador na correção, mas não devem revelar informações sensíveis que possam ser exploradas.",
+        "verification": "Revisar todas as mensagens de erro retornadas pelo fluxo; verificar que mensagens de erro de isolamento multi-tenant são genéricas (ex: 'Acesso negado') sem revelar existência de recurso em outro tenant; testar com dados de múltiplos tenants para confirmar que informações não vazam entre organizações."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 24,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T06:27:39.693Z",
+  "updatedAt": null
+}

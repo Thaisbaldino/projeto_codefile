@@ -1,0 +1,253 @@
+{
+  "id": 23584,
+  "projectId": 4118,
+  "type": "feature_definition",
+  "content": {
+    "pendencies": [
+      {
+        "id": 29,
+        "section": "functional",
+        "description": "Existe um número mínimo ou máximo de níveis hierárquicos que podem ser configurados por tenant? Por exemplo, deve haver sempre ao menos um nível obrigatório, ou o tenant pode operar sem nenhum nível definido?",
+        "resolutionOptions": [
+          {
+            "id": 30,
+            "text": "Não há limite mínimo nem máximo; o tenant pode operar sem nenhum nível definido e criar quantos níveis desejar."
+          },
+          {
+            "id": 31,
+            "text": "Exigir ao menos um nível hierárquico configurado no tenant; o sistema impede a exclusão do último nível existente."
+          },
+          {
+            "id": 32,
+            "text": "Não há limite mínimo, mas definir um limite máximo configurável de níveis por tenant (por exemplo, até 10 níveis)."
+          }
+        ],
+        "recommendedOptionId": 30
+      },
+      {
+        "id": 33,
+        "section": "functional",
+        "description": "O nível hierárquico é um campo obrigatório no perfil do colaborador, ou pode ser deixado em branco (colaborador sem nível atribuído)?",
+        "resolutionOptions": [
+          {
+            "id": 34,
+            "text": "O nível hierárquico é obrigatório no cadastro do colaborador; não é possível salvar um perfil sem nível atribuído."
+          },
+          {
+            "id": 35,
+            "text": "O nível hierárquico é opcional; o colaborador pode existir na plataforma sem nível hierárquico atribuído."
+          }
+        ],
+        "recommendedOptionId": 35
+      },
+      {
+        "id": 36,
+        "section": "functional",
+        "description": "Quando um nível hierárquico é renomeado, o histórico de tarefas e registros anteriores que exibiam o nome antigo deve ser atualizado retroativamente ou mantido com o nome original?",
+        "resolutionOptions": [
+          {
+            "id": 37,
+            "text": "Atualizar o nome do nível em todos os registros existentes de forma retroativa, refletindo o novo nome em todo o sistema."
+          },
+          {
+            "id": 38,
+            "text": "Manter o nome original nos registros históricos; apenas novos registros e exibições em tempo real utilizam o nome atualizado."
+          }
+        ],
+        "recommendedOptionId": 37
+      },
+      {
+        "id": 39,
+        "section": "functional",
+        "description": "O sistema deve oferecer níveis hierárquicos padrão pré-configurados ao provisionar um novo tenant (por exemplo, Diretor, Gerente, Analista), ou o tenant sempre começa sem nenhum nível e o administrador cria todos do zero?",
+        "resolutionOptions": [
+          {
+            "id": 40,
+            "text": "O tenant sempre inicia sem níveis pré-configurados; o administrador cria todos os níveis do zero conforme a estrutura da organização."
+          },
+          {
+            "id": 41,
+            "text": "Provisionar o tenant com um conjunto padrão de níveis hierárquicos sugeridos, que o administrador pode editar ou excluir conforme necessário."
+          }
+        ],
+        "recommendedOptionId": 40
+      },
+      {
+        "id": 42,
+        "section": "functional",
+        "description": "O nível hierárquico possui apenas um nome/rótulo, ou deve suportar campos adicionais como descrição, código interno ou cor de identificação visual?",
+        "resolutionOptions": [
+          {
+            "id": 43,
+            "text": "Apenas nome ou rótulo textual é necessário nesta versão; nenhum campo adicional é requerido."
+          },
+          {
+            "id": 44,
+            "text": "Incluir um campo de descrição opcional além do nome, para que o administrador possa detalhar o papel do nível na organização."
+          },
+          {
+            "id": 45,
+            "text": "Incluir nome, descrição opcional e cor de identificação visual para facilitar a distinção dos níveis nas listagens."
+          }
+        ],
+        "recommendedOptionId": 43
+      }
+    ],
+    "functional_requirements": [
+      {
+        "group": {
+          "id": 1,
+          "name": "Gerenciamento de Níveis Hierárquicos",
+          "items": [
+            {
+              "id": 2,
+              "description": "Permitir ao administrador do tenant criar um novo nível hierárquico informando ao menos um nome ou rótulo identificador."
+            },
+            {
+              "id": 3,
+              "description": "Permitir ao administrador do tenant editar o nome ou rótulo de um nível hierárquico existente."
+            },
+            {
+              "id": 4,
+              "description": "Permitir ao administrador do tenant excluir um nível hierárquico que não esteja associado a nenhum colaborador ativo."
+            },
+            {
+              "id": 5,
+              "description": "Impedir a exclusão de um nível hierárquico que possua colaboradores vinculados, exibindo mensagem de erro explicativa ao administrador."
+            },
+            {
+              "id": 6,
+              "description": "Exibir a lista de todos os níveis hierárquicos configurados no tenant, apresentando nome e, quando aplicável, a posição ou ordem de cada nível."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 7,
+          "name": "Ordenação e Estrutura dos Níveis",
+          "items": [
+            {
+              "id": 8,
+              "description": "Permitir ao administrador definir a ordem ou posição relativa dos níveis hierárquicos dentro da estrutura organizacional do tenant."
+            },
+            {
+              "id": 9,
+              "description": "Garantir que a ordenação dos níveis hierárquicos seja persistida e reflita corretamente em todas as telas que exibem ou utilizam essa estrutura, incluindo o formulário de cadastro de colaboradores."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 10,
+          "name": "Atribuição de Nível a Colaborador",
+          "items": [
+            {
+              "id": 11,
+              "description": "Permitir que o administrador do tenant atribua um nível hierárquico a um colaborador no momento do cadastro ou por meio da edição do perfil existente."
+            },
+            {
+              "id": 12,
+              "description": "Garantir que a atribuição de nível hierárquico a um colaborador não restrinja a criação, atribuição ou execução de tarefas entre colaboradores de níveis distintos."
+            },
+            {
+              "id": 13,
+              "description": "Exibir o nível hierárquico do colaborador em seu perfil e nas listagens de usuários do tenant."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 14,
+          "name": "Controle de Acesso à Configuração",
+          "items": [
+            {
+              "id": 15,
+              "description": "Restringir o acesso à funcionalidade de criação, edição e exclusão de níveis hierárquicos exclusivamente a usuários com perfil de administrador do tenant."
+            },
+            {
+              "id": 16,
+              "description": "Impedir que colaboradores ou gestores sem perfil de administrador criem, editem ou excluam níveis hierárquicos."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 17,
+          "name": "Validações e Feedback",
+          "items": [
+            {
+              "id": 18,
+              "description": "Validar que o nome do nível hierárquico não esteja em branco antes de permitir a criação ou edição, exibindo mensagem de erro específica quando o campo estiver vazio."
+            },
+            {
+              "id": 19,
+              "description": "Validar a unicidade do nome do nível hierárquico dentro do tenant, impedindo a criação de dois níveis com o mesmo nome na mesma organização."
+            },
+            {
+              "id": 20,
+              "description": "Exibir mensagem de confirmação de sucesso ao administrador após a criação, edição ou exclusão de um nível hierárquico."
+            },
+            {
+              "id": 21,
+              "description": "Exibir mensagem de erro clara e descritiva ao administrador quando uma operação sobre níveis hierárquicos não puder ser concluída por falha de validação ou erro do sistema."
+            }
+          ]
+        }
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "group": {
+          "id": 22,
+          "name": "Segurança e Conformidade",
+          "items": [
+            {
+              "id": 23,
+              "description": "Registrar em log de auditoria toda operação de criação, edição ou exclusão de nível hierárquico, incluindo identificação do administrador executor, timestamp e dados alterados, em conformidade com os requisitos de rastreabilidade da plataforma."
+            },
+            {
+              "id": 24,
+              "description": "Garantir que os níveis hierárquicos configurados em um tenant não sejam visíveis, acessíveis ou interferentes nos dados de nenhum outro tenant, respeitando o isolamento multi-tenant."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 25,
+          "name": "Usabilidade e Responsividade",
+          "items": [
+            {
+              "id": 26,
+              "description": "Renderizar a interface de gerenciamento de níveis hierárquicos de forma responsiva e adaptativa, garantindo usabilidade adequada em dispositivos móveis (smartphones e tablets) e em desktops."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 27,
+          "name": "Desempenho",
+          "items": [
+            {
+              "id": 28,
+              "description": "Concluir operações de criação, edição e exclusão de níveis hierárquicos e retornar a confirmação ao administrador em tempo adequado, mesmo sob carga de até 5.000 usuários ativos na plataforma."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 2,
+  "sourceType": "feature",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-10T20:26:45.400Z",
+  "updatedAt": null
+}

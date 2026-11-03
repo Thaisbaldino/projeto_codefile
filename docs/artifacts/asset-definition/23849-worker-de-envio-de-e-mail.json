@@ -1,0 +1,673 @@
+{
+  "id": 23849,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 36,
+          "name": "Mensagem de Fila de Envio de E-mail",
+          "format": "JSON { userId: uuid, email: string, recoveryToken: string, recoveryLink: string, tenantId: uuid, timestamp: ISO8601, idempotency_key?: string, retry_count?: integer }",
+          "origin": "email_send_queue",
+          "trigger": "message_available_in_queue"
+        },
+        {
+          "id": 37,
+          "name": "Configuração de Retry e Circuit Breaker",
+          "format": "Parâmetros de configuração carregados em tempo de inicialização do worker",
+          "origin": "worker_params",
+          "trigger": null
+        },
+        {
+          "id": 38,
+          "name": "Estado de Idempotência",
+          "format": "Registro de mensagens já processadas com sucesso, indexado por idempotency_key",
+          "origin": "idempotency_store",
+          "trigger": null
+        }
+      ],
+      "outputs": [
+        {
+          "id": 53,
+          "name": "Resultado de Processamento",
+          "format": "{ status: 'success' | 'temporary_failure' | 'permanent_failure' | 'duplicate', message_id?: string, retry_count: integer, latency_ms: integer, error?: { code: string, message: string } }",
+          "destination": "worker_result_log"
+        },
+        {
+          "id": 54,
+          "name": "Mensagem Recolocada na Fila",
+          "format": "Mensagem original com retry_count incrementado e novo visibility_timeout, se falha temporária",
+          "destination": "email_send_queue"
+        },
+        {
+          "id": 55,
+          "name": "Mensagem em Dead-Letter Queue",
+          "format": "Mensagem original com metadata de falha permanente, para análise manual e reprocessamento futuro",
+          "destination": "email_send_dlq"
+        },
+        {
+          "id": 56,
+          "name": "Registro de Auditoria",
+          "format": "{ timestamp: ISO8601, userId: uuid, tenantId: uuid, action: 'email_send_attempt', status: 'success' | 'failure', email: string, retry_count: integer, message_id?: string, error_code?: string, provider_latency_ms?: integer }",
+          "destination": "audit_log"
+        },
+        {
+          "id": 57,
+          "name": "Métrica de Observabilidade",
+          "format": "{ metric: 'email_send_success' | 'email_send_failure' | 'email_send_retry' | 'circuit_breaker_state', value: integer, tags: { tenant_id: uuid, provider: string, error_type?: string } }",
+          "destination": "metrics_collector"
+        }
+      ],
+      "processing": [
+        {
+          "id": 39,
+          "step": "Consumir Mensagem da Fila",
+          "description": "Worker retira mensagem da fila de envio de e-mail, registrando timestamp de consumo e iniciando timeout de visibilidade"
+        },
+        {
+          "id": 40,
+          "step": "Desserializar Payload",
+          "description": "Converte JSON da mensagem em objeto estruturado, validando presença de campos obrigatórios (userId, email, recoveryToken, recoveryLink, tenantId)"
+        },
+        {
+          "id": 41,
+          "step": "Validar Formato de Dados",
+          "description": "Verifica formato de e-mail, UUID de userId e tenantId, URL de recoveryLink, e estrutura geral do payload"
+        },
+        {
+          "id": 42,
+          "step": "Verificar Idempotência",
+          "description": "Consulta store de idempotência usando chave derivada de userId, recoveryTokenId e timestamp; se encontrado, marca como sucesso e retorna sem reenviar"
+        },
+        {
+          "id": 43,
+          "step": "Validar Circuit Breaker",
+          "description": "Verifica estado do circuit breaker para o provedor de e-mail; se aberto, aguarda período de half-open ou falha a mensagem"
+        },
+        {
+          "id": 44,
+          "step": "Aplicar Rate Limiting",
+          "description": "Verifica se requisição respeita limite de taxa configurado (ex: 100 req/min); se excedido, aguarda ou recoloca mensagem na fila"
+        },
+        {
+          "id": 45,
+          "step": "Invocar Conector de Provedor de E-mail",
+          "description": "Chama operação sendPasswordRecoveryEmail do Conector, passando userId, email, recoveryToken, recoveryLink, com timeout de 10s e total de 45s"
+        },
+        {
+          "id": 46,
+          "step": "Processar Resposta do Provedor",
+          "description": "Avalia resposta HTTP: 2xx = sucesso, 4xx = falha permanente, 5xx ou timeout = falha temporária; extrai message_id se disponível"
+        },
+        {
+          "id": 47,
+          "step": "Aplicar Lógica de Retry",
+          "description": "Se falha temporária e retry_count < max_retries, calcula backoff exponencial com jitter, recoloca mensagem na fila com novo retry_count"
+        },
+        {
+          "id": 48,
+          "step": "Atualizar Circuit Breaker",
+          "description": "Incrementa contador de falhas se erro 5xx; se threshold atingido, abre circuit breaker e registra em auditoria"
+        },
+        {
+          "id": 49,
+          "step": "Registrar em Auditoria",
+          "description": "Registra tentativa de envio (sucesso ou falha) em log de auditoria com userId, tenantId, email, timestamp, retry_count, message_id, e detalhes de erro"
+        },
+        {
+          "id": 50,
+          "step": "Registrar em Idempotência",
+          "description": "Se sucesso, armazena idempotency_key no store com timestamp de expiração (ex: 24h) para prevenir reenvios duplicados"
+        },
+        {
+          "id": 51,
+          "step": "Remover Mensagem da Fila",
+          "description": "Se sucesso, remove mensagem da fila de envio; se falha permanente, move para dead-letter queue"
+        },
+        {
+          "id": 52,
+          "step": "Emitir Evento de Observabilidade",
+          "description": "Emite métrica de sucesso/falha, latência de envio, e estado do circuit breaker para sistema de observabilidade"
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 58,
+        "category": "idempotency",
+        "description": "Cada mensagem de envio de e-mail deve ser processada no máximo uma vez, mesmo se consumida múltiplas vezes da fila. Idempotência é garantida através de chave única derivada de userId, recoveryTokenId e timestamp, armazenada em store com TTL de 24 horas.",
+        "enforcement": "code",
+        "verification": "Consultar idempotency_store antes de invocar Conector de Provedor de E-mail; se chave existe, retornar sucesso sem reenviar; se não existe, processar e registrar após sucesso confirmado"
+      },
+      {
+        "id": 59,
+        "category": "validation",
+        "description": "Toda mensagem consumida da fila deve ser desserializada e validada quanto a presença de campos obrigatórios (userId, email, recoveryToken, recoveryLink, tenantId) e formato correto (UUID, e-mail válido, URL válida) antes de qualquer processamento.",
+        "enforcement": "code",
+        "verification": "Implementar validação de schema JSON com rejeição de payloads malformados; registrar erro em auditoria e mover para dead-letter queue se validação falhar"
+      },
+      {
+        "id": 60,
+        "category": "authorization",
+        "description": "Mensagens de envio de e-mail devem ser processadas apenas para o tenant ao qual pertencem, garantindo isolamento de dados entre organizações. O tenantId na mensagem deve ser validado contra contexto de execução.",
+        "enforcement": "code",
+        "verification": "Verificar que tenantId da mensagem corresponde ao tenant do usuário (userId) antes de invocar Conector; registrar tentativa de acesso cruzado em auditoria como evento de segurança"
+      },
+      {
+        "id": 61,
+        "category": "rate_limit",
+        "description": "Requisições de envio de e-mail ao provedor devem respeitar limite de taxa configurado (100 requisições por minuto) para evitar throttling ou bloqueio pelo provedor. Rate limiting é aplicado por worker e por tenant.",
+        "enforcement": "code",
+        "verification": "Implementar token bucket ou sliding window counter; se limite atingido, recolocar mensagem na fila com novo visibility_timeout em vez de descartar"
+      },
+      {
+        "id": 62,
+        "category": "invariant",
+        "description": "Falhas temporárias (5xx, timeout) devem ser retentadas com backoff exponencial (inicial 1s, máximo 30s, multiplicador 2.0, jitter 10%) até máximo de 3 tentativas. Falhas permanentes (4xx, desserialização) devem ser movidas para dead-letter queue sem retry.",
+        "enforcement": "code",
+        "verification": "Classificar erro por código HTTP e tipo de exceção; aplicar lógica de retry apenas para falhas temporárias; registrar classificação em auditoria"
+      },
+      {
+        "id": 63,
+        "category": "invariant",
+        "description": "Circuit breaker para provedor de e-mail deve abrir após 5 falhas consecutivas em janela de 60 segundos, entrando em estado half-open por 60 segundos antes de tentar recuperação. Mensagens enfileiradas durante estado aberto devem ser retidas na fila sem processamento.",
+        "enforcement": "code",
+        "verification": "Implementar state machine de circuit breaker com contadores de falha e sucesso; registrar transições de estado em auditoria e métricas"
+      },
+      {
+        "id": 64,
+        "category": "observability",
+        "description": "Toda tentativa de envio de e-mail (sucesso, falha temporária, falha permanente, duplicata) deve ser registrada em log de auditoria com userId, tenantId, email, timestamp, retry_count, message_id (se disponível), e detalhes de erro.",
+        "enforcement": "code",
+        "verification": "Emitir entrada de auditoria estruturada após cada tentativa; verificar presença de campos obrigatórios em log; validar que tenantId está sempre presente"
+      },
+      {
+        "id": 65,
+        "category": "compliance",
+        "description": "Processamento de dados pessoais (e-mail, userId) deve estar em conformidade com LGPD. Dados de auditoria devem ser retidos por período mínimo de 90 dias e máximo de 1 ano, com política de exclusão automática após expiração.",
+        "enforcement": "infra",
+        "verification": "Configurar política de retenção de logs de auditoria em infraestrutura; validar que dados pessoais não são armazenados em cache ou logs de erro; implementar mascaramento de e-mail em logs quando apropriado"
+      },
+      {
+        "id": 66,
+        "category": "invariant",
+        "description": "Timeout total para operação de envio de e-mail (incluindo retries) é 45 segundos. Timeout individual para requisição HTTP ao provedor é 10 segundos. Se timeout total atingido, mensagem é movida para dead-letter queue.",
+        "enforcement": "code",
+        "verification": "Implementar timeout em nível de requisição HTTP e em nível de operação total; registrar timeout em auditoria; mover para DLQ se total atingido"
+      },
+      {
+        "id": 67,
+        "category": "invariant",
+        "description": "Mensagem deve ser removida da fila apenas após confirmação de sucesso (message_id recebido do provedor e registrado em idempotência). Se processamento falhar, mensagem permanece na fila com novo visibility_timeout para retry.",
+        "enforcement": "code",
+        "verification": "Confirmar sucesso antes de chamar delete_message na fila; se exceção ocorrer antes de confirmação, deixar mensagem na fila; registrar estado em auditoria"
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "O Worker de Envio de E-mail é um processador assíncrono especializado que consome mensagens de uma fila de envio, valida e desserializa payloads contendo dados de recuperação de senha, executa lógica de negócio de envio via Conector de Provedor de E-mail, implementa mecanismos de retry com backoff exponencial e circuit breaker para resiliência contra falhas do provedor, garante idempotência através de chaves de idempotência, registra resultados em auditoria, e trata erros classificando-os como recuperáveis ou irrecuperáveis. Executa em ciclo contínuo ou sob demanda, isolando dados por tenant, respeitando limites de taxa do provedor, e mantendo rastreabilidade completa de cada tentativa de envio para conformidade com LGPD e requisitos de observabilidade da plataforma."
+    },
+    "definition": {
+      "params": [
+        {
+          "id": 3,
+          "name": "max_retries",
+          "value": "3"
+        },
+        {
+          "id": 4,
+          "name": "initial_backoff_ms",
+          "value": "1000"
+        },
+        {
+          "id": 5,
+          "name": "max_backoff_ms",
+          "value": "30000"
+        },
+        {
+          "id": 6,
+          "name": "backoff_multiplier",
+          "value": "2.0"
+        },
+        {
+          "id": 7,
+          "name": "jitter_ratio",
+          "value": "0.1"
+        },
+        {
+          "id": 8,
+          "name": "circuit_breaker_failure_threshold",
+          "value": "5"
+        },
+        {
+          "id": 9,
+          "name": "circuit_breaker_timeout_seconds",
+          "value": "60"
+        },
+        {
+          "id": 10,
+          "name": "rate_limit_requests_per_minute",
+          "value": "100"
+        },
+        {
+          "id": 11,
+          "name": "request_timeout_seconds",
+          "value": "10"
+        },
+        {
+          "id": 12,
+          "name": "total_timeout_seconds",
+          "value": "45"
+        },
+        {
+          "id": 13,
+          "name": "message_visibility_timeout_seconds",
+          "value": "300"
+        },
+        {
+          "id": 14,
+          "name": "dead_letter_queue_name",
+          "value": "email_send_dlq"
+        }
+      ],
+      "worker": {
+        "id": 2,
+        "queue": "email_send_queue",
+        "idempotency_key": "message.idempotency_key || `${message.userId}_${message.recoveryTokenId}_${message.timestamp}`",
+        "max_concurrency": 10,
+        "handler_signature": "async function processEmailMessage(message: EmailQueueMessage, context: WorkerContext): Promise<ProcessingResult>"
+      },
+      "state_machine": {
+        "states": [
+          {
+            "id": 15,
+            "name": "Aguardando Processamento",
+            "description": "Mensagem enfileirada aguardando consumo pelo worker"
+          },
+          {
+            "id": 16,
+            "name": "Desserializando",
+            "description": "Payload da mensagem sendo desserializado e validado"
+          },
+          {
+            "id": 17,
+            "name": "Validando Idempotência",
+            "description": "Verificando se a mensagem já foi processada anteriormente"
+          },
+          {
+            "id": 18,
+            "name": "Enviando E-mail",
+            "description": "Requisição de envio em andamento para o provedor de e-mail"
+          },
+          {
+            "id": 19,
+            "name": "Aguardando Retry",
+            "description": "Falha temporária; aguardando período de backoff antes de nova tentativa"
+          },
+          {
+            "id": 20,
+            "name": "Sucesso",
+            "description": "E-mail enviado com sucesso; mensagem removida da fila"
+          },
+          {
+            "id": 21,
+            "name": "Falha Irrecuperável",
+            "description": "Erro permanente; mensagem movida para dead-letter queue"
+          },
+          {
+            "id": 22,
+            "name": "Circuit Breaker Aberto",
+            "description": "Provedor de e-mail indisponível; worker aguardando recuperação"
+          }
+        ],
+        "transitions": [
+          {
+            "id": 23,
+            "to": "Desserializando",
+            "from": "Aguardando Processamento",
+            "trigger": "message_consumed"
+          },
+          {
+            "id": 24,
+            "to": "Validando Idempotência",
+            "from": "Desserializando",
+            "trigger": "deserialization_success"
+          },
+          {
+            "id": 25,
+            "to": "Falha Irrecuperável",
+            "from": "Desserializando",
+            "guard": "error.type === 'INVALID_PAYLOAD'",
+            "trigger": "deserialization_error"
+          },
+          {
+            "id": 26,
+            "to": "Sucesso",
+            "from": "Validando Idempotência",
+            "trigger": "idempotency_duplicate_detected"
+          },
+          {
+            "id": 27,
+            "to": "Enviando E-mail",
+            "from": "Validando Idempotência",
+            "trigger": "idempotency_check_passed"
+          },
+          {
+            "id": 28,
+            "to": "Sucesso",
+            "from": "Enviando E-mail",
+            "trigger": "send_success"
+          },
+          {
+            "id": 29,
+            "to": "Aguardando Retry",
+            "from": "Enviando E-mail",
+            "guard": "retry_count < max_retries && !circuit_breaker_open",
+            "trigger": "send_failure_temporary"
+          },
+          {
+            "id": 30,
+            "to": "Circuit Breaker Aberto",
+            "from": "Enviando E-mail",
+            "trigger": "circuit_breaker_threshold_exceeded"
+          },
+          {
+            "id": 31,
+            "to": "Falha Irrecuperável",
+            "from": "Enviando E-mail",
+            "trigger": "send_failure_permanent"
+          },
+          {
+            "id": 32,
+            "to": "Enviando E-mail",
+            "from": "Aguardando Retry",
+            "trigger": "backoff_timeout_elapsed"
+          },
+          {
+            "id": 33,
+            "to": "Falha Irrecuperável",
+            "from": "Aguardando Retry",
+            "trigger": "max_retries_exceeded"
+          },
+          {
+            "id": 34,
+            "to": "Enviando E-mail",
+            "from": "Circuit Breaker Aberto",
+            "trigger": "circuit_breaker_half_open_timeout"
+          },
+          {
+            "id": 35,
+            "to": "Falha Irrecuperável",
+            "from": "Circuit Breaker Aberto",
+            "trigger": "message_visibility_timeout_exceeded"
+          }
+        ]
+      }
+    },
+    "pendencies": [
+      {
+        "id": 86,
+        "section": "definition",
+        "description": "Estrutura exata do payload de mensagem na fila de envio de e-mail não foi completamente especificada. É necessário confirmar se campos adicionais como 'locale' para localização de template, 'template_id' para seleção de template, ou 'custom_variables' para personalização devem ser suportados.",
+        "resolutionOptions": [
+          {
+            "id": 87,
+            "text": "Payload mínimo: apenas userId, email, recoveryToken, recoveryLink, tenantId, timestamp. Template e variáveis são fixos no Conector."
+          },
+          {
+            "id": 88,
+            "text": "Payload estendido: inclui template_id, locale, custom_variables para suportar múltiplos templates e localização de e-mail."
+          },
+          {
+            "id": 89,
+            "text": "Payload com metadados: inclui campos de rastreamento adicionais como source_system, request_id, user_agent para observabilidade aprimorada."
+          }
+        ],
+        "recommendedOptionId": 87
+      },
+      {
+        "id": 90,
+        "section": "definition",
+        "description": "Mecanismo de armazenamento para idempotency_store não foi especificado. É necessário definir se será Redis, banco de dados relacional, ou outro sistema de cache.",
+        "resolutionOptions": [
+          {
+            "id": 91,
+            "text": "Redis com TTL de 24 horas: rápido, adequado para idempotência de curta duração, requer infraestrutura Redis."
+          },
+          {
+            "id": 92,
+            "text": "Banco de dados relacional (PostgreSQL) com tabela de idempotência: durável, integrado com banco existente, latência ligeiramente maior."
+          },
+          {
+            "id": 93,
+            "text": "Cache em memória local do worker com sincronização periódica: simples, mas não suporta múltiplas instâncias de worker."
+          }
+        ],
+        "recommendedOptionId": 92
+      },
+      {
+        "id": 94,
+        "section": "flow",
+        "description": "Formato e destino de métricas de observabilidade não foram completamente especificados. É necessário confirmar se será Prometheus, CloudWatch, Datadog, ou outro sistema de métricas.",
+        "resolutionOptions": [
+          {
+            "id": 95,
+            "text": "Prometheus com formato de métrica padrão (counter, gauge, histogram) e scraping a cada 30s."
+          },
+          {
+            "id": 96,
+            "text": "CloudWatch com custom metrics e logs estruturados em JSON."
+          },
+          {
+            "id": 97,
+            "text": "Datadog com integração nativa e tags de tenant para segmentação."
+          }
+        ],
+        "recommendedOptionId": 95
+      },
+      {
+        "id": 98,
+        "section": "rules",
+        "description": "Política de retenção de logs de auditoria foi mencionada como 90-365 dias, mas valor exato não foi definido. É necessário confirmar período específico de retenção conforme requisitos de conformidade.",
+        "resolutionOptions": [
+          {
+            "id": 99,
+            "text": "Retenção de 90 dias: atende requisitos básicos de auditoria, reduz custo de armazenamento."
+          },
+          {
+            "id": 100,
+            "text": "Retenção de 1 ano (365 dias): atende requisitos mais rigorosos de conformidade e investigação forense."
+          },
+          {
+            "id": 101,
+            "text": "Retenção configurável por tenant: permite que cada organização defina sua própria política de retenção."
+          }
+        ],
+        "recommendedOptionId": 100
+      },
+      {
+        "id": 102,
+        "section": "non_functional_requirements",
+        "description": "Estratégia de monitoramento e alertas para o worker não foi completamente especificada. É necessário definir limiares de alerta e ações de remediação automática.",
+        "resolutionOptions": [
+          {
+            "id": 103,
+            "text": "Alertas baseados em limiares: alerta se p95 > 15s, throughput < 100 msg/min, ou uptime < 99.5%."
+          },
+          {
+            "id": 104,
+            "text": "Alertas baseados em anomalias: detecção automática de desvios em relação a padrão histórico de performance."
+          },
+          {
+            "id": 105,
+            "text": "Alertas com remediação automática: reiniciar worker se indisponível por > 5 min, escalar para on-call se circuit breaker aberto por > 10 min."
+          }
+        ],
+        "recommendedOptionId": 103
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 74,
+        "then": "Payload é desserializado sem erro; validação passa; worker avança para verificação de idempotência",
+        "type": "unit",
+        "when": "Worker processa a mensagem",
+        "given": "Mensagem JSON com campos obrigatórios válidos (userId, email, recoveryToken, recoveryLink, tenantId)",
+        "scenario": "Desserialização e validação de payload de mensagem",
+        "target_section": "definition"
+      },
+      {
+        "id": 75,
+        "then": "Validação falha; erro é registrado em auditoria; mensagem é movida para dead-letter queue sem retry",
+        "type": "unit",
+        "when": "Worker tenta desserializar e validar",
+        "given": "Mensagem JSON com campo obrigatório ausente (ex: email faltando)",
+        "scenario": "Rejeição de payload malformado",
+        "target_section": "definition"
+      },
+      {
+        "id": 76,
+        "then": "Chave é encontrada; worker retorna sucesso sem invocar Conector; mensagem é removida da fila",
+        "type": "unit",
+        "when": "Worker consulta idempotency_store",
+        "given": "Mensagem com idempotency_key que já foi processada com sucesso há 2 horas",
+        "scenario": "Detecção de duplicata por idempotência",
+        "target_section": "definition"
+      },
+      {
+        "id": 77,
+        "then": "E-mail é enviado; message_id é recebido; idempotency_key é registrado; mensagem é removida da fila; sucesso é registrado em auditoria",
+        "type": "integration",
+        "when": "Worker processa mensagem e invoca Conector",
+        "given": "Mensagem válida enfileirada; Conector de Provedor de E-mail disponível e respondendo com 2xx",
+        "scenario": "Envio bem-sucedido de e-mail de recuperação de senha",
+        "target_section": "flow"
+      },
+      {
+        "id": 78,
+        "then": "Primeira tentativa é registrada como falha temporária; backoff exponencial é aplicado (1s); segunda tentativa sucede; message_id é registrado; sucesso final é registrado em auditoria",
+        "type": "integration",
+        "when": "Worker processa mensagem, falha, aguarda backoff, e retenta",
+        "given": "Primeira tentativa retorna erro 503 (Service Unavailable); segunda tentativa retorna 2xx",
+        "scenario": "Falha temporária com retry bem-sucedido",
+        "target_section": "flow"
+      },
+      {
+        "id": 79,
+        "then": "Erro 400 é classificado como falha permanente; retry não é aplicado; mensagem é movida para dead-letter queue; falha é registrada em auditoria",
+        "type": "integration",
+        "when": "Worker processa mensagem e invoca Conector",
+        "given": "Mensagem com e-mail inválido (formato incorreto); Conector retorna erro 400 (Bad Request)",
+        "scenario": "Falha permanente movida para dead-letter queue",
+        "target_section": "flow"
+      },
+      {
+        "id": 80,
+        "then": "Após 5ª falha, circuit breaker transita para estado aberto; 6ª mensagem não invoca Conector; estado aberto é registrado em auditoria e métricas; worker aguarda 60s antes de half-open",
+        "type": "integration",
+        "when": "Worker processa 5 mensagens consecutivas",
+        "given": "Provedor de e-mail retorna 5 erros 503 consecutivos em 60 segundos",
+        "scenario": "Circuit breaker abre após múltiplas falhas",
+        "target_section": "flow"
+      },
+      {
+        "id": 81,
+        "then": "Requisição é enviada ao Conector; se sucesso, circuit breaker transita para fechado; se falha, retorna para aberto; transição é registrada em auditoria",
+        "type": "integration",
+        "when": "Worker tenta processar mensagem em estado half-open",
+        "given": "Circuit breaker está aberto há 60 segundos; Conector está novamente disponível",
+        "scenario": "Circuit breaker recupera após período half-open",
+        "target_section": "flow"
+      },
+      {
+        "id": 82,
+        "then": "tenantId é verificado contra contexto de execução; se mismatch, mensagem é rejeitada; tentativa de acesso cruzado é registrada em auditoria como evento de segurança",
+        "type": "security",
+        "when": "Worker valida tenantId da mensagem",
+        "given": "Mensagem de envio para usuário do tenant A; worker está processando",
+        "scenario": "Isolamento de dados por tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 83,
+        "then": "E-mail é armazenado em auditoria (necessário para rastreabilidade); dados pessoais não são expostos em logs de erro; política de retenção de 90-365 dias é aplicada",
+        "type": "security",
+        "when": "Worker registra evento em auditoria",
+        "given": "Mensagem de envio de e-mail é processada com sucesso",
+        "scenario": "Conformidade com LGPD em logs de auditoria",
+        "target_section": "rules"
+      },
+      {
+        "id": 84,
+        "then": "Todas as 10 mensagens são processadas simultaneamente; latência total é aproximadamente igual à latência de uma única mensagem (p95 <= 15s); throughput >= 100 msg/min",
+        "type": "performance",
+        "when": "Worker processa mensagens em paralelo",
+        "given": "10 mensagens enfileiradas; max_concurrency = 10",
+        "scenario": "Processamento de múltiplas mensagens em paralelo",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 85,
+        "then": "Requisições ao Conector não excedem 100 por minuto; se limite é atingido, mensagens são recolocadas na fila com novo visibility_timeout; nenhuma requisição é descartada",
+        "type": "performance",
+        "when": "Worker processa mensagens com rate limiting ativo",
+        "given": "100 mensagens enfileiradas; rate_limit_requests_per_minute = 100",
+        "scenario": "Rate limiting respeita limite do provedor",
+        "target_section": "non_functional_requirements"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 68,
+        "target": "p95 <= 15s (sucesso), p99 <= 45s (com retries), latência média do provedor <= 5s",
+        "category": "performance",
+        "requirement": "Processamento de cada mensagem de envio de e-mail deve ser concluído em tempo adequado, considerando latência de rede ao provedor e aplicação de retry.",
+        "verification": "Medir latência de ponta a ponta por tentativa; registrar em métricas; alertar se p95 > 15s por mais de 5 minutos"
+      },
+      {
+        "id": 69,
+        "target": "max_concurrency = 10 workers simultâneos; throughput mínimo de 100 mensagens/minuto sob carga normal",
+        "category": "scalability",
+        "requirement": "Worker deve processar múltiplas mensagens em paralelo sem degradação de performance, respeitando limite de concorrência configurado.",
+        "verification": "Monitorar número de workers ativos; alertar se throughput cair abaixo de 100 msg/min; validar que max_concurrency não é excedido"
+      },
+      {
+        "id": 70,
+        "target": "Disponibilidade >= 99.5% (máximo 3.6 horas de downtime/mês); RTO <= 5 minutos em caso de falha",
+        "category": "availability",
+        "requirement": "Worker deve estar disponível continuamente para processar mensagens de recuperação de senha, dado que indisponibilidade impede que usuários bloqueados recuperem acesso.",
+        "verification": "Monitorar uptime do worker; alertar se indisponível por mais de 5 minutos; implementar health check a cada 30 segundos"
+      },
+      {
+        "id": 71,
+        "target": "Zero exposição de dados pessoais em logs de erro; mascaramento de e-mail em logs públicos (ex: 'u***@example.com')",
+        "category": "security",
+        "requirement": "Dados pessoais (e-mail, userId) processados pelo worker devem ser protegidos contra exposição em logs, caches ou erros não tratados.",
+        "verification": "Auditar logs de erro para presença de dados pessoais; implementar mascaramento automático; validar que dados não são armazenados em cache local"
+      },
+      {
+        "id": 72,
+        "target": "100% das tentativas de envio registradas em auditoria; métricas de sucesso/falha/retry emitidas em tempo real; logs estruturados em formato JSON",
+        "category": "observability",
+        "requirement": "Todas as operações do worker devem ser rastreáveis através de logs estruturados, métricas e eventos de auditoria, permitindo diagnóstico de falhas e análise de padrões.",
+        "verification": "Validar presença de entrada de auditoria para cada tentativa; verificar que métricas são emitidas dentro de 5s; auditar formato de logs"
+      },
+      {
+        "id": 73,
+        "target": "Máximo 1 reenvio por mensagem em caso de falha temporária; idempotência previne duplicatas; rate limiting respeita limite de 100 req/min do provedor",
+        "category": "cost",
+        "requirement": "Processamento de e-mail deve ser otimizado para minimizar custos com provedor transacional, respeitando limites de taxa e evitando reenvios desnecessários.",
+        "verification": "Monitorar número de requisições ao provedor; alertar se taxa de reenvio > 10%; validar que duplicatas são prevenidas por idempotência"
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 37,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T08:00:02.997Z",
+  "updatedAt": null
+}

@@ -1,0 +1,708 @@
+{
+  "id": 23986,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 58,
+          "name": "Requisição de Edição de Tarefa",
+          "format": "JSON com campos opcionais: { titulo?: string, descricao?: string, responsavel_id?: uuid, prioridade?: enum[baixa|media|alta|urgente], status?: string, data_limite?: string }",
+          "origin": "Formulário de Edição de Tarefa (página de interface)",
+          "trigger": "Submissão do formulário de edição pelo usuário autenticado"
+        },
+        {
+          "id": 59,
+          "name": "Contexto de Autenticação",
+          "format": "{ usuario_id: uuid, tenant_id: uuid, perfil: enum[colaborador|gestor|administrador], status: enum[ativo|inativo] }",
+          "origin": "Middleware de Autenticação (JWT)",
+          "trigger": "Validação de token JWT na requisição HTTP"
+        },
+        {
+          "id": 60,
+          "name": "Identificador da Tarefa",
+          "format": "uuid",
+          "origin": "Parâmetro de URL ou corpo da requisição",
+          "trigger": "Extração do ID da tarefa a ser editada"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 76,
+          "name": "Resposta de Sucesso",
+          "format": "JSON: { id: uuid, tenant_id: uuid, titulo: string, descricao?: string, responsavel_id: uuid, responsavel_nome: string, criador_id: uuid, prioridade: enum[baixa|media|alta|urgente], status: string, data_limite?: string, data_ultima_edicao: string, ultimo_editor_id: uuid, ultimo_editor_nome: string }",
+          "destination": "Cliente HTTP (navegador ou aplicação)"
+        },
+        {
+          "id": 77,
+          "name": "Resposta de Erro de Validação",
+          "format": "JSON: { error: string, field?: string, message: string }, HTTP 400",
+          "destination": "Cliente HTTP (navegador ou aplicação)"
+        },
+        {
+          "id": 78,
+          "name": "Resposta de Erro de Acesso Negado",
+          "format": "JSON: { error: 'Not Found' | 'Forbidden', message: string }, HTTP 404 | 403",
+          "destination": "Cliente HTTP (navegador ou aplicação)"
+        },
+        {
+          "id": 79,
+          "name": "Resposta de Erro de Servidor",
+          "format": "JSON: { error: 'Internal Server Error', message: string }, HTTP 500",
+          "destination": "Cliente HTTP (navegador ou aplicação)"
+        },
+        {
+          "id": 80,
+          "name": "Evento de Domínio TarefaEditada",
+          "format": "{ id: uuid, tenant_id: uuid, campos_alterados: [{ campo: string, valor_anterior: any, valor_novo: any }], data_edicao: timestamp, editor_id: uuid }",
+          "destination": "Sistema de Eventos de Domínio (event bus interno)"
+        },
+        {
+          "id": 81,
+          "name": "Evento de Domínio StatusTarefaAlterado",
+          "format": "{ id: uuid, tenant_id: uuid, status_anterior: string, status_novo: string, data_transicao: timestamp, executor_id: uuid }",
+          "destination": "Sistema de Eventos de Domínio (event bus interno)"
+        },
+        {
+          "id": 82,
+          "name": "Registro de Auditoria",
+          "format": "{ usuario_id: uuid, tenant_id: uuid, timestamp: timestamp, operacao: 'editar_tarefa', tarefa_id: uuid, campos_alterados: [{ campo: string, valor_anterior: any, valor_novo: any }] }",
+          "destination": "Trilha de Auditoria (banco de dados ou log centralizado)"
+        }
+      ],
+      "processing": [
+        {
+          "id": 61,
+          "step": "Validar Existência da Tarefa",
+          "description": "Consulta o repositório de tarefas para verificar se a tarefa existe e pertence ao tenant do usuário autenticado."
+        },
+        {
+          "id": 62,
+          "step": "Validar Preenchimento de Campos Obrigatórios",
+          "description": "Verifica se campos obrigatórios (quando fornecidos) estão preenchidos e válidos."
+        },
+        {
+          "id": 63,
+          "step": "Validar Formato de Título",
+          "description": "Valida comprimento e caracteres permitidos do título quando alterado."
+        },
+        {
+          "id": 64,
+          "step": "Validar Identificador do Responsável",
+          "description": "Valida formato UUID e consulta repositório de usuários para confirmar existência e status ativo."
+        },
+        {
+          "id": 65,
+          "step": "Validar Prioridade",
+          "description": "Verifica se o valor de prioridade é um dos valores permitidos."
+        },
+        {
+          "id": 66,
+          "step": "Validar Data Limite",
+          "description": "Valida formato de data, não-retroatividade e conformidade com calendário."
+        },
+        {
+          "id": 67,
+          "step": "Validar Status",
+          "description": "Verifica se o status é um dos valores fixos permitidos."
+        },
+        {
+          "id": 68,
+          "step": "Invocar Regra de Prioridade e Prazo",
+          "description": "Executa validações de negócio para prioridade e prazo, incluindo isolamento multi-tenant."
+        },
+        {
+          "id": 69,
+          "step": "Invocar Regra de Transição de Status",
+          "description": "Executa validações de negócio para transição de status, incluindo autorização de executor."
+        },
+        {
+          "id": 70,
+          "step": "Persistir Alterações no Repositório",
+          "description": "Atualiza o registro de tarefa com os dados validados, registrando metadados de edição."
+        },
+        {
+          "id": 71,
+          "step": "Registrar Transição de Status em Histórico",
+          "description": "Se status foi alterado, registra a transição no histórico imutável."
+        },
+        {
+          "id": 72,
+          "step": "Registrar Evento em Trilha de Auditoria",
+          "description": "Registra a operação de edição na trilha de auditoria para conformidade com LGPD."
+        },
+        {
+          "id": 73,
+          "step": "Emitir Evento de Sucesso",
+          "description": "Emite evento de domínio TarefaEditada para notificar outros componentes."
+        },
+        {
+          "id": 74,
+          "step": "Atualizar Visualizações em Tempo Real",
+          "description": "Coordena atualização de lista e Kanban para refletir alterações sem recarregamento."
+        },
+        {
+          "id": 75,
+          "step": "Retornar Confirmação ao Usuário",
+          "description": "Retorna resposta HTTP 200 com dados atualizados da tarefa e mensagem de sucesso."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 83,
+        "category": "validation",
+        "description": "O título da tarefa não pode estar vazio e não pode exceder 255 caracteres. Validação ocorre antes de persistência.",
+        "enforcement": "code",
+        "verification": "Teste unitário valida rejeição de título vazio e título com 256+ caracteres; teste de integração valida persistência apenas com título válido."
+      },
+      {
+        "id": 84,
+        "category": "validation",
+        "description": "O responsável selecionado deve ser um usuário ativo pertencente ao mesmo tenant do editor. Validação ocorre consultando repositório de usuários.",
+        "enforcement": "code",
+        "verification": "Teste unitário valida rejeição de responsável inativo ou de outro tenant; teste de integração valida persistência apenas com responsável ativo no tenant correto."
+      },
+      {
+        "id": 85,
+        "category": "validation",
+        "description": "A prioridade deve ser um dos valores fixos permitidos: baixa, média, alta, urgente. Validação ocorre antes de persistência.",
+        "enforcement": "code",
+        "verification": "Teste unitário valida rejeição de valores de prioridade fora do conjunto permitido; teste de integração valida persistência apenas com prioridade válida."
+      },
+      {
+        "id": 86,
+        "category": "validation",
+        "description": "A data limite, quando fornecida, deve ser uma data válida no calendário e não pode ser anterior à data atual. Validação ocorre antes de persistência.",
+        "enforcement": "code",
+        "verification": "Teste unitário valida rejeição de datas retroativas e inválidas; teste de integração valida persistência apenas com data limite válida ou ausente."
+      },
+      {
+        "id": 87,
+        "category": "validation",
+        "description": "O status, quando alterado, deve ser um dos valores fixos permitidos: A Fazer, Em Andamento, Concluído. Validação ocorre antes de persistência.",
+        "enforcement": "code",
+        "verification": "Teste unitário valida rejeição de status fora do conjunto permitido; teste de integração valida persistência apenas com status válido."
+      },
+      {
+        "id": 88,
+        "category": "authorization",
+        "description": "Apenas usuários autenticados e ativos do tenant proprietário da tarefa podem editar a tarefa. Isolamento multi-tenant é garantido em todas as consultas e atualizações.",
+        "enforcement": "code",
+        "verification": "Teste de segurança valida rejeição de requisições não autenticadas, de usuários inativos e de usuários de outros tenants; teste de integração valida isolamento de dados entre tenants."
+      },
+      {
+        "id": 89,
+        "category": "invariant",
+        "description": "A tarefa a ser editada deve existir no repositório e pertencer ao tenant do editor. Validação ocorre no início do fluxo.",
+        "enforcement": "code",
+        "verification": "Teste unitário valida rejeição de tarefa inexistente ou de outro tenant; teste de integração valida erro 404 ou 403 apropriado."
+      },
+      {
+        "id": 90,
+        "category": "compliance",
+        "description": "Toda operação de edição de tarefa deve ser registrada em trilha de auditoria, incluindo identificação do editor, tenant, timestamp, identificação da tarefa e campos alterados, em conformidade com requisitos de rastreabilidade LGPD.",
+        "enforcement": "code",
+        "verification": "Teste de auditoria valida presença de registro em trilha para cada operação de edição; teste de conformidade valida conformidade com LGPD."
+      },
+      {
+        "id": 91,
+        "category": "invariant",
+        "description": "Se o status é alterado, a transição deve ser registrada no histórico imutável de transições de status, armazenando status anterior, novo status, executor e timestamp.",
+        "enforcement": "code",
+        "verification": "Teste de integração valida presença de registro no histórico para cada alteração de status; teste de imutabilidade valida que registros históricos não podem ser alterados."
+      },
+      {
+        "id": 92,
+        "category": "observability",
+        "description": "Toda operação de edição de tarefa deve emitir evento de domínio TarefaEditada ou StatusTarefaAlterado para permitir que outros componentes reajam à edição.",
+        "enforcement": "code",
+        "verification": "Teste de integração valida emissão de evento para cada operação de edição; teste de observabilidade valida que eventos contêm informações necessárias para rastreamento."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "O Fluxo de Atualização de Tarefa é o orquestrador de negócio responsável por materializar a alteração de dados de uma tarefa existente dentro do módulo Gerenciamento de Tarefas, coordenando a captura de modificações do usuário (título, descrição, responsável, prioridade, status, prazo), validação de integridade (campos obrigatórios, formato de data, responsável ativo no tenant), aplicação de regras de negócio (Regras de Prioridade e Prazo, Regras de Transição de Status), persistência isolada por tenant, registro em trilha de auditoria para conformidade com LGPD, e geração de confirmação ou erro ao editor. Encadeia operações de validação de entrada, invocação de regras de negócio, consulta ao repositório de usuários para confirmar responsável ativo, persistência no repositório de tarefas, atualização de visualizações em tempo real (lista e Kanban), e emissão de evento de sucesso ou falha. Serve como ponto de entrada para edição de tarefas, garantindo que cada modificação respeite isolamento multi-tenant, validações de negócio, rastreabilidade completa e conformidade regulatória antes de refletir nas visualizações."
+    },
+    "definition": {
+      "params": [
+        {
+          "id": 2,
+          "name": "flow_name",
+          "value": "atualizacao-tarefa"
+        },
+        {
+          "id": 3,
+          "name": "trigger_type",
+          "value": "user_action_form_submission"
+        },
+        {
+          "id": 4,
+          "name": "execution_mode",
+          "value": "synchronous_with_audit_async"
+        },
+        {
+          "id": 5,
+          "name": "tenant_isolation_strategy",
+          "value": "strict_scoped_to_authenticated_user_tenant"
+        }
+      ],
+      "flow_spec": {
+        "steps": [
+          {
+            "id": 6,
+            "name": "Validar Existência da Tarefa",
+            "description": "Verifica se a tarefa a ser editada existe no repositório e pertence ao tenant do usuário autenticado, garantindo isolamento multi-tenant antes de prosseguir com qualquer modificação."
+          },
+          {
+            "id": 7,
+            "name": "Validar Preenchimento de Campos Obrigatórios",
+            "description": "Verifica se todos os campos obrigatórios do formulário de edição de tarefa (título, responsável, prioridade) foram preenchidos pelo usuário quando fornecidos, rejeitando campos vazios ou inválidos."
+          },
+          {
+            "id": 8,
+            "name": "Validar Formato de Título",
+            "description": "Valida que o título da tarefa não está vazio, não excede o limite máximo de 255 caracteres e contém apenas caracteres permitidos quando alterado."
+          },
+          {
+            "id": 9,
+            "name": "Validar Identificador do Responsável",
+            "description": "Valida que o identificador do responsável selecionado (se alterado) corresponde a um formato válido de UUID e que o usuário foi selecionado a partir da lista de colaboradores ativos do tenant."
+          },
+          {
+            "id": 10,
+            "name": "Validar Prioridade",
+            "description": "Valida que o valor de prioridade selecionado (se alterado) é um dos valores permitidos (baixa, média, alta, urgente) conforme definido pelas Regras de Prioridade e Prazo."
+          },
+          {
+            "id": 11,
+            "name": "Validar Data Limite",
+            "description": "Valida que a data limite informada (se alterada) é uma data válida no calendário, não é retroativa (anterior à data atual), e está em formato aceito pelo sistema."
+          },
+          {
+            "id": 12,
+            "name": "Validar Status",
+            "description": "Valida que o status selecionado (se alterado) é um dos valores fixos definidos pelo sistema (A Fazer, Em Andamento, Concluído)."
+          },
+          {
+            "id": 13,
+            "name": "Consultar Responsável no Repositório de Usuários",
+            "description": "Busca o registro do usuário responsável selecionado (se alterado) no repositório de usuários, validando que o usuário existe, pertence ao mesmo tenant do editor, e possui status ativo."
+          },
+          {
+            "id": 14,
+            "name": "Invocar Regra de Prioridade e Prazo",
+            "description": "Executa a regra de negócio Regras de Prioridade e Prazo de Tarefas para validar a combinação de prioridade e prazo (se alterados), garantir isolamento multi-tenant, confirmar responsável ativo no tenant, e determinar elegibilidade para destaque de criticidade."
+          },
+          {
+            "id": 15,
+            "name": "Invocar Regra de Transição de Status",
+            "description": "Executa a regra de negócio Regras de Transição de Status de Tarefa para validar a transição de status (se alterado), garantir que o executor é responsável ou criador da tarefa, e registrar a transição no histórico imutável."
+          },
+          {
+            "id": 16,
+            "name": "Persistir Alterações da Tarefa no Repositório",
+            "description": "Invoca o repositório de tarefas para atualizar o registro de tarefa com os dados validados, registrando data e hora da edição, identificação do editor, e refletindo todas as alterações de campos (título, descrição, responsável, prioridade, status, prazo)."
+          },
+          {
+            "id": 17,
+            "name": "Registrar Transição de Status em Histórico (se aplicável)",
+            "description": "Se o status foi alterado, registra a transição no histórico imutável de transições de status, armazenando status anterior, novo status, usuário executor e timestamp da alteração."
+          },
+          {
+            "id": 18,
+            "name": "Registrar Evento de Edição em Trilha de Auditoria",
+            "description": "Registra a operação de edição de tarefa na trilha de auditoria, incluindo identificação do usuário editor, tenant, timestamp, identificação da tarefa, e campos alterados com valores anteriores e novos, em conformidade com requisitos de rastreabilidade LGPD."
+          },
+          {
+            "id": 19,
+            "name": "Emitir Evento de Sucesso",
+            "description": "Emite evento de domínio TarefaEditada contendo identificadores, campos alterados e dados atualizados da tarefa, permitindo que outros componentes (visualizações, notificações futuras) reajam à edição."
+          },
+          {
+            "id": 20,
+            "name": "Atualizar Visualizações em Tempo Real",
+            "description": "Coordena a atualização das visualizações de lista e Kanban para refletir as alterações da tarefa sem necessidade de recarregamento completo da página, garantindo experiência fluida ao usuário."
+          },
+          {
+            "id": 21,
+            "name": "Retornar Confirmação ao Usuário",
+            "description": "Retorna mensagem de confirmação de sucesso ao usuário editor, incluindo dados atualizados da tarefa e indicação de que as alterações foram persistidas com sucesso."
+          }
+        ],
+        "branches": [
+          {
+            "id": 22,
+            "condition": "tarefa_nao_encontrada OR tarefa_pertence_outro_tenant",
+            "description": "Se a tarefa não existe ou pertence a outro tenant, desvia para tratamento de erro de acesso negado.",
+            "target_step": 23
+          },
+          {
+            "id": 24,
+            "condition": "titulo_vazio OR titulo_excede_limite",
+            "description": "Se o título está vazio ou excede 255 caracteres, desvia para tratamento de erro de validação de título.",
+            "target_step": 25
+          },
+          {
+            "id": 26,
+            "condition": "responsavel_uuid_invalido OR responsavel_nao_selecionado_corretamente",
+            "description": "Se o UUID do responsável é inválido ou não foi selecionado corretamente, desvia para tratamento de erro de seleção de responsável.",
+            "target_step": 27
+          },
+          {
+            "id": 28,
+            "condition": "prioridade_invalida",
+            "description": "Se o valor de prioridade não é um dos valores permitidos, desvia para tratamento de erro de prioridade.",
+            "target_step": 29
+          },
+          {
+            "id": 30,
+            "condition": "data_limite_retroativa OR data_limite_invalida",
+            "description": "Se a data limite é anterior à data atual ou em formato inválido, desvia para tratamento de erro de prazo.",
+            "target_step": 31
+          },
+          {
+            "id": 32,
+            "condition": "status_invalido",
+            "description": "Se o status não é um dos valores fixos permitidos, desvia para tratamento de erro de status.",
+            "target_step": 33
+          },
+          {
+            "id": 34,
+            "condition": "responsavel_nao_encontrado_no_repositorio",
+            "description": "Se o responsável selecionado não existe no repositório de usuários ou não pertence ao tenant, desvia para tratamento de erro de responsável inválido.",
+            "target_step": 35
+          },
+          {
+            "id": 36,
+            "condition": "responsavel_inativo",
+            "description": "Se o responsável selecionado existe mas possui status inativo, desvia para tratamento de erro de responsável inativo.",
+            "target_step": 37
+          },
+          {
+            "id": 38,
+            "condition": "regra_prioridade_prazo_falha",
+            "description": "Se a regra de negócio Regras de Prioridade e Prazo retorna validação falha, desvia para tratamento de erro de regra de negócio.",
+            "target_step": 39
+          },
+          {
+            "id": 40,
+            "condition": "regra_transicao_status_falha",
+            "description": "Se a regra de negócio Regras de Transição de Status retorna validação falha, desvia para tratamento de erro de transição inválida.",
+            "target_step": 41
+          },
+          {
+            "id": 42,
+            "condition": "persistencia_falha",
+            "description": "Se a persistência das alterações no repositório falha (erro de banco de dados, constraint violation), desvia para tratamento de erro de persistência.",
+            "target_step": 43
+          },
+          {
+            "id": 44,
+            "condition": "auditoria_falha",
+            "description": "Se o registro em trilha de auditoria falha, desvia para tratamento de erro de auditoria (não impede sucesso da edição, mas registra falha).",
+            "target_step": 45
+          }
+        ],
+        "compensations": [
+          {
+            "id": 46,
+            "action": "Exibir Mensagem de Erro de Acesso Negado",
+            "trigger": "tarefa_nao_encontrada OR tarefa_pertence_outro_tenant"
+          },
+          {
+            "id": 47,
+            "action": "Exibir Mensagem de Erro de Validação de Título",
+            "trigger": "titulo_vazio OR titulo_excede_limite"
+          },
+          {
+            "id": 48,
+            "action": "Exibir Mensagem de Erro de Seleção de Responsável",
+            "trigger": "responsavel_uuid_invalido OR responsavel_nao_selecionado_corretamente"
+          },
+          {
+            "id": 49,
+            "action": "Exibir Mensagem de Erro de Prioridade Inválida",
+            "trigger": "prioridade_invalida"
+          },
+          {
+            "id": 50,
+            "action": "Exibir Mensagem de Erro de Data Limite Retroativa ou Inválida",
+            "trigger": "data_limite_retroativa OR data_limite_invalida"
+          },
+          {
+            "id": 51,
+            "action": "Exibir Mensagem de Erro de Status Inválido",
+            "trigger": "status_invalido"
+          },
+          {
+            "id": 52,
+            "action": "Exibir Mensagem de Erro de Responsável Não Encontrado",
+            "trigger": "responsavel_nao_encontrado_no_repositorio"
+          },
+          {
+            "id": 53,
+            "action": "Exibir Mensagem de Erro de Responsável Inativo",
+            "trigger": "responsavel_inativo"
+          },
+          {
+            "id": 54,
+            "action": "Exibir Mensagem de Erro de Regra de Negócio",
+            "trigger": "regra_prioridade_prazo_falha"
+          },
+          {
+            "id": 55,
+            "action": "Exibir Mensagem de Erro de Transição de Status Inválida",
+            "trigger": "regra_transicao_status_falha"
+          },
+          {
+            "id": 56,
+            "action": "Exibir Mensagem de Erro de Persistência",
+            "trigger": "persistencia_falha"
+          },
+          {
+            "id": 57,
+            "action": "Registrar Falha de Auditoria em Log de Sistema",
+            "trigger": "auditoria_falha"
+          }
+        ]
+      }
+    },
+    "pendencies": [
+      {
+        "id": 110,
+        "section": "definition",
+        "description": "Necessário confirmar se o fluxo de atualização de tarefa deve suportar atualização parcial (PATCH) ou completa (PUT) de campos. Atualmente, a especificação assume atualização parcial (apenas campos fornecidos são alterados), mas a implementação pode exigir clareza sobre comportamento de campos omitidos.",
+        "resolutionOptions": [
+          {
+            "id": 111,
+            "text": "Implementar como PATCH: apenas campos fornecidos são alterados; campos omitidos mantêm valores anteriores. Recomendado para UX fluida."
+          },
+          {
+            "id": 112,
+            "text": "Implementar como PUT: todos os campos obrigatórios devem ser fornecidos; campos omitidos são resetados para valores padrão. Mais explícito mas menos flexível."
+          },
+          {
+            "id": 113,
+            "text": "Implementar ambos: suportar PATCH para edição parcial e PUT para edição completa em endpoints separados."
+          }
+        ],
+        "recommendedOptionId": 111
+      },
+      {
+        "id": 114,
+        "section": "flow",
+        "description": "Necessário definir comportamento de atualização de visualizações em tempo real (lista e Kanban) quando a edição ocorre. A especificação menciona 'atualizar visualizações em tempo real' mas não detalha mecanismo (WebSocket, polling, server-sent events).",
+        "resolutionOptions": [
+          {
+            "id": 115,
+            "text": "Usar WebSocket para push de atualizações em tempo real a todos os clientes conectados do tenant. Mais responsivo mas requer infraestrutura de WebSocket."
+          },
+          {
+            "id": 116,
+            "text": "Usar Server-Sent Events (SSE) para push de atualizações. Mais simples que WebSocket, suportado em navegadores modernos."
+          },
+          {
+            "id": 117,
+            "text": "Usar polling do cliente: cliente consulta servidor periodicamente (ex: a cada 5 segundos) para verificar atualizações. Mais simples mas menos responsivo."
+          },
+          {
+            "id": 118,
+            "text": "Retornar apenas confirmação de sucesso ao editor; outros usuários veem atualizações apenas ao recarregar página ou ao próximo polling. Mais simples mas menos intuitivo."
+          }
+        ],
+        "recommendedOptionId": 115
+      },
+      {
+        "id": 119,
+        "section": "rules",
+        "description": "Necessário definir se a edição de tarefa pode alterar o criador ou apenas o editor é registrado. Atualmente, a especificação assume que criador_id é imutável e apenas ultimo_editor_id é atualizado.",
+        "resolutionOptions": [
+          {
+            "id": 120,
+            "text": "Manter criador_id imutável: apenas ultimo_editor_id é atualizado. Preserva rastreabilidade de quem criou a tarefa originalmente."
+          },
+          {
+            "id": 121,
+            "text": "Permitir alteração de criador_id: administrador pode reatribuir criação a outro usuário. Mais flexível mas pode comprometer rastreabilidade."
+          }
+        ],
+        "recommendedOptionId": 120
+      },
+      {
+        "id": 122,
+        "section": "non_functional_requirements",
+        "description": "Necessário definir política de cache para consultas de responsáveis ativos durante edição de tarefa. A especificação menciona validação de responsável ativo mas não detalha se resultado é cacheado.",
+        "resolutionOptions": [
+          {
+            "id": 123,
+            "text": "Sem cache: consultar repositório de usuários a cada edição. Mais preciso mas potencialmente mais lento."
+          },
+          {
+            "id": 124,
+            "text": "Cache em memória com TTL de 5 minutos: reduz consultas ao repositório, aceita eventual inconsistência de até 5 minutos."
+          },
+          {
+            "id": 125,
+            "text": "Cache em memória com invalidação por evento: quando usuário é desativado, cache é invalidado imediatamente. Mais complexo mas mais preciso."
+          }
+        ],
+        "recommendedOptionId": 124
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 99,
+        "then": "O fluxo rejeita a edição e retorna erro 400 com mensagem 'Título não pode estar vazio'",
+        "type": "unit",
+        "when": "O usuário tenta submeter o formulário",
+        "given": "Um formulário de edição de tarefa com campo título vazio",
+        "scenario": "Validação de título vazio é rejeitada",
+        "target_section": "rules"
+      },
+      {
+        "id": 100,
+        "then": "O fluxo rejeita a edição e retorna erro 400 com mensagem 'Responsável selecionado não está ativo'",
+        "type": "unit",
+        "when": "O usuário tenta submeter o formulário",
+        "given": "Um formulário de edição de tarefa com responsável inativo selecionado",
+        "scenario": "Validação de responsável inativo é rejeitada",
+        "target_section": "rules"
+      },
+      {
+        "id": 101,
+        "then": "O fluxo rejeita a edição e retorna erro 400 com mensagem 'Prioridade inválida'",
+        "type": "unit",
+        "when": "O usuário tenta submeter o formulário",
+        "given": "Um formulário de edição de tarefa com valor de prioridade fora do conjunto permitido",
+        "scenario": "Validação de prioridade inválida é rejeitada",
+        "target_section": "rules"
+      },
+      {
+        "id": 102,
+        "then": "O fluxo rejeita a edição e retorna erro 400 com mensagem 'Data limite não pode ser anterior à data atual'",
+        "type": "unit",
+        "when": "O usuário tenta submeter o formulário",
+        "given": "Um formulário de edição de tarefa com data limite anterior à data atual",
+        "scenario": "Validação de data limite retroativa é rejeitada",
+        "target_section": "rules"
+      },
+      {
+        "id": 103,
+        "then": "O fluxo persiste as alterações no repositório, registra auditoria, emite evento TarefaEditada e retorna 200 com dados atualizados",
+        "type": "integration",
+        "when": "O usuário submete o formulário de edição com título, responsável e prioridade alterados",
+        "given": "Uma tarefa existente no tenant do usuário autenticado com dados válidos para edição",
+        "scenario": "Edição bem-sucedida de tarefa persiste alterações no repositório",
+        "target_section": "flow"
+      },
+      {
+        "id": 104,
+        "then": "O fluxo registra a transição no histórico imutável com status anterior, novo status, executor e timestamp",
+        "type": "integration",
+        "when": "O usuário altera o status para 'Em Andamento'",
+        "given": "Uma tarefa existente com status 'A Fazer' no tenant do usuário autenticado",
+        "scenario": "Alteração de status registra transição no histórico",
+        "target_section": "flow"
+      },
+      {
+        "id": 105,
+        "then": "O fluxo rejeita a operação e retorna erro 404 ou 403 apropriado, sem expor informações da tarefa",
+        "type": "security",
+        "when": "O usuário submete requisição de edição para a tarefa do tenant B",
+        "given": "Um usuário autenticado no tenant A tentando editar uma tarefa que pertence ao tenant B",
+        "scenario": "Isolamento multi-tenant impede edição de tarefa de outro tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 106,
+        "then": "O fluxo rejeita a operação e retorna erro 403 'Acesso negado: usuário inativo'",
+        "type": "security",
+        "when": "O usuário submete requisição de edição",
+        "given": "Um usuário com status inativo no tenant tentando editar uma tarefa",
+        "scenario": "Usuário inativo não pode editar tarefas",
+        "target_section": "rules"
+      },
+      {
+        "id": 107,
+        "then": "A resposta contém campos obrigatórios: id, tenant_id, titulo, responsavel_id, responsavel_nome, prioridade, status, data_ultima_edicao, ultimo_editor_id, ultimo_editor_nome",
+        "type": "contract",
+        "when": "O fluxo retorna resposta 200",
+        "given": "Uma edição bem-sucedida de tarefa",
+        "scenario": "Resposta de sucesso contém estrutura esperada",
+        "target_section": "flow"
+      },
+      {
+        "id": 108,
+        "then": "p99 de latência <= 500ms; p95 <= 300ms; taxa de erro < 0.1%",
+        "type": "performance",
+        "when": "Requisições de edição são processadas continuamente",
+        "given": "5.000 usuários simultâneos, 10.000 tarefas por tenant, requisições de edição distribuídas uniformemente",
+        "scenario": "Edição de tarefa atende SLA de latência sob carga",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 109,
+        "then": "A tarefa é atualizada no repositório, transição de status é registrada no histórico, auditoria é registrada, evento é emitido, visualizações são atualizadas e confirmação é retornada ao usuário",
+        "type": "e2e",
+        "when": "O usuário acessa o formulário de edição, altera título, responsável e status, e submete",
+        "given": "Um usuário autenticado no tenant A com uma tarefa existente atribuída a outro colaborador",
+        "scenario": "Fluxo completo de edição de tarefa com alteração de status e responsável",
+        "target_section": "flow"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 93,
+        "target": "p99 <= 500ms para operação de persistência + auditoria; p95 <= 300ms",
+        "category": "performance",
+        "requirement": "A operação de edição de tarefa deve ser concluída e retornar confirmação ao usuário em tempo adequado, mesmo sob carga de até 5.000 usuários ativos e 10.000 tarefas por tenant.",
+        "verification": "Teste de carga com 5.000 usuários simultâneos, 10.000 tarefas por tenant, medindo latência p99 e p95 de requisições PUT /api/tasks/:id."
+      },
+      {
+        "id": 94,
+        "target": "100% das requisições via HTTPS; TLS 1.2 ou superior",
+        "category": "security",
+        "requirement": "Todas as comunicações do fluxo de edição de tarefa devem ocorrer exclusivamente por HTTPS, garantindo confidencialidade dos dados em trânsito.",
+        "verification": "Teste de segurança valida rejeição de requisições HTTP não-criptografadas; teste de conformidade valida versão mínima de TLS."
+      },
+      {
+        "id": 95,
+        "target": "100% das operações escopadas ao tenant do usuário autenticado",
+        "category": "security",
+        "requirement": "O isolamento multi-tenant deve ser garantido em todas as operações de consulta e atualização, impedindo acesso cruzado entre tenants.",
+        "verification": "Teste de segurança valida rejeição de tentativas de acesso a tarefas de outros tenants; teste de integração valida que consultas retornam apenas dados do tenant correto."
+      },
+      {
+        "id": 96,
+        "target": "99.9% de uptime mensal; RTO <= 5 minutos; RPO <= 1 minuto",
+        "category": "availability",
+        "requirement": "O fluxo de edição de tarefa deve estar disponível com alta disponibilidade, dado que sua indisponibilidade impede que usuários atualizem atividades.",
+        "verification": "Teste de disponibilidade monitora uptime mensal; teste de recuperação valida RTO e RPO em cenários de falha."
+      },
+      {
+        "id": 97,
+        "target": "100% das operações registradas com timestamp, usuário executor, tenant, tarefa ID e campos alterados",
+        "category": "observability",
+        "requirement": "Todas as operações de edição de tarefa devem ser registradas em trilha de auditoria com informações suficientes para rastreabilidade completa e investigação de mudanças.",
+        "verification": "Teste de auditoria valida presença de registro para cada operação; teste de rastreabilidade valida que informações registradas permitem reconstruir histórico de mudanças."
+      },
+      {
+        "id": 98,
+        "target": "Latência p99 <= 500ms mantida com crescimento de 50 tenants e 5.000 usuários totais",
+        "category": "scalability",
+        "requirement": "O fluxo de edição de tarefa deve suportar crescimento progressivo de tenants (até 50 no primeiro ano) e usuários por tenant (até 100) sem degradação de desempenho.",
+        "verification": "Teste de escalabilidade simula crescimento progressivo de tenants e usuários, medindo latência p99 em cada etapa."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 32,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T17:26:41.936Z",
+  "updatedAt": null
+}

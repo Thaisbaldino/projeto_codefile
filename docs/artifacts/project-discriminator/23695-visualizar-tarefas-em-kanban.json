@@ -1,0 +1,97 @@
+{
+  "id": 23695,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 7,
+        "name": "Tipo específico de evento ou mensagem que está sendo comunicado",
+        "value": [
+          "user-informed-notification"
+        ],
+        "method": "user-input",
+        "reasoning": "A mensagem informativa sobre a ausência de atividades na coluna é exibida ao usuário, indicando que não há tarefas naquele status no momento.",
+        "confidence": 0.8257,
+        "context_element_id": 2755
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 11,
+        "name": "Implemente Policy Enforcement Points em gateways e APIs para validar requisições contra regras de conformidade antes da execução",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem validação no backend, requisições manipuladas de um tenant alteram o status de tarefas de outros, e a correção só acontece depois que o erro é notificado.",
+        "confidence": 0.8375,
+        "context_element_id": 3010
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 1,
+        "name": "Paradigma de Armazenamento da Estrutura Lógica",
+        "value": "colunar",
+        "method": "user-input",
+        "reasoning": "O modelo de dados das colunas do quadro Kanban é columnar, caracterizando um paradigma de armazenamento de dados.",
+        "confidence": 0.7845,
+        "context_element_id": 1321
+      },
+      {
+        "id": 3,
+        "name": "Natureza Temporal",
+        "value": "sequência temporal",
+        "method": "user-input",
+        "reasoning": "A estrutura de três colunas fixas em ordem de progressão (Fazer, Em Andamento, Concluído) é uma sequência temporal.",
+        "confidence": 0.7232,
+        "context_element_id": 1475
+      },
+      {
+        "id": 17,
+        "name": "Estratégia de Erros",
+        "value": "compensação",
+        "method": "user-input",
+        "reasoning": "A mensagem de erro é restaurada ao cartão à coluna de origem, um mecanismo de compensação.",
+        "confidence": 0.918,
+        "context_element_id": 4207
+      },
+      {
+        "id": 23,
+        "name": "Paginação de Dados",
+        "value": "rolagem virtual",
+        "method": "user-input",
+        "reasoning": "Quando uma coluna do quadro Kanban possui muitos cartões, o sistema exibe todos de uma só vez com rolagem vertical da página inteira, caracterizando virtual-scrolling.",
+        "confidence": 0.9429,
+        "context_element_id": 4499
+      },
+      {
+        "id": 24,
+        "name": "Natureza do Módulo",
+        "value": "transacional",
+        "method": "internal-inference",
+        "reasoning": "A movimentação de tarefas entre colunas é uma operação transacional.",
+        "confidence": 0.7296,
+        "context_element_id": 4574
+      },
+      {
+        "id": 25,
+        "name": "Dispositivo Alvo",
+        "value": "mobile",
+        "method": "user-input",
+        "reasoning": "A interação alternativa substitui a operação de arrastar e soltar no Kanban em dispositivos de toque, como smartphones e tablets.",
+        "confidence": 0.8185,
+        "context_element_id": 4867
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 2,
+  "active": true,
+  "sourceId": 23628,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T01:30:54.043Z",
+  "updatedAt": null
+}

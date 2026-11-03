@@ -1,0 +1,154 @@
+{
+  "id": 23924,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 12,
+        "name": "Confusão de Identidade e Responsabilidade",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Responsabilidade confusa entre criação e reatribuição torna difícil entender o propósito de cada tarefa e identificar quem deve assumi-la.",
+        "confidence": 0.8055,
+        "context_element_id": 2839
+      }
+    ],
+    "attributes": [
+      {
+        "id": 9,
+        "name": "Entidade, item de trabalho ou dataset primário manipulado, exibido ou rastreado pela superfície",
+        "value": [
+          "tasks"
+        ],
+        "method": "user-input",
+        "reasoning": "O atribuído de responsável é manipulado, exibido e tracado na entidade de tarefa.",
+        "confidence": 0.7945,
+        "context_element_id": 2727
+      },
+      {
+        "id": 10,
+        "name": "Domínio funcional das mensagens roteadas através do sistema",
+        "value": [
+          "notifications"
+        ],
+        "method": "user-input",
+        "reasoning": "A notificação automática de atribuição ou reatribuição de tarefas ao responsável é um domínio funcional de mensagens.",
+        "confidence": 0.7169,
+        "context_element_id": 2754
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 14,
+        "name": "Implementar identificação única de atores com sistemas de identidade centralizados e gerenciamento unificado de credenciais",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem identificação imediata do responsável, a equipe tem que procurar o nome em cada visualização, o que distrai o trabalho e não permite a tomada de decisão.",
+        "confidence": 0.8079,
+        "context_element_id": 2928
+      },
+      {
+        "id": 18,
+        "name": "Implemente operações em lote para permitir que os usuários executem múltiplas ações semelhantes simultaneamente com uma única confirmação",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Repetição de confirmação em cada usuário ativo e cada tarefa por tenant é uma tarefa repetitiva que se acumula sem saída.",
+        "confidence": 0.8139,
+        "context_element_id": 3044
+      },
+      {
+        "id": 19,
+        "name": "Mantenha um modelo de tarefas do usuário com rastreamento do contexto atual, histórico de ações e sugestões de próximos passos com base no fluxo de trabalho",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem essa opção pré-selecionada, o usuário tem que procurar o nome do responsável em outra parte do sistema, o que distrai do trabalho de edição.",
+        "confidence": 0.7091,
+        "context_element_id": 3045
+      },
+      {
+        "id": 20,
+        "name": "Implemente mecanismos automáticos de compensação e rollback que revertem ações potencialmente prejudiciais, restauram estados seguros anteriores e aplicam medidas corretivas com base em logs detalhados",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem ação manual, a tarefa fica sem responsável e a responsabilidade passa a ser atribuída a outra pessoa sem que ninguém saiba quem foi.",
+        "confidence": 0.8052,
+        "context_element_id": 3073
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 2,
+        "name": "Capacidade de Busca",
+        "value": "busca em texto completo",
+        "method": "user-input",
+        "reasoning": "A busca ou filtragem textual dentro da lista de colaboradores disponíveis para atribuição é realizada por meio de busca completa, facilitando a localização do responsável desejado em tenants com grande número de usuários.",
+        "confidence": 0.9834,
+        "context_element_id": 1365
+      },
+      {
+        "id": 4,
+        "name": "Natureza Temporal",
+        "value": "estado atual",
+        "method": "user-input",
+        "reasoning": "O nome do responsável atualmente atribuído à tarefa é exibido como valor pré-selecionado no campo de seleção durante a edição, caracterizando um registro de estado atual.",
+        "confidence": 0.7389,
+        "context_element_id": 1508
+      },
+      {
+        "id": 21,
+        "name": "Modelo de Autorização",
+        "value": "RBAC",
+        "method": "internal-inference",
+        "reasoning": "A reatribuição de tarefas é feita por qualquer usuário autenticado do tenant, com responsabilidade única definida por cada usuário.",
+        "confidence": 0.7607,
+        "context_element_id": 4083
+      },
+      {
+        "id": 24,
+        "name": "Estratégia de Erros",
+        "value": "fail-fast",
+        "method": "user-input",
+        "reasoning": "A mensagem de erro é exibida imediatamente quando a atribuição ou reatribuição não puder ser concluída por falha de validação ou erro do sistema, sem tentativa de reavaliação.",
+        "confidence": 0.8316,
+        "context_element_id": 4207
+      },
+      {
+        "id": 25,
+        "name": "Persistência de Estado",
+        "value": "persistent",
+        "method": "user-input",
+        "reasoning": "A persistência e confirmação da atribuição são feitas através de uma entidade persistente, caracterizando um padrão de persistência persistente.",
+        "confidence": 0.8876,
+        "context_element_id": 4286
+      },
+      {
+        "id": 29,
+        "name": "Nível de Autonomia",
+        "value": "humano no circuito",
+        "method": "internal-inference",
+        "reasoning": "A atribuição de responsabilidade é feita por um usuário humano, não por um sistema automático, caracterizando um nível de autonomia humano.",
+        "confidence": 0.8314,
+        "context_element_id": 4668
+      },
+      {
+        "id": 33,
+        "name": "Escopo da Operação",
+        "value": "com suporte a lote",
+        "method": "internal-inference",
+        "reasoning": "A lista de colaboradores ativos é carregada de forma batch ao abrir o campo de seleção, caracterizando uma operação de escopo de escopo de batch.",
+        "confidence": 0.7411,
+        "context_element_id": 4951
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 6,
+  "active": true,
+  "sourceId": 23609,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T14:58:49.768Z",
+  "updatedAt": null
+}

@@ -1,0 +1,76 @@
+{
+  "id": 23817,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [],
+    "best_practices": [
+      {
+        "id": 9,
+        "name": "Estabelecer isolamento entre entidades usando containerização, virtualização e separação de ambientes por criticidade",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem separação de dados entre organizações, um erro em uma tarefa de um tenant pode ser propagado para outro tenant, comprometendo a integridade da informação.",
+        "confidence": 0.7207,
+        "context_element_id": 2934
+      },
+      {
+        "id": 13,
+        "name": "Implemente funcionalidade de desfazer para ações críticas com um histórico de estados anteriores e a capacidade de reverter mudanças granulares",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem poder rever o estado anterior, a decisão de quem deve voltar a trabalhar depende de quem saiu, não de quem voltou.",
+        "confidence": 0.8473,
+        "context_element_id": 3042
+      },
+      {
+        "id": 14,
+        "name": "Implemente funcionalidade de pausar e retomar para operações longas, preservando o estado da sessão e permitindo a continuação após interrupções",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Reabertura de tarefa sem salvar o status anterior deixa o sistema sem referência para o que foi feito anteriormente, e a reabertura só volta ao status inicial.",
+        "confidence": 0.8415,
+        "context_element_id": 3043
+      },
+      {
+        "id": 17,
+        "name": "Implemente checkpoints obrigatórios onde operadores humanos devem aprovar decisões críticas antes da execução, especialmente para ações irreversíveis ou de alto impacto",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A tarefa já foi concluída, e a confirmação é obrigatória, não uma opção opcional.",
+        "confidence": 0.9809,
+        "context_element_id": 3064
+      },
+      {
+        "id": 18,
+        "name": "Estabeleça verificação automática de saída por meio de validação cruzada, sanity checks e comparação com resultados esperados ou padrões históricos",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem validação automática, a conclusão é aceita sem verificação, o que torna a decisão sem justificativa.",
+        "confidence": 0.8431,
+        "context_element_id": 3068
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 23,
+        "name": "Complexidade da Tarefa",
+        "value": "múltiplas etapas",
+        "method": "internal-inference",
+        "reasoning": "A conclusão da tarefa envolve múltiplas etapas, caracterizando um processo complexo multi-step.",
+        "confidence": 0.7289,
+        "context_element_id": 4366
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 3,
+  "active": true,
+  "sourceId": 23620,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T05:50:08.964Z",
+  "updatedAt": null
+}

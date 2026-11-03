@@ -1,0 +1,244 @@
+{
+  "id": 24021,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 27,
+        "name": "Degradação de Desempenho",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Processamento de múltiplas requisições simultâneas sem degradação de desempenho é um teste de performance de carga.",
+        "confidence": 0.8969,
+        "context_element_id": 2811
+      },
+      {
+        "id": 28,
+        "name": "Gargalos e Timeouts",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Carga de 500 requisições simultâneas em um sistema que não suporta p99 de latência de até 500ms é uma condição de falha crítica.",
+        "confidence": 0.8556,
+        "context_element_id": 2813
+      },
+      {
+        "id": 29,
+        "name": "Falhas de Execução e Idempotência",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Concluir a mesma tarefa repetidamente sem verificar se ela já está concluída tornaria a operação irreparável e a regra de negócio sem respaldo.",
+        "confidence": 0.772,
+        "context_element_id": 2819
+      },
+      {
+        "id": 30,
+        "name": "Autenticação e Controle de Acesso",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Acesso negado a um usuário inativo é uma falha de autenticação e autorização que não pode ser corrigida por configuração externa.",
+        "confidence": 0.9222,
+        "context_element_id": 2824
+      },
+      {
+        "id": 31,
+        "name": "Proteção de Dados e Vazamento",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Dados sensíveis em respostas de API são expostos em rede, e qualquer falha nesse ponto de rede pode levar a exposição de dados sensíveis.",
+        "confidence": 0.7099,
+        "context_element_id": 2826
+      },
+      {
+        "id": 32,
+        "name": "Auditoria e Rastreabilidade",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem registro de falha, a auditoria não pode apontar quem fez o que, e a responsabilidade fica em silêncio.",
+        "confidence": 0.7003,
+        "context_element_id": 2848
+      }
+    ],
+    "attributes": [
+      {
+        "id": 15,
+        "name": "Domínios de negócio sobre os quais a regra atua, valida ou decide",
+        "value": [
+          "status-transition"
+        ],
+        "method": "user-input",
+        "reasoning": "A regra de negócio é executada para validar a transição de status entre status fixos, atuando em domínio de status-transição.",
+        "confidence": 0.7298,
+        "context_element_id": 2678
+      },
+      {
+        "id": 18,
+        "name": "Nome ou identificador único da API dentro do contexto do sistema",
+        "value": [
+          "tasks/:id"
+        ],
+        "method": "internal-inference",
+        "reasoning": "O identificador único da API é o path /api/tasks/:id, onde id é o parâmetro uuid da tarefa.",
+        "confidence": 0.7626,
+        "context_element_id": 2751
+      },
+      {
+        "id": 19,
+        "name": "Tipo específico de evento ou mensagem que está sendo comunicado",
+        "value": [
+          "Tarefa já foi concluída"
+        ],
+        "method": "user-input",
+        "reasoning": "A mensagem de erro informa que a tarefa já foi concluída, indicando que o evento é de tipo 'Tarefa já foi concluída'.",
+        "confidence": 0.7083,
+        "context_element_id": 2755
+      },
+      {
+        "id": 23,
+        "name": "SLA ou tolerância a falhas esperada",
+        "value": [
+          "99.9% uptime",
+          "p99 <= 500ms",
+          "p99 <= 200ms"
+        ],
+        "method": "user-input",
+        "reasoning": "A disponibilidade do Handler deve ser de 99,9% em um período de 30 dias.\nA operação de criação de tarefa deve ser concluída e retornada ao usuário em tempo p99 de até 500ms, mesmo sob carga de 5.000 usuários ativos e 10.000 tarefas por tenant.\nA operação de alteração de status via drag-and-drop no Kanban deve ser concluída e refletida na interface em tempo de p99 de 200ms ou menos.",
+        "confidence": 0.7536,
+        "context_element_id": 2772
+      },
+      {
+        "id": 25,
+        "name": "Operação de domínio ou caso de uso que o handler processa",
+        "value": [
+          "create-task",
+          "authenticate-user"
+        ],
+        "method": "user-input",
+        "reasoning": "A requisição POST cria uma nova tarefa no tenant do usuário autenticado, caracterizando um operação de criação.\nO Handler recebe requisições autenticadas via JWT, validando entrada conforme regras de negócio.",
+        "confidence": 0.7327,
+        "context_element_id": 2782
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 33,
+        "name": "Implementar rate limiting com throttling configurável por endpoint e amostragem de requisições em cenários de alta carga",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Uma única requisição de 50 tarefas por minuto é o limite mínimo para evitar abuso; qualquer excesso é bloqueado com erro 429.",
+        "confidence": 0.9114,
+        "context_element_id": 2860
+      },
+      {
+        "id": 34,
+        "name": "Configurar o escalonamento de recursos com políticas FIFO, de prioridade ou baseadas em deadline conforme a criticidade das operações",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Prioridade e prazo são atribuídos de acordo com padrões de negócio comuns, sem que o usuário escolha manualmente.",
+        "confidence": 0.8375,
+        "context_element_id": 2870
+      },
+      {
+        "id": 35,
+        "name": "Implementar validação rigorosa de entradas e prevenção de condições que levem a exceções",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem validação, o sistema aceita tarefas sem título, o que torna a busca por tarefas sem referência inútil e a atualização sem autorização fácil.",
+        "confidence": 0.9158,
+        "context_element_id": 2909
+      },
+      {
+        "id": 36,
+        "name": "Implementar rate limiting com throttling adaptativo para prevenir a sobrecarga do sistema",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Uma regra fixa não se ajusta à variação do comportamento do usuário, e a barreira é sempre a mesma, sem ajuste.",
+        "confidence": 0.9365,
+        "context_element_id": 2911
+      },
+      {
+        "id": 37,
+        "name": "Definir metas de disponibilidade mensuráveis com SLA/SLO e monitoramento de conformidade",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Uma queda de 0,1% em um dia de produção é suficiente para que a meta de 99,9% seja violada.",
+        "confidence": 0.9618,
+        "context_element_id": 2916
+      },
+      {
+        "id": 38,
+        "name": "Implementar validação de dados em múltiplas camadas com verificações de tipo, formato, faixa e regras de negócio antes da persistência",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem validação, o sistema aceita dados fora do padrão e a confirmação de erro só aparece depois de salvar.",
+        "confidence": 0.8235,
+        "context_element_id": 2954
+      },
+      {
+        "id": 39,
+        "name": "Implemente operações idempotentes que podem ser executadas múltiplas vezes sem efeitos colaterais",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Repetir a mesma tarefa em um sistema de trabalho não deve alterar o resultado; cada chamada deve retornar o mesmo resultado sem efeito adicional.",
+        "confidence": 0.9665,
+        "context_element_id": 2968
+      },
+      {
+        "id": 40,
+        "name": "Gere automaticamente trilhas de auditoria capturando todas as operações críticas com timestamps, identificação do usuário, dados antes/depois e contexto da operação",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem registro de quem fez o que, quando, o que mudou e o que aconteceu depois, a responsabilidade é questionada e a prova é perdida.",
+        "confidence": 0.961,
+        "context_element_id": 3012
+      },
+      {
+        "id": 41,
+        "name": "Implemente restrições operacionais que limitem as ações do sistema com base em critérios de segurança predefinidos, incluindo rate limits, limites de operação e políticas de acesso restritivas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O limite de 50 tarefas por minuto por usuário é configurável e monitorado, garantindo que a operação de criação em massa seja controlada.",
+        "confidence": 0.8604,
+        "context_element_id": 3062
+      },
+      {
+        "id": 42,
+        "name": "Configure controles de privacidade rigorosos incluindo minimização de dados, anonimização automática, controles de acesso granulares e auditoria do uso de informações pessoais sensíveis",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem rastreabilidade completa, a responsabilidade por vazamento de dados é disputada entre o tenant e o usuário, sem prova firme.",
+        "confidence": 0.7985,
+        "context_element_id": 3075
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 2,
+        "name": "Especialização Funcional",
+        "value": "base de conhecimento",
+        "method": "internal-inference",
+        "reasoning": "A definição de valores permitidos para o Catálogo de Status de Tarefa é centralizada em um asset_definition separado, caracterizando um banco de conhecimento.",
+        "confidence": 0.7595,
+        "context_element_id": 1327
+      },
+      {
+        "id": 7,
+        "name": "Complexidade Comportamental",
+        "value": "rico em comportamento",
+        "method": "internal-inference",
+        "reasoning": "A lógica de validação de Regras de Prioridade e Prazo de Tarefas é caracterizada por regras de negócio complexas, com casos de teste e validação.",
+        "confidence": 0.7216,
+        "context_element_id": 1474
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 2,
+  "active": true,
+  "sourceId": 23984,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}

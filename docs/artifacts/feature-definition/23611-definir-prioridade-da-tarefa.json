@@ -1,0 +1,261 @@
+{
+  "id": 23611,
+  "projectId": 4118,
+  "type": "feature_definition",
+  "content": {
+    "pendencies": [
+      {
+        "id": 29,
+        "section": "functional",
+        "description": "Quais são os níveis de prioridade exatos disponíveis no sistema e sua ordenação crescente de criticidade? O brief menciona exemplos como baixa, média, alta e urgente, mas os valores definitivos e a quantidade de níveis precisam ser confirmados para garantir consistência com a feature Criar Tarefa.",
+        "resolutionOptions": [
+          {
+            "id": 30,
+            "text": "Adotar quatro níveis fixos em ordem crescente: Baixa, Média, Alta e Urgente."
+          },
+          {
+            "id": 31,
+            "text": "Adotar três níveis fixos em ordem crescente: Baixa, Média e Alta."
+          },
+          {
+            "id": 32,
+            "text": "Adotar cinco níveis fixos em ordem crescente: Muito Baixa, Baixa, Média, Alta e Crítica."
+          }
+        ],
+        "recommendedOptionId": 30
+      },
+      {
+        "id": 33,
+        "section": "functional",
+        "description": "A prioridade padrão deve ser pré-selecionada automaticamente pelo sistema ao abrir o formulário de criação de tarefa (por exemplo, 'Média' como valor padrão), ou o campo deve iniciar sem nenhuma seleção, exigindo escolha explícita do usuário?",
+        "resolutionOptions": [
+          {
+            "id": 34,
+            "text": "O campo de prioridade inicia sem nenhuma seleção; o usuário deve escolher explicitamente o nível desejado antes de salvar a tarefa."
+          },
+          {
+            "id": 35,
+            "text": "O sistema pré-seleciona automaticamente o nível 'Média' como valor padrão ao abrir o formulário de criação, podendo o usuário alterá-lo antes de salvar."
+          },
+          {
+            "id": 36,
+            "text": "O sistema pré-seleciona automaticamente o nível mais baixo disponível como valor padrão ao abrir o formulário de criação, podendo o usuário alterá-lo antes de salvar."
+          }
+        ],
+        "recommendedOptionId": 34
+      },
+      {
+        "id": 37,
+        "section": "functional",
+        "description": "Quem tem permissão para alterar a prioridade de uma tarefa existente? Qualquer usuário autenticado do tenant pode alterar a prioridade de qualquer tarefa, ou apenas o criador da tarefa e o responsável atual têm essa permissão?",
+        "resolutionOptions": [
+          {
+            "id": 38,
+            "text": "Qualquer usuário autenticado e ativo do tenant pode alterar a prioridade de qualquer tarefa, independentemente de ser o criador ou o responsável."
+          },
+          {
+            "id": 39,
+            "text": "Apenas o criador da tarefa ou o responsável atual podem alterar a prioridade; outros colaboradores não têm permissão para modificar esse atributo."
+          },
+          {
+            "id": 40,
+            "text": "Apenas o criador da tarefa pode alterar a prioridade; o responsável atual não tem permissão para modificar esse atributo."
+          }
+        ],
+        "recommendedOptionId": 38
+      },
+      {
+        "id": 41,
+        "section": "functional",
+        "description": "A diferenciação visual dos níveis de prioridade deve ser baseada em cores, ícones, rótulos textuais ou uma combinação desses elementos? É necessário definir um padrão visual para garantir consistência entre as visualizações de lista, Kanban e detalhe da tarefa.",
+        "resolutionOptions": [
+          {
+            "id": 42,
+            "text": "Utilizar apenas rótulo textual colorido (badge com cor de fundo) para diferenciar os níveis de prioridade em todas as visualizações."
+          },
+          {
+            "id": 43,
+            "text": "Utilizar combinação de ícone e rótulo textual para diferenciar os níveis de prioridade, garantindo acessibilidade mesmo para usuários com dificuldade de distinção de cores."
+          },
+          {
+            "id": 44,
+            "text": "Utilizar apenas cor de destaque (sem ícone ou rótulo adicional) para diferenciar os níveis de prioridade nos cartões Kanban e na lista."
+          }
+        ],
+        "recommendedOptionId": 43
+      },
+      {
+        "id": 45,
+        "section": "non-functional",
+        "description": "Os níveis de prioridade são fixos e definidos globalmente pelo sistema para todos os tenants, ou devem ser configuráveis por tenant (por exemplo, o administrador do tenant pode adicionar, remover ou renomear níveis de prioridade)?",
+        "resolutionOptions": [
+          {
+            "id": 46,
+            "text": "Os níveis de prioridade são fixos e globais para todos os tenants nesta versão; não há configuração por tenant."
+          },
+          {
+            "id": 47,
+            "text": "Os níveis de prioridade são configuráveis por tenant; o administrador do tenant pode personalizar os níveis disponíveis para sua organização."
+          }
+        ],
+        "recommendedOptionId": 46
+      }
+    ],
+    "functional_requirements": [
+      {
+        "group": {
+          "id": 1,
+          "name": "Seleção e Atribuição de Prioridade",
+          "items": [
+            {
+              "id": 2,
+              "description": "Exibir campo de seleção de prioridade no formulário de criação de tarefa, apresentando os níveis de prioridade disponíveis no sistema para escolha pelo usuário."
+            },
+            {
+              "id": 3,
+              "description": "Exibir campo de seleção de prioridade no formulário de edição de tarefa existente, permitindo a alteração do nível de prioridade previamente atribuído."
+            },
+            {
+              "id": 4,
+              "description": "Tornar o campo de prioridade obrigatório no formulário de criação de tarefa, impedindo o registro de uma nova tarefa sem que um nível de prioridade seja selecionado."
+            },
+            {
+              "id": 5,
+              "description": "Apresentar os níveis de prioridade em ordem crescente de criticidade, facilitando a compreensão da escala e a escolha consciente pelo usuário."
+            },
+            {
+              "id": 6,
+              "description": "Permitir que qualquer usuário autenticado e ativo do tenant, independentemente do nível hierárquico, defina ou altere a prioridade de uma tarefa."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 7,
+          "name": "Validações de Prioridade",
+          "items": [
+            {
+              "id": 8,
+              "description": "Validar que o valor de prioridade selecionado corresponde a um dos níveis válidos definidos pelo sistema, rejeitando entradas fora do conjunto permitido."
+            },
+            {
+              "id": 9,
+              "description": "Validar o preenchimento do campo de prioridade antes de permitir o envio do formulário de criação, exibindo mensagem de erro específica quando o campo estiver vazio ou sem seleção."
+            },
+            {
+              "id": 10,
+              "description": "Exibir mensagem de erro clara e descritiva ao usuário quando a definição ou alteração de prioridade não puder ser concluída por falha de validação ou erro do sistema."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 11,
+          "name": "Persistência e Confirmação",
+          "items": [
+            {
+              "id": 12,
+              "description": "Persistir o nível de prioridade selecionado associado à tarefa no tenant do usuário criador, garantindo o isolamento de dados entre organizações."
+            },
+            {
+              "id": 13,
+              "description": "Atualizar o nível de prioridade da tarefa existente e persistir a alteração imediatamente após a confirmação pelo usuário, refletindo o novo valor em todas as visualizações da plataforma."
+            },
+            {
+              "id": 14,
+              "description": "Exibir mensagem de confirmação de sucesso ao usuário após a definição ou alteração de prioridade ser concluída com êxito."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 15,
+          "name": "Exibição da Prioridade nas Visualizações",
+          "items": [
+            {
+              "id": 16,
+              "description": "Exibir o nível de prioridade atribuído à tarefa na visualização em lista tabular, permitindo ao usuário identificar rapidamente a criticidade de cada atividade."
+            },
+            {
+              "id": 17,
+              "description": "Exibir o nível de prioridade atribuído à tarefa na visualização em Kanban, apresentando indicação visual associada ao cartão da tarefa na coluna correspondente."
+            },
+            {
+              "id": 18,
+              "description": "Exibir o nível de prioridade atribuído à tarefa na visualização detalhada da tarefa, junto aos demais atributos como título, descrição, responsável, status e prazo."
+            },
+            {
+              "id": 19,
+              "description": "Utilizar diferenciação visual (como cor, ícone ou rótulo) para distinguir os diferentes níveis de prioridade nas visualizações de lista, Kanban e detalhe da tarefa, facilitando a identificação imediata de demandas críticas."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 20,
+          "name": "Integração com Destaque de Tarefas Críticas",
+          "items": [
+            {
+              "id": 21,
+              "description": "Fornecer o atributo de prioridade da tarefa como insumo para o mecanismo de destaque visual de tarefas críticas ou atrasadas, permitindo que tarefas com prioridade elevada sejam identificadas e sinalizadas automaticamente pelo sistema."
+            }
+          ]
+        }
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "group": {
+          "id": 22,
+          "name": "Segurança e Conformidade",
+          "items": [
+            {
+              "id": 23,
+              "description": "Registrar em log de auditoria toda operação de definição ou alteração de prioridade de tarefa, incluindo identificação do usuário executor, tenant, timestamp, identificação da tarefa e os valores de prioridade anterior e novo, em conformidade com os requisitos de rastreabilidade da plataforma."
+            },
+            {
+              "id": 24,
+              "description": "Garantir que a prioridade de uma tarefa de um tenant não seja visível, acessível ou interferente nos dados de nenhum outro tenant, respeitando o isolamento multi-tenant."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 25,
+          "name": "Usabilidade e Responsividade",
+          "items": [
+            {
+              "id": 26,
+              "description": "Renderizar o campo de seleção de prioridade e os indicadores visuais de nível de prioridade de forma responsiva e adaptativa, garantindo usabilidade adequada em dispositivos móveis (smartphones e tablets) e em desktops."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 27,
+          "name": "Desempenho",
+          "items": [
+            {
+              "id": 28,
+              "description": "Concluir a operação de persistência da definição ou alteração de prioridade e retornar a confirmação ao usuário em tempo adequado, mesmo sob carga de até 5.000 usuários ativos e 10.000 tarefas por tenant na plataforma."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 10,
+  "sourceType": "feature",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-10T21:08:56.361Z",
+  "updatedAt": null
+}

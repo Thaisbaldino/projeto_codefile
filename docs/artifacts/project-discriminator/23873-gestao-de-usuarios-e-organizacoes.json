@@ -1,0 +1,151 @@
+{
+  "id": 23873,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 19,
+        "name": "Nome do conceito de domínio representado por este bloco de construção",
+        "value": [
+          "Tenant"
+        ],
+        "method": "user-input",
+        "reasoning": "A entidade retornada pela função provisionarTenantNovo é do tipo Tenant.",
+        "confidence": 0.7766,
+        "context_element_id": 2701
+      },
+      {
+        "id": 21,
+        "name": "Entidade primária que o registro representa ou documenta",
+        "value": [
+          "AuthContext"
+        ],
+        "method": "user-input",
+        "reasoning": "O documento de especificação de AuthContext representa o entidade principal do registro.",
+        "confidence": 0.7817,
+        "context_element_id": 2706
+      },
+      {
+        "id": 23,
+        "name": "Perfil ou papel de usuário que é o principal público-alvo da página",
+        "value": [
+          "internal-team"
+        ],
+        "method": "user-input",
+        "reasoning": "O usuário é o principal target da interface, um time interno.",
+        "confidence": 0.8237,
+        "context_element_id": 2721
+      },
+      {
+        "id": 25,
+        "name": "Sistema ou serviço que origina os dados a serem transformados",
+        "value": [
+          "external-crm"
+        ],
+        "method": "user-input",
+        "reasoning": "A integração com o serviço de e-mail transacional é com o provedor de e-mail externo (ex: SendGrid, AWS SES), o que indica CRM externo como fonte de dados.",
+        "confidence": 0.7289,
+        "context_element_id": 2761
+      },
+      {
+        "id": 32,
+        "name": "Domínio funcional ou área de negócio a ser protegida pelo sistema de identidade",
+        "value": [
+          "identity-and-access"
+        ],
+        "method": "internal-inference",
+        "reasoning": "O módulo Gestão de Usuários e Organizações protege o domínio funcional de identidade e acesso à plataforma.",
+        "confidence": 0.7602,
+        "context_element_id": 2795
+      },
+      {
+        "id": 33,
+        "name": "Contexto de usuários ou sistemas que interagem com a camada de segurança",
+        "value": [
+          "internal-employees, external-customers, partner-systems, mobile-users, anonymous-visitors, privileged-admins"
+        ],
+        "method": "internal-inference",
+        "reasoning": "O módulo Gestão de Usuários e Organizações atende a interações de funcionários internos, clientes externos, parceiros e usuários mobile, além de administradores internos.",
+        "confidence": 0.8084,
+        "context_element_id": 2799
+      }
+    ],
+    "best_practices": [],
+    "discriminators": [
+      {
+        "id": 11,
+        "name": "Múltiplas Hierarquias",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "O nível hierárquico é um único hierarquia, não múltiplas simultâneas.",
+        "confidence": 0.7009,
+        "context_element_id": 1544
+      },
+      {
+        "id": 12,
+        "name": "Permissões Integradas",
+        "value": "role-based",
+        "method": "internal-inference",
+        "reasoning": "A autenticação segura com recuperação de senha é baseada em perfil de usuário, caracterizando autorização baseada em papel.",
+        "confidence": 0.7601,
+        "context_element_id": 1545
+      },
+      {
+        "id": 14,
+        "name": "Canal de Integração",
+        "value": "fila de mensagens",
+        "method": "user-input",
+        "reasoning": "A fila de mensagens é distribuída por meio de AWS SQS, um canal de comunicação de mensagens.",
+        "confidence": 0.7091,
+        "context_element_id": 2060
+      },
+      {
+        "id": 72,
+        "name": "Estratégia de Cache",
+        "value": "múltiplas camadas",
+        "method": "user-input",
+        "reasoning": "A cache é implementada com TTL, invalidação e sincronização entre instâncias, caracterizando uma estratégia de cache multi-lado.",
+        "confidence": 0.7892,
+        "context_element_id": 4496
+      },
+      {
+        "id": 76,
+        "name": "Testes de Segurança",
+        "value": "orientado a conformidade",
+        "method": "user-input",
+        "reasoning": "A armazenagem de senhas em formato de hash seguro, com algoritmo argon2id, é uma estratégia de segurança direcionada a compliance.",
+        "confidence": 0.877,
+        "context_element_id": 4538
+      },
+      {
+        "id": 79,
+        "name": "Nível de Autenticação",
+        "value": "acesso baseado em papel",
+        "method": "internal-inference",
+        "reasoning": "A autenticação segura com recuperação de senha é baseada em papel de usuário, caracterizando autorização baseada em papel.",
+        "confidence": 0.7275,
+        "context_element_id": 4828
+      },
+      {
+        "id": 81,
+        "name": "Abordagem de Composição",
+        "value": "composição híbrida",
+        "method": "user-input",
+        "reasoning": "A composição é feita com uma abstração composta de componentes e arquitetura de design leve, caracterizando uma composição híbrida.",
+        "confidence": 0.7763,
+        "context_element_id": 4912
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 6,
+  "active": true,
+  "sourceId": 23711,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T08:24:33.228Z",
+  "updatedAt": null
+}

@@ -1,0 +1,247 @@
+{
+  "id": 24000,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 36,
+        "name": "Falhas Silenciosas e Falsos Positivos",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Silencioso, o erro não avisa ninguém, e a correção só aparece depois de o cliente ter pago ou o sistema ter fechado.",
+        "confidence": 0.8761,
+        "context_element_id": 2820
+      },
+      {
+        "id": 38,
+        "name": "Validação de Entrada e Injeção",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Entrada malformada é aceita e propagada para a execução, o que permite que o sistema seja invadido ou corrompido.",
+        "confidence": 0.7796,
+        "context_element_id": 2825
+      },
+      {
+        "id": 39,
+        "name": "Formato e Tradução de Dados",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "A data em ISO 8601 é transmitida em APIs, e a incompatibilidade entre o formato do banco e o padrão padrão do protocolo pode resultar em perda de informação.",
+        "confidence": 0.8308,
+        "context_element_id": 2834
+      }
+    ],
+    "attributes": [
+      {
+        "id": 21,
+        "name": "Conjunto de idiomas e configurações regionais suportados pelo sistema",
+        "value": [
+          "pt-BR",
+          "en-US"
+        ],
+        "method": "user-input",
+        "reasoning": "O sistema suporta múltiplas localizações, incluindo 'pt-BR' e 'en-US', para formatação de datas conforme a preferência do usuário.\nO sistema suporta múltiplas localizações, incluindo 'pt-BR' e 'en-US', para formatação de datas conforme a preferência do usuário.",
+        "confidence": 0.7864,
+        "context_element_id": 2684
+      },
+      {
+        "id": 27,
+        "name": "Formato estrutural esperado das respostas do LLM",
+        "value": [
+          "structured-json"
+        ],
+        "method": "user-input",
+        "reasoning": "O corpo de requisição HTTP é um JSON estruturado.",
+        "confidence": 0.7251,
+        "context_element_id": 2735
+      },
+      {
+        "id": 34,
+        "name": "Tipo predominante de problema computacional tratado pelo toolkit",
+        "value": [
+          "temporal-calculation"
+        ],
+        "method": "user-input",
+        "reasoning": "A tarefa é avaliada com base em datas, e a prioridade é calculada com base na prioridade da tarefa, ambas operações de cálculo temporal.",
+        "confidence": 0.9231,
+        "context_element_id": 2804
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 41,
+        "name": "Reduzir a superfície de ataque desabilitando serviços desnecessários, removendo funcionalidades não utilizadas e minimizando pontos de entrada",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Exposição de dados internos não destinados à exposição em APIs torna a operação pública, sem a necessidade de acesso público.",
+        "confidence": 0.9385,
+        "context_element_id": 2932
+      },
+      {
+        "id": 42,
+        "name": "Implementar validação rigorosa de entradas com sanitização, whitelists de caracteres permitidos e prevenção contra ataques de injeção",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Entrada malformada é aceita e propagada para a execução, o que permite que o sistema seja invadido ou corrompido.",
+        "confidence": 0.8445,
+        "context_element_id": 2936
+      },
+      {
+        "id": 43,
+        "name": "Configurar revogação automática de acesso para contas comprometidas com invalidação imediata de tokens e sessões ativas",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem o nome completo, email e nível hierarquico, o sistema não reconhece a alteração como uma tentativa de ataque e não pode reativá-la.",
+        "confidence": 0.7042,
+        "context_element_id": 2946
+      },
+      {
+        "id": 45,
+        "name": "Implementar versionamento de dados com timestamps e controle de versão para rastreabilidade e auditoria",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem data formatada, a interpretação do tempo é feita por cada usuário, e a diferença entre '15/01/2024' e '15/01/2024 10:30' é difícil de identificar.",
+        "confidence": 0.7078,
+        "context_element_id": 2956
+      },
+      {
+        "id": 46,
+        "name": "Implementar verificação de integridade de dados em cada camada arquitetural com validações específicas para cada responsabilidade",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Rejeitar transformações com referências inválidas evita que o sistema se confunda com dados que já existem, sem precisar recomeçar a confirmação.",
+        "confidence": 0.8944,
+        "context_element_id": 2960
+      },
+      {
+        "id": 47,
+        "name": "Implemente operações idempotentes que podem ser executadas múltiplas vezes sem efeitos colaterais",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Uma requisição que altera o estado do objeto original é repetida e não sobrevive ao reenvio; o resultado é sempre o mesmo, sem que a entrada seja modificada.",
+        "confidence": 0.9159,
+        "context_element_id": 2968
+      },
+      {
+        "id": 48,
+        "name": "Abstraia serviços comuns em componentes reutilizáveis para reduzir a duplicação de código e as dependências cruzadas",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Enriquecer nomes em tempo de execução custa mais do que em tempo de consulta, e o sistema não pode armazenar nomes em cache.",
+        "confidence": 0.7942,
+        "context_element_id": 2978
+      },
+      {
+        "id": 50,
+        "name": "Implemente operações em lote para permitir que os usuários executem múltiplas ações semelhantes simultaneamente com uma única confirmação",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Repetir a consulta em cada registro consumia tempo e recursos, e o resultado só aparecia depois de todos os registros terem sido processados.",
+        "confidence": 0.7938,
+        "context_element_id": 3044
+      },
+      {
+        "id": 51,
+        "name": "Estabeleça validação rigorosa de entrada e saída com sanitização automática, verificação de tipos de dados, limites de intervalo e detecção de payloads maliciosos ou malformados",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Entrada malformada é aceita e propagada para a execução, o que permite que o sistema seja invadido ou corrompido.",
+        "confidence": 0.9566,
+        "context_element_id": 3063
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 5,
+        "name": "Gerenciamento de Transações",
+        "value": "sem transação",
+        "method": "user-input",
+        "reasoning": "A cache não é gerenciada por uma transação explícita ou implícita, mas sim por padrão.",
+        "confidence": 0.7017,
+        "context_element_id": 1362
+      },
+      {
+        "id": 6,
+        "name": "Uso de Projeção",
+        "value": "yes",
+        "method": "internal-inference",
+        "reasoning": "A transformação é feita sob demanda por handlers, fluxos de negócio e camadas de apresentação, caracterizando uso de projetos de projeção.",
+        "confidence": 0.8163,
+        "context_element_id": 1363
+      },
+      {
+        "id": 10,
+        "name": "Complexidade Comportamental",
+        "value": "focado em dados",
+        "method": "internal-inference",
+        "reasoning": "A conversão entre entidades de domínio e DTOs é realizada por meio de mapeamento de dados, caracterizando um comportamento focado em dados.",
+        "confidence": 0.88,
+        "context_element_id": 1474
+      },
+      {
+        "id": 12,
+        "name": "Padrão de Interação",
+        "value": "focado em comando",
+        "method": "internal-inference",
+        "reasoning": "A conversão entre entidades de domínio e DTOs é realizada sob demanda por handlers, fluxos de negócio e camadas de apresentação, caracterizando um comportamento focado em comandos.",
+        "confidence": 0.8553,
+        "context_element_id": 1476
+      },
+      {
+        "id": 17,
+        "name": "Tipo de Estrutura",
+        "value": "hierárquico",
+        "method": "internal-inference",
+        "reasoning": "O nível hierárquico é representado por um ID e um nome, caracterizando um modelo hierárquico.",
+        "confidence": 0.7787,
+        "context_element_id": 1542
+      },
+      {
+        "id": 61,
+        "name": "Reutilização",
+        "value": "reutilizável dentro do módulo",
+        "method": "user-input",
+        "reasoning": "As funções de transformação são reutilizáveis dentro do mesmo módulo, sem ciclo de vida próprio.",
+        "confidence": 0.8967,
+        "context_element_id": 4594
+      },
+      {
+        "id": 64,
+        "name": "Modelo de Memória",
+        "value": "memória de longo prazo",
+        "method": "internal-inference",
+        "reasoning": "A cache de IDs para nomes de usuários e níveis hierárquicos é de memória, mantendo dados por tempo longo.",
+        "confidence": 0.7869,
+        "context_element_id": 4667
+      },
+      {
+        "id": 68,
+        "name": "Escopo de Transformação",
+        "value": "misto",
+        "method": "internal-inference",
+        "reasoning": "A transformUserActivationChange é uma transação que altera o status de um usuário, um processo que envolve múltiplos componentes do sistema.",
+        "confidence": 0.8108,
+        "context_element_id": 5150
+      },
+      {
+        "id": 70,
+        "name": "Modo de Resolução",
+        "value": "resolução hierárquica",
+        "method": "user-input",
+        "reasoning": "A função normalizeHierarchyLevelName normaliza o nome do nível hierárquico, um processo de resolução hierárquica.",
+        "confidence": 0.7279,
+        "context_element_id": 5168
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 7,
+  "active": true,
+  "sourceId": 23761,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}

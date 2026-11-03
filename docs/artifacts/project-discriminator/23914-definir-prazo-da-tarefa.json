@@ -1,0 +1,50 @@
+{
+  "id": 23914,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 3,
+        "name": "Observabilidade e Detecção",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem alerta, a equipe fica sem saber se a tarefa está em atraso ou se o prazo foi ultrapassado.",
+        "confidence": 0.7573,
+        "context_element_id": 2814
+      }
+    ],
+    "attributes": [],
+    "best_practices": [
+      {
+        "id": 5,
+        "name": "Configurar o escalonamento de recursos com políticas FIFO, de prioridade ou baseadas em deadline conforme a criticidade das operações",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A data limite é uma informação que só aparece quando a tarefa é visualizada, e não é atualizada com o tempo.\nA data limite de conclusão de tarefas é definida no momento da criação, com prazo obrigatório, caracterizando um policy de compliance customizada.",
+        "confidence": 0.7506,
+        "context_element_id": 2870
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 19,
+        "name": "Plataforma de Canal",
+        "value": "navegador web",
+        "method": "internal-inference",
+        "reasoning": "O seletor de data em formato de calendário visual é apresentado em um ambiente web, caracterizando canal web-browser.",
+        "confidence": 0.7545,
+        "context_element_id": 4824
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 4,
+  "active": true,
+  "sourceId": 23613,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T14:58:49.768Z",
+  "updatedAt": null
+}

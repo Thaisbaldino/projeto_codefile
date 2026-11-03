@@ -1,0 +1,1258 @@
+{
+  "id": 23782,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 116,
+          "name": "Operações de Escrita",
+          "format": "Entidades de domínio (Tarefa, Usuário, Tenant) mapeadas para linhas de tabela relacional",
+          "origin": "Handler de Usuários e Organizações, Handler de Tarefas",
+          "trigger": "Requisições HTTP POST/PUT/DELETE de criação, edição, ativação, desativação de tarefas, usuários e tenants"
+        },
+        {
+          "id": 117,
+          "name": "Requisições de Consulta",
+          "format": "Parâmetros de filtro, paginação e ordenação (tenant_id, status, responsavel_id, prioridade, data_limite, offset, limit)",
+          "origin": "Handler de Usuários e Organizações, Handler de Tarefas",
+          "trigger": "Requisições HTTP GET de listagem, filtragem e pesquisa de tarefas, usuários e tenants"
+        },
+        {
+          "id": 118,
+          "name": "Definições de Esquema",
+          "format": "Scripts SQL de criação de tabelas, índices, constraints e chaves estrangeiras",
+          "origin": "Pipeline de Migração de Esquema",
+          "trigger": "Inicialização do banco de dados, migrações de versão de schema"
+        },
+        {
+          "id": 119,
+          "name": "Parâmetros de Configuração",
+          "format": "Valores de retenção de dados, limites de tamanho, algoritmos de hash, parâmetros de criptografia",
+          "origin": "Configuração da Aplicação",
+          "trigger": "Carregamento de configuração no startup da aplicação"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 127,
+          "name": "Resultados de Consulta",
+          "format": "Entidades de domínio (Tarefa, Usuário, Tenant) ou listas paginadas de entidades",
+          "destination": "Handler de Usuários e Organizações, Handler de Tarefas"
+        },
+        {
+          "id": 128,
+          "name": "Confirmações de Escrita",
+          "format": "Entidade persistida com ID gerado, timestamps de auditoria e status de sucesso/erro",
+          "destination": "Handler de Usuários e Organizações, Handler de Tarefas"
+        },
+        {
+          "id": 129,
+          "name": "Histórico de Transições",
+          "format": "Registros de histórico_status_tarefas com status_anterior, status_novo, data_transicao, executor_id",
+          "destination": "Trilha de Auditoria de Ações"
+        },
+        {
+          "id": 130,
+          "name": "Métricas de Desempenho",
+          "format": "Tempo de execução de consulta, número de linhas afetadas, índices utilizados",
+          "destination": "Camada de Observabilidade"
+        }
+      ],
+      "processing": [
+        {
+          "id": 120,
+          "step": "Validação de Isolamento de Tenant",
+          "description": "Valida que toda operação de leitura ou escrita inclui o tenant_id correto e que o usuário executor pertence ao tenant solicitado, impedindo acesso cruzado entre organizações."
+        },
+        {
+          "id": 121,
+          "step": "Mapeamento Entidade-para-Linha",
+          "description": "Traduz entidades de domínio (Tarefa, Usuário, Tenant) para estruturas de linha relacional, normalizando tipos de dados, enums e valores nulos conforme o schema."
+        },
+        {
+          "id": 122,
+          "step": "Validação de Integridade Referencial",
+          "description": "Valida que todas as chaves estrangeiras (tenant_id, responsavel_id, criador_id, nivel_hierarquico_id) apontam para registros existentes e pertencentes ao tenant correto."
+        },
+        {
+          "id": 123,
+          "step": "Execução de Consulta SQL",
+          "description": "Executa a operação SQL (SELECT, INSERT, UPDATE, DELETE) contra o banco de dados relacional, utilizando índices apropriados para otimização de desempenho."
+        },
+        {
+          "id": 124,
+          "step": "Registro de Auditoria",
+          "description": "Registra metadados de auditoria (data_criacao, data_ultima_edicao, ultimo_editor_id, data_conclusao) e transições de status no histórico para conformidade com LGPD e rastreabilidade."
+        },
+        {
+          "id": 125,
+          "step": "Mapeamento Linha-para-Entidade",
+          "description": "Traduz linhas retornadas do banco de dados para entidades de domínio, reconstruindo objetos com tipos corretos e relacionamentos."
+        },
+        {
+          "id": 126,
+          "step": "Aplicação de Índices e Otimizações",
+          "description": "Utiliza índices compostos (tenant_id + status, tenant_id + responsavel_id, tenant_id + data_limite, tenant_id + prioridade) para acelerar filtros, ordenações e paginação em tenants com até 10.000 tarefas."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 131,
+        "category": "invariant",
+        "description": "Isolamento de Dados por Tenant: Toda operação de leitura ou escrita deve incluir validação de tenant_id, garantindo que um usuário de um tenant nunca acesse, modifique ou visualize dados de outro tenant. Chaves estrangeiras e índices compostos (tenant_id + coluna) reforçam este isolamento no nível de banco de dados.",
+        "enforcement": "db_constraint",
+        "verification": "Verificar que todas as consultas SELECT, UPDATE, DELETE incluem cláusula WHERE com tenant_id = $tenant_id_do_usuario. Testar tentativa de acesso cruzado entre tenants e confirmar que retorna zero linhas ou erro de autorização."
+      },
+      {
+        "id": 132,
+        "category": "invariant",
+        "description": "Unicidade de E-mail por Tenant: O endereço de e-mail de um usuário deve ser único dentro de seu tenant, permitindo que dois tenants diferentes tenham usuários com o mesmo e-mail. Índice único composto (tenant_id, email) garante esta restrição.",
+        "enforcement": "db_constraint",
+        "verification": "Tentar inserir dois usuários com o mesmo e-mail no mesmo tenant e confirmar que a operação falha com erro de violação de constraint. Tentar inserir usuários com o mesmo e-mail em tenants diferentes e confirmar que ambas as operações succedem."
+      },
+      {
+        "id": 133,
+        "category": "invariant",
+        "description": "Unicidade de Slug de Tenant: O identificador textual (slug) de um tenant deve ser único na plataforma inteira. Índice único sobre slug garante esta restrição.",
+        "enforcement": "db_constraint",
+        "verification": "Tentar inserir dois tenants com o mesmo slug e confirmar que a operação falha com erro de violação de constraint."
+      },
+      {
+        "id": 134,
+        "category": "validation",
+        "description": "Validação de Responsável Ativo: Toda tarefa deve ter um responsável que é um usuário ativo (status = 'ativo') pertencente ao mesmo tenant. Chave estrangeira fk_tarefas_responsavel garante existência; validação de status deve ocorrer no código antes de persistência.",
+        "enforcement": "code",
+        "verification": "Tentar criar tarefa com responsável inativo e confirmar que a operação falha com mensagem de erro específica. Tentar criar tarefa com responsável de outro tenant e confirmar que falha."
+      },
+      {
+        "id": 135,
+        "category": "validation",
+        "description": "Validação de Prioridade: O campo prioridade deve conter um dos valores fixos definidos pelo sistema (baixa, media, alta, urgente). Tipo enum no banco de dados reforça esta restrição.",
+        "enforcement": "db_constraint",
+        "verification": "Tentar inserir tarefa com prioridade inválida (ex: 'crítica') e confirmar que a operação falha com erro de violação de constraint."
+      },
+      {
+        "id": 136,
+        "category": "validation",
+        "description": "Validação de Status de Tarefa: O campo status deve conter um dos valores fixos definidos pelo sistema (A Fazer, Em Andamento, Concluído). Validação deve ocorrer no código antes de persistência.",
+        "enforcement": "code",
+        "verification": "Tentar criar ou atualizar tarefa com status inválido e confirmar que a operação falha com mensagem de erro específica."
+      },
+      {
+        "id": 137,
+        "category": "validation",
+        "description": "Validação de Status de Usuário: O campo status deve conter um dos valores fixos (ativo, inativo). Tipo enum no banco de dados reforça esta restrição.",
+        "enforcement": "db_constraint",
+        "verification": "Tentar inserir usuário com status inválido e confirmar que a operação falha com erro de violação de constraint."
+      },
+      {
+        "id": 138,
+        "category": "validation",
+        "description": "Validação de Status de Tenant: O campo status deve conter um dos valores fixos (ativo, inativo). Tipo enum no banco de dados reforça esta restrição.",
+        "enforcement": "db_constraint",
+        "verification": "Tentar inserir tenant com status inválido e confirmar que a operação falha com erro de violação de constraint."
+      },
+      {
+        "id": 139,
+        "category": "validation",
+        "description": "Validação de Título de Tarefa: O campo titulo não pode estar vazio e não pode exceder 255 caracteres. Validação deve ocorrer no código antes de persistência.",
+        "enforcement": "code",
+        "verification": "Tentar criar tarefa com título vazio ou com mais de 255 caracteres e confirmar que a operação falha com mensagem de erro específica."
+      },
+      {
+        "id": 140,
+        "category": "validation",
+        "description": "Validação de Slug de Tenant: O campo slug deve conter apenas letras minúsculas, números e hífens, sem espaços ou caracteres especiais. Validação deve ocorrer no código antes de persistência.",
+        "enforcement": "code",
+        "verification": "Tentar criar tenant com slug contendo caracteres inválidos (espaços, maiúsculas, caracteres especiais) e confirmar que a operação falha com mensagem de erro específica."
+      },
+      {
+        "id": 141,
+        "category": "authorization",
+        "description": "Autorização de Acesso a Dados: Apenas usuários autenticados e ativos pertencentes a um tenant podem acessar dados daquele tenant. Validação de tenant_id e status do usuário deve ocorrer no código antes de qualquer consulta.",
+        "enforcement": "code",
+        "verification": "Tentar acessar dados de um tenant como usuário não autenticado, inativo ou de outro tenant e confirmar que a operação é bloqueada com erro de autorização."
+      },
+      {
+        "id": 142,
+        "category": "retention",
+        "description": "Retenção de Histórico de Auditoria: Registros de histórico_status_tarefas devem ser retidos por no mínimo 90 dias conforme requisitos de conformidade com LGPD. Política de retenção deve ser implementada via job agendado que marca registros antigos para exclusão lógica ou física.",
+        "enforcement": "infra",
+        "verification": "Verificar que registros de histórico com data_transicao anterior a 90 dias atrás são marcados para exclusão ou removidos conforme política configurada. Confirmar que registros dentro da janela de retenção são preservados."
+      },
+      {
+        "id": 143,
+        "category": "compliance",
+        "description": "Conformidade com LGPD - Minimização de Dados Pessoais: O banco de dados armazena apenas dados pessoais necessários (nome_completo, email) para operação do sistema. Dados sensíveis como senha são armazenados em hash seguro (argon2id). Nenhum dado pessoal adicional é coletado ou armazenado.",
+        "enforcement": "code",
+        "verification": "Revisar schema de banco de dados e confirmar que apenas campos necessários para operação estão presentes. Confirmar que senhas são armazenadas em hash e nunca em texto simples."
+      },
+      {
+        "id": 144,
+        "category": "compliance",
+        "description": "Conformidade com LGPD - Rastreabilidade de Ações: Todas as operações que criam, modificam ou deletam dados pessoais devem ser registradas em log de auditoria com identificação do executor, timestamp e dados alterados. Tabela historico_status_tarefas e campos de auditoria (criador_id, ultimo_editor_id, data_criacao, data_ultima_edicao) implementam este requisito.",
+        "enforcement": "code",
+        "verification": "Executar operações de criação, edição e exclusão de usuários e tarefas e confirmar que logs de auditoria são gerados com identificação do executor, timestamp e dados alterados."
+      },
+      {
+        "id": 145,
+        "category": "observability",
+        "description": "Observabilidade de Desempenho: Índices compostos (tenant_id + status, tenant_id + responsavel_id, tenant_id + data_limite, tenant_id + prioridade) devem ser utilizados para otimizar consultas de filtragem e listagem. Planos de execução de consultas devem ser monitorados para garantir que índices estão sendo utilizados.",
+        "enforcement": "infra",
+        "verification": "Executar consultas de filtragem e listagem de tarefas e confirmar via EXPLAIN PLAN que índices compostos estão sendo utilizados. Medir tempo de execução e confirmar que está dentro de SLA (p99 <= 100ms para consultas de listagem com até 10.000 tarefas)."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "O Banco de Dados Relacional é a camada de persistência central da plataforma multi-tenant de gerenciamento de tarefas, responsável pelo armazenamento durável, recuperação e gerenciamento de todos os dados estruturados do sistema. Compreende um conjunto de tabelas relacionais normalizadas (tarefas, usuários, tenants, níveis hierárquicos, histórico de status de tarefas) que implementam o modelo de domínio, garantindo isolamento completo de dados entre tenants por meio de chaves estrangeiras e índices compostos. Fornece operações de leitura e escrita otimizadas através de repositórios de acesso a dados (RepositórioTarefas, RepositórioUsuáriosTenants) que encapsulam consultas SQL, validações de integridade referencial, e estratégias de filtragem multi-critério. Mantém auditabilidade completa via campos de metadados (datas de criação/edição/conclusão, identificação de executores), conformidade com LGPD através de minimização de dados pessoais e retenção controlada, e desempenho adequado sob carga de até 50 tenants, 5.000 usuários ativos e 10.000 tarefas por tenant através de índices estratégicos e normalização relacional."
+    },
+    "definition": {
+      "params": [
+        {
+          "id": 110,
+          "name": "retention_days_audit_logs",
+          "value": "90"
+        },
+        {
+          "id": 111,
+          "name": "max_task_title_length",
+          "value": "255"
+        },
+        {
+          "id": 112,
+          "name": "password_hash_algorithm",
+          "value": "argon2id"
+        },
+        {
+          "id": 113,
+          "name": "password_hash_memory_cost_mib",
+          "value": "64"
+        },
+        {
+          "id": 114,
+          "name": "password_hash_time_cost",
+          "value": "3"
+        },
+        {
+          "id": 115,
+          "name": "password_hash_parallelism",
+          "value": "4"
+        }
+      ],
+      "tables": [
+        {
+          "id": 2,
+          "name": "tarefas",
+          "columns": [
+            {
+              "id": 3,
+              "name": "id",
+              "type": "uuid",
+              "nullable": false,
+              "description": "Identificador único da tarefa dentro do tenant, gerado automaticamente no momento da criação.",
+              "primary_key": true
+            },
+            {
+              "id": 4,
+              "name": "tenant_id",
+              "type": "uuid",
+              "nullable": false,
+              "description": "Referência ao tenant proprietário da tarefa, garantindo isolamento de dados entre organizações."
+            },
+            {
+              "id": 5,
+              "name": "titulo",
+              "type": "string",
+              "nullable": false,
+              "description": "Título descritivo da tarefa, identificador legível da atividade, com limite máximo de 255 caracteres."
+            },
+            {
+              "id": 6,
+              "name": "descricao",
+              "type": "string",
+              "nullable": true,
+              "description": "Descrição detalhada do contexto, objetivo ou instruções da tarefa, preenchida opcionalmente pelo criador."
+            },
+            {
+              "id": 7,
+              "name": "responsavel_id",
+              "type": "uuid",
+              "nullable": false,
+              "description": "Referência ao usuário ativo do tenant responsável pela execução da tarefa."
+            },
+            {
+              "id": 8,
+              "name": "criador_id",
+              "type": "uuid",
+              "nullable": false,
+              "description": "Referência ao usuário que criou a tarefa, registrado automaticamente no momento da criação."
+            },
+            {
+              "id": 9,
+              "name": "prioridade",
+              "type": "enum[baixa|media|alta|urgente]",
+              "nullable": false,
+              "description": "Nível de prioridade da tarefa para fins de destaque visual e ordenação, selecionado no momento da criação."
+            },
+            {
+              "id": 10,
+              "name": "status",
+              "type": "string",
+              "nullable": false,
+              "description": "Status atual da tarefa, referência a um dos status fixos definidos pelo sistema (A Fazer, Em Andamento, Concluído)."
+            },
+            {
+              "id": 11,
+              "name": "data_limite",
+              "type": "date",
+              "nullable": true,
+              "description": "Data limite para conclusão da tarefa; null quando nenhum prazo foi definido."
+            },
+            {
+              "id": 12,
+              "name": "data_criacao",
+              "type": "timestamp",
+              "nullable": false,
+              "description": "Data e hora de criação da tarefa, registrada automaticamente pelo sistema no momento da persistência."
+            },
+            {
+              "id": 13,
+              "name": "data_ultima_edicao",
+              "type": "timestamp",
+              "nullable": true,
+              "description": "Data e hora da última edição dos dados da tarefa; null se nunca foi editada após criação."
+            },
+            {
+              "id": 14,
+              "name": "ultimo_editor_id",
+              "type": "uuid",
+              "nullable": true,
+              "description": "Referência ao usuário que realizou a última edição da tarefa; null se nunca foi editada."
+            },
+            {
+              "id": 15,
+              "name": "data_conclusao",
+              "type": "timestamp",
+              "nullable": true,
+              "description": "Data e hora de conclusão da tarefa quando marcada como concluída; null enquanto a tarefa estiver ativa."
+            }
+          ],
+          "indexes": [
+            {
+              "id": 20,
+              "name": "idx_tarefas_tenant_status",
+              "unique": false,
+              "columns": [
+                {
+                  "id": 21,
+                  "column_name": "tenant_id"
+                },
+                {
+                  "id": 22,
+                  "column_name": "status"
+                }
+              ],
+              "description": "Índice não-único composto sobre (tenant_id, status) para otimizar filtros e listagens de tarefas por status dentro de um tenant."
+            },
+            {
+              "id": 23,
+              "name": "idx_tarefas_tenant_responsavel",
+              "unique": false,
+              "columns": [
+                {
+                  "id": 24,
+                  "column_name": "tenant_id"
+                },
+                {
+                  "id": 25,
+                  "column_name": "responsavel_id"
+                }
+              ],
+              "description": "Índice não-único composto sobre (tenant_id, responsavel_id) para otimizar consultas de tarefas por responsável dentro de um tenant."
+            },
+            {
+              "id": 26,
+              "name": "idx_tarefas_tenant_data_limite",
+              "unique": false,
+              "columns": [
+                {
+                  "id": 27,
+                  "column_name": "tenant_id"
+                },
+                {
+                  "id": 28,
+                  "column_name": "data_limite"
+                }
+              ],
+              "description": "Índice não-único composto sobre (tenant_id, data_limite) para otimizar filtros de tarefas por prazo e identificação de tarefas atrasadas."
+            },
+            {
+              "id": 29,
+              "name": "idx_tarefas_tenant_prioridade",
+              "unique": false,
+              "columns": [
+                {
+                  "id": 30,
+                  "column_name": "tenant_id"
+                },
+                {
+                  "id": 31,
+                  "column_name": "prioridade"
+                }
+              ],
+              "description": "Índice não-único composto sobre (tenant_id, prioridade) para otimizar filtros de tarefas por nível de prioridade."
+            },
+            {
+              "id": 32,
+              "name": "idx_tarefas_data_criacao",
+              "unique": false,
+              "columns": [
+                {
+                  "id": 33,
+                  "column_name": "data_criacao"
+                }
+              ],
+              "description": "Índice não-único sobre data_criacao para otimizar ordenações e filtros temporais na listagem de tarefas."
+            }
+          ],
+          "foreign_keys": [
+            {
+              "id": 16,
+              "name": "fk_tarefas_tenant",
+              "column": "tenant_id",
+              "ref_table": "tenants",
+              "ref_column": "id",
+              "description": "Garante que o tenant ao qual a tarefa pertence existe na tabela de tenants, mantendo integridade referencial e isolamento multi-tenant."
+            },
+            {
+              "id": 17,
+              "name": "fk_tarefas_responsavel",
+              "column": "responsavel_id",
+              "ref_table": "usuarios",
+              "ref_column": "id",
+              "description": "Garante que o usuário responsável pela tarefa existe na tabela de usuários e pertence ao mesmo tenant."
+            },
+            {
+              "id": 18,
+              "name": "fk_tarefas_criador",
+              "column": "criador_id",
+              "ref_table": "usuarios",
+              "ref_column": "id",
+              "description": "Garante que o usuário criador da tarefa existe na tabela de usuários."
+            },
+            {
+              "id": 19,
+              "name": "fk_tarefas_ultimo_editor",
+              "column": "ultimo_editor_id",
+              "ref_table": "usuarios",
+              "ref_column": "id",
+              "description": "Garante que o usuário editor da tarefa existe na tabela de usuários (quando não null)."
+            }
+          ]
+        },
+        {
+          "id": 34,
+          "name": "usuarios",
+          "columns": [
+            {
+              "id": 35,
+              "name": "id",
+              "type": "uuid",
+              "nullable": false,
+              "description": "Identificador único do usuário na plataforma, gerado automaticamente no momento do cadastro.",
+              "primary_key": true
+            },
+            {
+              "id": 36,
+              "name": "tenant_id",
+              "type": "uuid",
+              "nullable": false,
+              "description": "Referência ao tenant proprietário do usuário, garantindo isolamento de dados entre organizações."
+            },
+            {
+              "id": 37,
+              "name": "nome_completo",
+              "type": "string",
+              "nullable": false,
+              "description": "Nome completo do colaborador, informado no momento do cadastro ou edição do perfil."
+            },
+            {
+              "id": 38,
+              "name": "email",
+              "type": "string",
+              "nullable": false,
+              "description": "Endereço de e-mail único do usuário dentro do tenant, utilizado para autenticação e comunicação."
+            },
+            {
+              "id": 39,
+              "name": "senha_hash",
+              "type": "string",
+              "nullable": false,
+              "description": "Hash criptográfico da senha do usuário, armazenado em formato seguro (argon2id ou bcrypt), nunca em texto simples."
+            },
+            {
+              "id": 40,
+              "name": "nivel_hierarquico_id",
+              "type": "uuid",
+              "nullable": false,
+              "description": "Referência ao nível hierárquico atribuído ao usuário dentro da estrutura organizacional do tenant."
+            },
+            {
+              "id": 41,
+              "name": "status",
+              "type": "enum[ativo|inativo]",
+              "nullable": false,
+              "description": "Status de ativação do usuário; ativo permite acesso à plataforma, inativo bloqueia login e operações."
+            },
+            {
+              "id": 42,
+              "name": "data_criacao",
+              "type": "timestamp",
+              "nullable": false,
+              "description": "Data e hora de cadastro do usuário, registrada automaticamente pelo sistema no momento da criação."
+            },
+            {
+              "id": 43,
+              "name": "criador_id",
+              "type": "uuid",
+              "nullable": false,
+              "description": "Referência ao usuário administrador do tenant que realizou o cadastro inicial do usuário."
+            },
+            {
+              "id": 44,
+              "name": "data_ultima_edicao",
+              "type": "timestamp",
+              "nullable": true,
+              "description": "Data e hora da última edição dos dados cadastrais do usuário; null se nunca foi editado após criação."
+            },
+            {
+              "id": 45,
+              "name": "ultimo_editor_id",
+              "type": "uuid",
+              "nullable": true,
+              "description": "Referência ao usuário administrador que realizou a última edição do perfil; null se nunca foi editado."
+            },
+            {
+              "id": 46,
+              "name": "data_ultima_ativacao",
+              "type": "timestamp",
+              "nullable": true,
+              "description": "Data e hora da última ativação do usuário; null se nunca foi desativado após criação."
+            },
+            {
+              "id": 47,
+              "name": "data_ultima_desativacao",
+              "type": "timestamp",
+              "nullable": true,
+              "description": "Data e hora da última desativação do usuário; null se nunca foi desativado."
+            }
+          ],
+          "indexes": [
+            {
+              "id": 52,
+              "name": "idx_usuarios_tenant_email",
+              "unique": true,
+              "columns": [
+                {
+                  "id": 53,
+                  "column_name": "tenant_id"
+                },
+                {
+                  "id": 54,
+                  "column_name": "email"
+                }
+              ],
+              "description": "Índice único composto sobre (tenant_id, email) para garantir unicidade de e-mail dentro de cada tenant e otimizar buscas por e-mail durante autenticação."
+            },
+            {
+              "id": 55,
+              "name": "idx_usuarios_tenant_status",
+              "unique": false,
+              "columns": [
+                {
+                  "id": 56,
+                  "column_name": "tenant_id"
+                },
+                {
+                  "id": 57,
+                  "column_name": "status"
+                }
+              ],
+              "description": "Índice não-único composto sobre (tenant_id, status) para otimizar filtros e listagens de usuários ativos ou inativos por tenant."
+            },
+            {
+              "id": 58,
+              "name": "idx_usuarios_tenant_nivel_hierarquico",
+              "unique": false,
+              "columns": [
+                {
+                  "id": 59,
+                  "column_name": "tenant_id"
+                },
+                {
+                  "id": 60,
+                  "column_name": "nivel_hierarquico_id"
+                }
+              ],
+              "description": "Índice não-único composto sobre (tenant_id, nivel_hierarquico_id) para otimizar consultas de usuários por nível hierárquico dentro de um tenant."
+            },
+            {
+              "id": 61,
+              "name": "idx_usuarios_data_criacao",
+              "unique": false,
+              "columns": [
+                {
+                  "id": 62,
+                  "column_name": "data_criacao"
+                }
+              ],
+              "description": "Índice não-único sobre data_criacao para otimizar ordenações e filtros temporais na listagem de usuários."
+            }
+          ],
+          "foreign_keys": [
+            {
+              "id": 48,
+              "name": "fk_usuarios_tenant",
+              "column": "tenant_id",
+              "ref_table": "tenants",
+              "ref_column": "id",
+              "description": "Garante que o tenant ao qual o usuário pertence existe na tabela de tenants, mantendo integridade referencial."
+            },
+            {
+              "id": 49,
+              "name": "fk_usuarios_nivel_hierarquico",
+              "column": "nivel_hierarquico_id",
+              "ref_table": "niveis_hierarquicos",
+              "ref_column": "id",
+              "description": "Garante que o nível hierárquico atribuído ao usuário existe na tabela de níveis hierárquicos do tenant."
+            },
+            {
+              "id": 50,
+              "name": "fk_usuarios_criador",
+              "column": "criador_id",
+              "ref_table": "usuarios",
+              "ref_column": "id",
+              "description": "Garante que o usuário administrador que criou este registro existe na tabela de usuários."
+            },
+            {
+              "id": 51,
+              "name": "fk_usuarios_ultimo_editor",
+              "column": "ultimo_editor_id",
+              "ref_table": "usuarios",
+              "ref_column": "id",
+              "description": "Garante que o usuário administrador que editou este registro existe na tabela de usuários (quando não null)."
+            }
+          ]
+        },
+        {
+          "id": 63,
+          "name": "tenants",
+          "columns": [
+            {
+              "id": 64,
+              "name": "id",
+              "type": "uuid",
+              "nullable": false,
+              "description": "Identificador único do tenant na plataforma, gerado automaticamente no momento do provisionamento.",
+              "primary_key": true
+            },
+            {
+              "id": 65,
+              "name": "nome",
+              "type": "string",
+              "nullable": false,
+              "description": "Nome descritivo da organização (empresa) cadastrada, informado pelo administrador interno durante o provisionamento."
+            },
+            {
+              "id": 66,
+              "name": "slug",
+              "type": "string",
+              "nullable": false,
+              "description": "Identificador único textual do tenant (código ou slug), utilizado em URLs e referências internas, contendo apenas letras minúsculas, números e hífens."
+            },
+            {
+              "id": 67,
+              "name": "status",
+              "type": "enum[ativo|inativo]",
+              "nullable": false,
+              "description": "Status de ativação do tenant; ativo permite acesso de usuários, inativo bloqueia todas as operações e login."
+            },
+            {
+              "id": 68,
+              "name": "data_criacao",
+              "type": "timestamp",
+              "nullable": false,
+              "description": "Data e hora de provisionamento do tenant, registrada automaticamente pelo sistema no momento da criação."
+            },
+            {
+              "id": 69,
+              "name": "administrador_criador_id",
+              "type": "uuid",
+              "nullable": false,
+              "description": "Referência ao usuário administrador interno da plataforma que realizou o provisionamento do tenant."
+            },
+            {
+              "id": 70,
+              "name": "data_ultima_ativacao",
+              "type": "timestamp",
+              "nullable": true,
+              "description": "Data e hora da última ativação do tenant; null se nunca foi desativado após criação."
+            },
+            {
+              "id": 71,
+              "name": "data_ultima_desativacao",
+              "type": "timestamp",
+              "nullable": true,
+              "description": "Data e hora da última desativação do tenant; null se nunca foi desativado."
+            }
+          ],
+          "indexes": [
+            {
+              "id": 73,
+              "name": "idx_tenants_slug",
+              "unique": true,
+              "columns": [
+                {
+                  "id": 74,
+                  "column_name": "slug"
+                }
+              ],
+              "description": "Índice único sobre slug para otimizar buscas por identificador textual do tenant e garantir unicidade."
+            },
+            {
+              "id": 75,
+              "name": "idx_tenants_status",
+              "unique": false,
+              "columns": [
+                {
+                  "id": 76,
+                  "column_name": "status"
+                }
+              ],
+              "description": "Índice não-único sobre status para otimizar filtros e consultas que buscam tenants ativos ou inativos."
+            },
+            {
+              "id": 77,
+              "name": "idx_tenants_data_criacao",
+              "unique": false,
+              "columns": [
+                {
+                  "id": 78,
+                  "column_name": "data_criacao"
+                }
+              ],
+              "description": "Índice não-único sobre data_criacao para otimizar ordenações e filtros temporais na listagem de tenants."
+            }
+          ],
+          "foreign_keys": [
+            {
+              "id": 72,
+              "name": "fk_tenants_administrador_criador",
+              "column": "administrador_criador_id",
+              "ref_table": "usuarios",
+              "ref_column": "id",
+              "description": "Garante que o administrador criador do tenant existe na tabela de usuários (referência a usuário administrador interno da plataforma)."
+            }
+          ]
+        },
+        {
+          "id": 79,
+          "name": "niveis_hierarquicos",
+          "columns": [
+            {
+              "id": 80,
+              "name": "id",
+              "type": "uuid",
+              "nullable": false,
+              "description": "Identificador único do nível hierárquico dentro do tenant.",
+              "primary_key": true
+            },
+            {
+              "id": 81,
+              "name": "tenant_id",
+              "type": "uuid",
+              "nullable": false,
+              "description": "Referência ao tenant proprietário do nível hierárquico, garantindo isolamento de dados entre organizações."
+            },
+            {
+              "id": 82,
+              "name": "nome",
+              "type": "string",
+              "nullable": false,
+              "description": "Nome ou rótulo identificador do nível hierárquico, informado pelo administrador do tenant."
+            },
+            {
+              "id": 83,
+              "name": "ordem",
+              "type": "integer",
+              "nullable": false,
+              "description": "Posição relativa do nível hierárquico dentro da estrutura organizacional do tenant, utilizado para ordenação e visualização."
+            },
+            {
+              "id": 84,
+              "name": "data_criacao",
+              "type": "timestamp",
+              "nullable": false,
+              "description": "Data e hora de criação do nível hierárquico, registrada automaticamente pelo sistema."
+            }
+          ],
+          "indexes": [
+            {
+              "id": 86,
+              "name": "idx_niveis_hierarquicos_tenant_ordem",
+              "unique": false,
+              "columns": [
+                {
+                  "id": 87,
+                  "column_name": "tenant_id"
+                },
+                {
+                  "id": 88,
+                  "column_name": "ordem"
+                }
+              ],
+              "description": "Índice não-único composto sobre (tenant_id, ordem) para otimizar consultas ordenadas de níveis hierárquicos dentro de um tenant."
+            }
+          ],
+          "foreign_keys": [
+            {
+              "id": 85,
+              "name": "fk_niveis_hierarquicos_tenant",
+              "column": "tenant_id",
+              "ref_table": "tenants",
+              "ref_column": "id",
+              "description": "Garante que o tenant ao qual o nível hierárquico pertence existe na tabela de tenants, mantendo integridade referencial."
+            }
+          ]
+        },
+        {
+          "id": 89,
+          "name": "historico_status_tarefas",
+          "columns": [
+            {
+              "id": 90,
+              "name": "id",
+              "type": "uuid",
+              "nullable": false,
+              "description": "Identificador único do registro de histórico, gerado automaticamente no momento da transição de status.",
+              "primary_key": true
+            },
+            {
+              "id": 91,
+              "name": "tarefa_id",
+              "type": "uuid",
+              "nullable": false,
+              "description": "Referência à tarefa cuja transição de status está sendo registrada, vinculando o histórico ao registro de tarefa."
+            },
+            {
+              "id": 92,
+              "name": "tenant_id",
+              "type": "uuid",
+              "nullable": false,
+              "description": "Referência ao tenant proprietário da tarefa e do histórico, garantindo isolamento de dados entre organizações."
+            },
+            {
+              "id": 93,
+              "name": "status_anterior",
+              "type": "string",
+              "nullable": false,
+              "description": "Status da tarefa antes da transição, um dos valores fixos definidos pelo sistema (A Fazer, Em Andamento, Concluído)."
+            },
+            {
+              "id": 94,
+              "name": "status_novo",
+              "type": "string",
+              "nullable": false,
+              "description": "Status da tarefa após a transição, um dos valores fixos definidos pelo sistema (A Fazer, Em Andamento, Concluído)."
+            },
+            {
+              "id": 95,
+              "name": "data_transicao",
+              "type": "timestamp",
+              "nullable": false,
+              "description": "Data e hora exata em que a transição de status foi executada, registrada automaticamente pelo sistema no servidor (backend) para garantir consistência independentemente do fuso horário do cliente."
+            },
+            {
+              "id": 96,
+              "name": "executor_id",
+              "type": "uuid",
+              "nullable": false,
+              "description": "Referência ao usuário que executou a alteração de status da tarefa, associando a ação ao colaborador responsável para fins de auditoria e rastreabilidade."
+            }
+          ],
+          "indexes": [
+            {
+              "id": 100,
+              "name": "idx_historico_tarefa_id",
+              "unique": false,
+              "columns": [
+                {
+                  "id": 101,
+                  "column_name": "tarefa_id"
+                }
+              ],
+              "description": "Índice não-único sobre tarefa_id para otimizar consultas do histórico completo de transições de uma tarefa específica."
+            },
+            {
+              "id": 102,
+              "name": "idx_historico_tenant_data_transicao",
+              "unique": false,
+              "columns": [
+                {
+                  "id": 103,
+                  "column_name": "tenant_id"
+                },
+                {
+                  "id": 104,
+                  "column_name": "data_transicao"
+                }
+              ],
+              "description": "Índice não-único composto sobre (tenant_id, data_transicao) para otimizar filtros e ordenações de histórico por período dentro de um tenant."
+            },
+            {
+              "id": 105,
+              "name": "idx_historico_tenant_executor",
+              "unique": false,
+              "columns": [
+                {
+                  "id": 106,
+                  "column_name": "tenant_id"
+                },
+                {
+                  "id": 107,
+                  "column_name": "executor_id"
+                }
+              ],
+              "description": "Índice não-único composto sobre (tenant_id, executor_id) para otimizar consultas de histórico filtradas por usuário executor dentro de um tenant."
+            },
+            {
+              "id": 108,
+              "name": "idx_historico_data_transicao",
+              "unique": false,
+              "columns": [
+                {
+                  "id": 109,
+                  "column_name": "data_transicao"
+                }
+              ],
+              "description": "Índice não-único sobre data_transicao para otimizar ordenações e filtros temporais na análise de histórico de transições."
+            }
+          ],
+          "foreign_keys": [
+            {
+              "id": 97,
+              "name": "fk_historico_tarefa",
+              "column": "tarefa_id",
+              "ref_table": "tarefas",
+              "ref_column": "id",
+              "description": "Garante que a tarefa referenciada no histórico existe na tabela de tarefas, mantendo integridade referencial e impedindo registros órfãos."
+            },
+            {
+              "id": 98,
+              "name": "fk_historico_tenant",
+              "column": "tenant_id",
+              "ref_table": "tenants",
+              "ref_column": "id",
+              "description": "Garante que o tenant ao qual o histórico pertence existe na tabela de tenants, mantendo integridade referencial e isolamento multi-tenant."
+            },
+            {
+              "id": 99,
+              "name": "fk_historico_executor",
+              "column": "executor_id",
+              "ref_table": "usuarios",
+              "ref_column": "id",
+              "description": "Garante que o usuário executor da transição existe na tabela de usuários, mantendo integridade referencial e permitindo rastreabilidade de quem realizou cada mudança."
+            }
+          ]
+        }
+      ]
+    },
+    "pendencies": [
+      {
+        "id": 170,
+        "section": "definition",
+        "description": "Definição de Tabela de Níveis Hierárquicos: A tabela niveis_hierarquicos foi incluída no schema com campos id, tenant_id, nome, ordem e data_criacao, mas a feature_definition de 'Definir Níveis Hierárquicos' (sourceId 2) não foi fornecida com detalhes completos de schema. Necessário confirmar se a estrutura está correta e se há campos adicionais necessários (ex: descrição, ativo/inativo).",
+        "resolutionOptions": [
+          {
+            "id": 171,
+            "text": "Manter schema atual com campos mínimos (id, tenant_id, nome, ordem, data_criacao) e adicionar campo 'status' (ativo/inativo) em versão futura se necessário"
+          },
+          {
+            "id": 172,
+            "text": "Adicionar campo 'status' (ativo/inativo) agora para suportar desativação de níveis hierárquicos sem exclusão física"
+          },
+          {
+            "id": 173,
+            "text": "Adicionar campo 'descricao' (opcional) para permitir documentação de cada nível hierárquico"
+          }
+        ],
+        "recommendedOptionId": 172
+      },
+      {
+        "id": 174,
+        "section": "definition",
+        "description": "Política de Exclusão de Registros Órfãos: Quando um usuário é deletado, suas tarefas como criador ou editor ficam órfãs (criador_id ou ultimo_editor_id apontam para usuário inexistente). Necessário definir política de tratamento: cascata, soft delete, ou restrição de exclusão.",
+        "resolutionOptions": [
+          {
+            "id": 175,
+            "text": "Implementar soft delete de usuários (adicionar campo data_delecao) em vez de exclusão física, preservando integridade referencial"
+          },
+          {
+            "id": 176,
+            "text": "Implementar cascata de exclusão que deleta todas as tarefas criadas por um usuário quando o usuário é deletado"
+          },
+          {
+            "id": 177,
+            "text": "Implementar restrição de exclusão que impede deletar usuário que é criador ou editor de tarefas ativas"
+          }
+        ],
+        "recommendedOptionId": 175
+      },
+      {
+        "id": 178,
+        "section": "rules",
+        "description": "Validação de Transição de Status: A máquina de estados de tarefa permite transições A Fazer → Em Andamento → Concluído e Concluído → A Fazer (reabertura). Necessário confirmar se todas as transições são permitidas ou se há restrições (ex: não permitir voltar de Concluído para Em Andamento).",
+        "resolutionOptions": [
+          {
+            "id": 179,
+            "text": "Permitir todas as transições entre status (A Fazer ↔ Em Andamento ↔ Concluído) sem restrições"
+          },
+          {
+            "id": 180,
+            "text": "Restringir transições a um fluxo linear (A Fazer → Em Andamento → Concluído) e permitir reabertura apenas para A Fazer"
+          },
+          {
+            "id": 181,
+            "text": "Implementar máquina de estados mais complexa com transições condicionais baseadas em regras de negócio"
+          }
+        ],
+        "recommendedOptionId": 179
+      },
+      {
+        "id": 182,
+        "section": "non_functional_requirements",
+        "description": "Estratégia de Backup e Disaster Recovery: Necessário definir RTO (Recovery Time Objective) e RPO (Recovery Point Objective) específicos, frequência de backup, e localização de réplicas para garantir disponibilidade de 99.5%.",
+        "resolutionOptions": [
+          {
+            "id": 183,
+            "text": "Implementar backup automático a cada 15 minutos com replicação síncrona para standby em zona de disponibilidade diferente (RTO <= 1 hora, RPO <= 15 minutos)"
+          },
+          {
+            "id": 184,
+            "text": "Implementar backup diário com replicação assíncrona para região diferente (RTO <= 4 horas, RPO <= 24 horas)"
+          },
+          {
+            "id": 185,
+            "text": "Implementar backup contínuo com replicação em tempo real para múltiplas regiões (RTO <= 5 minutos, RPO <= 1 minuto)"
+          }
+        ],
+        "recommendedOptionId": 183
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 159,
+        "then": "A consulta retorna apenas tarefas pertencentes ao tenant A, e nenhuma tarefa do tenant B é retornada, mesmo que existam tarefas no banco de dados",
+        "type": "unit",
+        "when": "O usuário executa uma consulta de listagem de tarefas",
+        "given": "Um usuário do tenant A autenticado no sistema",
+        "scenario": "Validação de Isolamento de Tenant em Consulta de Listagem",
+        "target_section": "definition"
+      },
+      {
+        "id": 160,
+        "then": "A operação falha com erro de violação de constraint de unicidade",
+        "type": "unit",
+        "when": "Tenta-se cadastrar outro usuário no tenant A com o mesmo email",
+        "given": "Um tenant A com usuário cadastrado com email 'user@example.com'",
+        "scenario": "Validação de Unicidade de E-mail por Tenant",
+        "target_section": "definition"
+      },
+      {
+        "id": 161,
+        "then": "A operação falha com mensagem de erro indicando que o responsável deve estar ativo",
+        "type": "unit",
+        "when": "Tenta-se criar uma tarefa com este usuário inativo como responsável",
+        "given": "Um usuário inativo no tenant A",
+        "scenario": "Validação de Responsável Ativo em Criação de Tarefa",
+        "target_section": "definition"
+      },
+      {
+        "id": 162,
+        "then": "A operação falha com erro de violação de constraint de enum",
+        "type": "unit",
+        "when": "Tenta-se criar uma tarefa com prioridade inválida (ex: 'crítica')",
+        "given": "Um formulário de criação de tarefa",
+        "scenario": "Validação de Prioridade em Criação de Tarefa",
+        "target_section": "definition"
+      },
+      {
+        "id": 163,
+        "then": "Todas as operações succedem, metadados de auditoria são registrados corretamente, e histórico de transições de status é mantido",
+        "type": "integration",
+        "when": "Um usuário cria uma tarefa, edita seu título e responsável, e marca como concluída",
+        "given": "Um tenant A com usuários ativos cadastrados",
+        "scenario": "Fluxo Completo de Criação e Atualização de Tarefa",
+        "target_section": "flow"
+      },
+      {
+        "id": 164,
+        "then": "A consulta retorna apenas tarefas que satisfazem todos os critérios, em tempo adequado (p99 <= 100ms)",
+        "type": "integration",
+        "when": "Um usuário aplica filtros combinados (status + responsável + prioridade) e pesquisa textual",
+        "given": "Um tenant A com 100 tarefas de diferentes status, responsáveis e prioridades",
+        "scenario": "Fluxo de Filtragem e Pesquisa de Tarefas",
+        "target_section": "flow"
+      },
+      {
+        "id": 165,
+        "then": "A operação é bloqueada e retorna erro de autorização, sem expor dados do tenant B",
+        "type": "security",
+        "when": "O usuário tenta acessar dados do tenant B através de manipulação de tenant_id em requisição",
+        "given": "Um usuário do tenant A autenticado",
+        "scenario": "Tentativa de Acesso Cruzado entre Tenants",
+        "target_section": "rules"
+      },
+      {
+        "id": 166,
+        "then": "A operação falha com erro de violação de chave estrangeira, protegendo integridade dos dados",
+        "type": "security",
+        "when": "Tenta-se deletar este usuário do banco de dados",
+        "given": "Um usuário que é responsável por tarefas ativas",
+        "scenario": "Validação de Integridade Referencial em Exclusão de Usuário",
+        "target_section": "rules"
+      },
+      {
+        "id": 167,
+        "then": "A consulta retorna em tempo adequado (p99 <= 100ms), utilizando índices compostos",
+        "type": "performance",
+        "when": "Um usuário executa uma consulta de listagem com filtros (status + responsável) e paginação",
+        "given": "Um tenant A com 10.000 tarefas cadastradas",
+        "scenario": "Desempenho de Listagem de Tarefas com 10.000 Registros",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 168,
+        "then": "Todas as operações completam em tempo adequado (p99 <= 50ms) sem deadlocks ou timeouts",
+        "type": "performance",
+        "when": "As operações são executadas em paralelo",
+        "given": "5.000 usuários simultâneos realizando operações de criação e edição de tarefas",
+        "scenario": "Desempenho de Operação de Escrita sob Carga",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 169,
+        "then": "Todas as operações succedem, histórico de transições é mantido com identificação de executores e timestamps, e conformidade com LGPD é garantida",
+        "type": "e2e",
+        "when": "Um usuário cria uma tarefa, atribui a outro usuário, edita múltiplas vezes, altera status via Kanban e marca como concluída",
+        "given": "Um tenant A com usuários e estrutura hierárquica configurados",
+        "scenario": "Ciclo de Vida Completo de Tarefa com Auditoria",
+        "target_section": "definition"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 146,
+        "target": "p99 <= 100ms para consultas de listagem de tarefas com até 10.000 registros por tenant, incluindo filtragem por status, responsável, prioridade e prazo",
+        "category": "performance",
+        "requirement": "Tempo de Resposta de Consultas de Listagem",
+        "verification": "Executar testes de carga com 10.000 tarefas por tenant e medir tempo de resposta de consultas de listagem com diferentes combinações de filtros. Confirmar que p99 está dentro do alvo."
+      },
+      {
+        "id": 147,
+        "target": "p99 <= 50ms para operações de criação, edição e conclusão de tarefas, mesmo sob carga de 5.000 usuários ativos simultâneos",
+        "category": "performance",
+        "requirement": "Tempo de Resposta de Operações de Escrita",
+        "verification": "Executar testes de carga com 5.000 usuários simultâneos realizando operações de escrita e medir tempo de resposta. Confirmar que p99 está dentro do alvo."
+      },
+      {
+        "id": 148,
+        "target": "p99 <= 200ms para pesquisa textual em título e descrição de tarefas com até 10.000 registros por tenant",
+        "category": "performance",
+        "requirement": "Tempo de Resposta de Pesquisa Textual",
+        "verification": "Executar testes de pesquisa textual com diferentes termos e confirmar que p99 está dentro do alvo. Considerar implementação de índice full-text se necessário."
+      },
+      {
+        "id": 149,
+        "target": "Suportar até 50 tenants cadastrados na plataforma com desempenho adequado, permitindo crescimento progressivo",
+        "category": "scalability",
+        "requirement": "Suporte a Volume de Tenants",
+        "verification": "Provisionar 50 tenants com 100 usuários e 10.000 tarefas cada e executar operações de listagem, filtragem e escrita. Confirmar que desempenho permanece dentro de SLA."
+      },
+      {
+        "id": 150,
+        "target": "Suportar até 100 usuários ativos por tenant com desempenho adequado em operações de seleção de responsável e listagem de usuários",
+        "category": "scalability",
+        "requirement": "Suporte a Volume de Usuários por Tenant",
+        "verification": "Provisionar tenant com 100 usuários e executar operações de seleção de responsável e listagem de usuários. Confirmar que desempenho está dentro de SLA."
+      },
+      {
+        "id": 151,
+        "target": "Suportar até 10.000 tarefas por tenant com desempenho adequado em operações de listagem, filtragem, pesquisa e visualização Kanban",
+        "category": "scalability",
+        "requirement": "Suporte a Volume de Tarefas por Tenant",
+        "verification": "Provisionar tenant com 10.000 tarefas e executar operações de listagem, filtragem, pesquisa e visualização Kanban. Confirmar que desempenho está dentro de SLA."
+      },
+      {
+        "id": 152,
+        "target": "Senhas armazenadas com algoritmo argon2id com parâmetros m=64MiB, t=3, p=4, garantindo resistência a ataques de força bruta",
+        "category": "security",
+        "requirement": "Armazenamento Seguro de Senhas",
+        "verification": "Verificar que todas as senhas no banco de dados são armazenadas em hash argon2id com parâmetros corretos. Tentar recuperar senha em texto simples e confirmar que é impossível."
+      },
+      {
+        "id": 153,
+        "target": "Garantir que um usuário de um tenant nunca pode acessar, modificar ou visualizar dados de outro tenant, mesmo através de manipulação de parâmetros de requisição",
+        "category": "security",
+        "requirement": "Isolamento de Dados por Tenant",
+        "verification": "Executar testes de segurança tentando acessar dados de outro tenant através de manipulação de tenant_id em requisições e confirmar que todas as tentativas são bloqueadas."
+      },
+      {
+        "id": 154,
+        "target": "Garantir que todas as chaves estrangeiras (tenant_id, responsavel_id, criador_id, nivel_hierarquico_id) apontam para registros existentes e pertencentes ao tenant correto",
+        "category": "security",
+        "requirement": "Integridade Referencial",
+        "verification": "Executar testes de integridade referencial tentando criar registros com chaves estrangeiras inválidas e confirmar que todas as tentativas são bloqueadas."
+      },
+      {
+        "id": 155,
+        "target": "Garantir disponibilidade de 99.5% do banco de dados, com RTO <= 1 hora e RPO <= 15 minutos em caso de falha",
+        "category": "availability",
+        "requirement": "Disponibilidade do Banco de Dados",
+        "verification": "Implementar backup automático a cada 15 minutos e replicação para standby. Testar failover e confirmar que RTO e RPO estão dentro dos alvos."
+      },
+      {
+        "id": 156,
+        "target": "Monitorar utilização de índices e planos de execução de consultas para garantir que índices compostos estão sendo utilizados corretamente",
+        "category": "observability",
+        "requirement": "Monitoramento de Desempenho de Índices",
+        "verification": "Configurar alertas para consultas que não utilizam índices esperados. Revisar planos de execução regularmente e otimizar conforme necessário."
+      },
+      {
+        "id": 157,
+        "target": "Monitorar crescimento de tamanho de banco de dados e alertar quando atingir 80% da capacidade provisionada",
+        "category": "observability",
+        "requirement": "Monitoramento de Tamanho de Banco de Dados",
+        "verification": "Configurar alertas de monitoramento de espaço em disco e confirmar que alertas são disparados quando limite é atingido."
+      },
+      {
+        "id": 158,
+        "target": "Implementar política de retenção de dados para remover registros de histórico com mais de 90 dias, reduzindo custo de armazenamento",
+        "category": "cost",
+        "requirement": "Otimização de Custo de Armazenamento",
+        "verification": "Verificar que política de retenção está implementada e que registros antigos são removidos conforme agendado."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 6,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T05:18:01.439Z",
+  "updatedAt": null
+}

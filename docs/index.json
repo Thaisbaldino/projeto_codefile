@@ -1,0 +1,31 @@
+{
+  "projectId": 4118,
+  "projectName": "Chronos Tasks",
+  "projectState": "on_going",
+  "exportedAt": "2026-08-11T19:04:38.457Z",
+  "scope": "active artifacts only",
+  "counts": {
+    "features": 18,
+    "projectAssets": 65,
+    "assetRoots": 11,
+    "artifactsActive": 169,
+    "artifactsTotal": 169,
+    "references": 11094,
+    "artifactsByType": {
+      "asset_definition": 65,
+      "business_structure": 1,
+      "feature_definition": 18,
+      "project_discriminator": 83,
+      "project_scope": 1,
+      "project_stack": 1
+    }
+  },
+  "files": {
+    "project.json": 1447,
+    "features.json": 7831,
+    "project-assets.json": 67535,
+    "artifacts/": 3136440,
+    "references.json": 22205852,
+    "matrix.csv": 41535
+  }
+}

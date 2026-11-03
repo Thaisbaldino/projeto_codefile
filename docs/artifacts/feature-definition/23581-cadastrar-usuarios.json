@@ -1,0 +1,237 @@
+{
+  "id": 23581,
+  "projectId": 4118,
+  "type": "feature_definition",
+  "content": {
+    "pendencies": [
+      {
+        "id": 26,
+        "section": "functional",
+        "description": "Após o cadastro, o sistema deve enviar alguma comunicação ao colaborador recém-registrado (por exemplo, e-mail de boas-vindas com credenciais de acesso ou link para definição de senha)?",
+        "resolutionOptions": [
+          {
+            "id": 27,
+            "text": "Enviar e-mail de boas-vindas ao colaborador com link para definição da própria senha no primeiro acesso."
+          },
+          {
+            "id": 28,
+            "text": "Enviar e-mail ao colaborador com senha temporária gerada automaticamente pelo sistema."
+          },
+          {
+            "id": 29,
+            "text": "Não enviar nenhuma comunicação automática; o administrador é responsável por informar o colaborador manualmente."
+          }
+        ],
+        "recommendedOptionId": 27
+      },
+      {
+        "id": 30,
+        "section": "functional",
+        "description": "O administrador deve poder cadastrar múltiplos colaboradores de uma só vez (cadastro em lote, por exemplo via importação de planilha), ou o cadastro é sempre individual?",
+        "resolutionOptions": [
+          {
+            "id": 31,
+            "text": "Apenas cadastro individual por formulário, sem suporte a importação em lote nesta versão."
+          },
+          {
+            "id": 32,
+            "text": "Suportar cadastro em lote via importação de arquivo CSV ou planilha, além do cadastro individual."
+          }
+        ],
+        "recommendedOptionId": 31
+      },
+      {
+        "id": 33,
+        "section": "functional",
+        "description": "Além de nome, e-mail e nível hierárquico, existem outros campos que devem compor o cadastro do colaborador nesta versão (por exemplo, cargo, telefone, matrícula interna)?",
+        "resolutionOptions": [
+          {
+            "id": 34,
+            "text": "Apenas nome completo, e-mail e nível hierárquico são obrigatórios; nenhum campo adicional é necessário nesta versão."
+          },
+          {
+            "id": 35,
+            "text": "Incluir campo de cargo ou função como campo opcional no formulário de cadastro."
+          },
+          {
+            "id": 36,
+            "text": "Incluir campos adicionais opcionais como cargo, telefone e matrícula interna no formulário de cadastro."
+          }
+        ],
+        "recommendedOptionId": 34
+      },
+      {
+        "id": 37,
+        "section": "functional",
+        "description": "Qual deve ser o comportamento do sistema quando o administrador tenta cadastrar um e-mail já existente em outro tenant (não apenas no mesmo tenant)? O e-mail é um identificador global único na plataforma ou apenas único por tenant?",
+        "resolutionOptions": [
+          {
+            "id": 38,
+            "text": "O e-mail deve ser único globalmente na plataforma; um mesmo e-mail não pode ser cadastrado em mais de um tenant."
+          },
+          {
+            "id": 39,
+            "text": "O e-mail deve ser único apenas dentro do tenant; o mesmo e-mail pode existir em tenants diferentes."
+          }
+        ],
+        "recommendedOptionId": 39
+      },
+      {
+        "id": 40,
+        "section": "non-functional",
+        "description": "Existe algum limite máximo de colaboradores que podem ser cadastrados por tenant (por exemplo, baseado em plano contratado ou limite técnico)?",
+        "resolutionOptions": [
+          {
+            "id": 41,
+            "text": "Não há limite de colaboradores por tenant nesta versão; o sistema aceita até o limite operacional estimado de 100 usuários por organização."
+          },
+          {
+            "id": 42,
+            "text": "Implementar limite configurável de colaboradores por tenant, bloqueando novos cadastros ao atingir o teto definido."
+          }
+        ],
+        "recommendedOptionId": 41
+      }
+    ],
+    "functional_requirements": [
+      {
+        "group": {
+          "id": 1,
+          "name": "Formulário de Cadastro",
+          "items": [
+            {
+              "id": 2,
+              "description": "Permitir ao administrador do tenant acessar um formulário dedicado para registrar um novo colaborador na plataforma."
+            },
+            {
+              "id": 3,
+              "description": "Exibir campos obrigatórios de nome completo, endereço de e-mail e nível hierárquico no formulário de cadastro de colaborador."
+            },
+            {
+              "id": 4,
+              "description": "Validar o preenchimento de todos os campos obrigatórios antes de permitir o envio do formulário, exibindo mensagens de erro específicas por campo não preenchido."
+            },
+            {
+              "id": 5,
+              "description": "Validar o formato do endereço de e-mail informado, rejeitando entradas que não estejam em formato válido de e-mail."
+            },
+            {
+              "id": 6,
+              "description": "Verificar a unicidade do endereço de e-mail dentro do tenant antes de persistir o cadastro, impedindo o registro de dois colaboradores com o mesmo e-mail na mesma organização."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 7,
+          "name": "Atribuição de Nível Hierárquico",
+          "items": [
+            {
+              "id": 8,
+              "description": "Exibir a lista de níveis hierárquicos disponíveis no tenant para seleção durante o cadastro do colaborador."
+            },
+            {
+              "id": 9,
+              "description": "Associar o nível hierárquico selecionado ao perfil do colaborador no momento da criação do registro."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 10,
+          "name": "Persistência e Confirmação",
+          "items": [
+            {
+              "id": 11,
+              "description": "Persistir o novo colaborador vinculado ao tenant do administrador que realizou o cadastro, garantindo o isolamento de dados entre organizações."
+            },
+            {
+              "id": 12,
+              "description": "Atribuir status inicial ativo ao colaborador recém-cadastrado, habilitando seu acesso imediato à plataforma."
+            },
+            {
+              "id": 13,
+              "description": "Exibir mensagem de confirmação de sucesso ao administrador após a conclusão do cadastro do colaborador."
+            },
+            {
+              "id": 14,
+              "description": "Exibir mensagem de erro clara e descritiva ao administrador quando o cadastro não puder ser concluído por falha de validação ou erro do sistema."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 15,
+          "name": "Controle de Acesso ao Cadastro",
+          "items": [
+            {
+              "id": 16,
+              "description": "Restringir o acesso à funcionalidade de cadastro de colaboradores exclusivamente a usuários com perfil de administrador do tenant."
+            },
+            {
+              "id": 17,
+              "description": "Impedir que colaboradores ou gestores sem perfil de administrador acessem ou executem o cadastro de novos usuários."
+            }
+          ]
+        }
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "group": {
+          "id": 18,
+          "name": "Segurança e Conformidade",
+          "items": [
+            {
+              "id": 19,
+              "description": "Registrar em log de auditoria toda operação de criação de colaborador, incluindo identificação do administrador executor, timestamp e dados do colaborador criado, em conformidade com os requisitos de rastreabilidade da plataforma."
+            },
+            {
+              "id": 20,
+              "description": "Garantir que os dados pessoais do colaborador cadastrado (nome e e-mail) sejam tratados em conformidade com a LGPD, aplicando princípios de minimização de dados e proteção das informações pessoais."
+            },
+            {
+              "id": 21,
+              "description": "Garantir que o cadastro de um colaborador em um tenant não seja visível, acessível ou interferente nos dados de nenhum outro tenant, respeitando o isolamento multi-tenant."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 22,
+          "name": "Usabilidade e Responsividade",
+          "items": [
+            {
+              "id": 23,
+              "description": "Renderizar o formulário de cadastro de colaborador de forma responsiva e adaptativa, garantindo usabilidade adequada em dispositivos móveis (smartphones e tablets) e em desktops."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 24,
+          "name": "Desempenho",
+          "items": [
+            {
+              "id": 25,
+              "description": "Concluir a operação de persistência do cadastro do colaborador e retornar a confirmação ao administrador em tempo adequado, mesmo sob carga de até 5.000 usuários ativos na plataforma."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 1,
+  "sourceType": "feature",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-10T20:22:46.288Z",
+  "updatedAt": null
+}

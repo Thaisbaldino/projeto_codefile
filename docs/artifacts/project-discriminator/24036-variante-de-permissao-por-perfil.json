@@ -1,0 +1,171 @@
+{
+  "id": 24036,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 16,
+        "name": "Domínio funcional ou estrutural que sofre variação",
+        "value": [
+          "business-rules"
+        ],
+        "method": "internal-inference",
+        "reasoning": "A lógica de negócio complexa de cada permissão é implementada em ASSET-009 Business Rules, não em módulos e endpoints do seletor de variante.",
+        "confidence": 0.7947,
+        "context_element_id": 2686
+      },
+      {
+        "id": 22,
+        "name": "Identificador único da página no sistema",
+        "value": [
+          "user-profile",
+          "login-page"
+        ],
+        "method": "internal-inference",
+        "reasoning": "A página de perfil de usuário é identificada como página única do sistema, com dados próprios do usuário.\nA página de login é identificada como login-page.",
+        "confidence": 0.7689,
+        "context_element_id": 2718
+      },
+      {
+        "id": 24,
+        "name": "Perfil primário dos usuários que utilizarão a interface",
+        "value": [
+          "managers",
+          "internal-only",
+          "internal-users",
+          "admin-users"
+        ],
+        "method": "user-input",
+        "reasoning": "Os endpoints GET /users e GET /users/{id} visam a visualização de perfis de equipe, que são gerenciados por gerentes.\nA página de perfil de usuário é visível apenas a usuários administradores, sem acesso a outros usuários.\nO perfil do usuário é determinado com base em atributos do usuário e do tenant, incluindo administrador_tenant e administrador_plataforma.\nOs usuários que atuam na página de gerenciamento de usuários são administradores.",
+        "confidence": 0.7157,
+        "context_element_id": 2723
+      },
+      {
+        "id": 25,
+        "name": "Principais seções ou módulos funcionais da aplicação",
+        "value": [
+          "dashboard"
+        ],
+        "method": "user-input",
+        "reasoning": "O painel Kanban de tarefas é o principal funcionalidade do aplicativo.",
+        "confidence": 0.7512,
+        "context_element_id": 2724
+      },
+      {
+        "id": 27,
+        "name": "Principais operações ou endpoints que serão consumidos do serviço externo",
+        "value": [
+          "tasks"
+        ],
+        "method": "user-input",
+        "reasoning": "Os endpoints de tarefas (GET /tasks, POST /tasks, PATCH /tasks/{id}, GET /tasks/{id}, DELETE /tasks/{id}) são consumidos externamente.",
+        "confidence": 0.7146,
+        "context_element_id": 2759
+      }
+    ],
+    "best_practices": [],
+    "discriminators": [
+      {
+        "id": 1,
+        "name": "Propósito Operacional",
+        "value": "operacional",
+        "method": "internal-inference",
+        "reasoning": "O painel de filtros e pesquisa de tarefas é operacional, servindo a uma tarefa operacional de gerenciamento de tarefas.",
+        "confidence": 0.7189,
+        "context_element_id": 1322
+      },
+      {
+        "id": 7,
+        "name": "Estrutura de Dados de Registro",
+        "value": "baseado em documentos",
+        "method": "user-input",
+        "reasoning": "A variante é armazenada em sessão ou token, um registro document-based.",
+        "confidence": 0.7294,
+        "context_element_id": 1510
+      },
+      {
+        "id": 12,
+        "name": "Escopo da Operação",
+        "value": "CRUD completo",
+        "method": "user-input",
+        "reasoning": "O acesso completo a todos os campos e operações do formulário de tarefa é um CRUD completo.",
+        "confidence": 0.7907,
+        "context_element_id": 1943
+      },
+      {
+        "id": 50,
+        "name": "Tipo de Regra",
+        "value": "regra de cálculo de negócio",
+        "method": "user-input",
+        "reasoning": "A lógica de negócio complexa de cada permissão é implementada em ASSET-009 Business Rules, não em módulos e endpoints do seletor de variante.",
+        "confidence": 0.8267,
+        "context_element_id": 4603
+      },
+      {
+        "id": 51,
+        "name": "Escopo de Regra",
+        "value": "entidade única",
+        "method": "user-input",
+        "reasoning": "A definição de operações permitidas para cada variante em cada endpoint é feita em relação a um único recurso, caracterizando uma regra de negócio de operação única.",
+        "confidence": 0.7408,
+        "context_element_id": 4604
+      },
+      {
+        "id": 54,
+        "name": "Modo de Apresentação",
+        "value": "painel lateral",
+        "method": "user-input",
+        "reasoning": "O painel Kanban de tarefas é visualizado em uma tela de painel de trabalho, com colunas, drag-and-drop de cartões e filtragem por responsável e prioridade.",
+        "confidence": 0.7204,
+        "context_element_id": 4870
+      },
+      {
+        "id": 55,
+        "name": "Layout de Navegação",
+        "value": "somente contextual",
+        "method": "user-input",
+        "reasoning": "A interface é renderizada conforme a variante ativa, com campos, botões e seções ocultos ou visíveis de acordo com a configuração.",
+        "confidence": 0.7684,
+        "context_element_id": 4907
+      },
+      {
+        "id": 58,
+        "name": "Acesso de Modificação",
+        "value": "aprovação obrigatória",
+        "method": "internal-inference",
+        "reasoning": "A edição de dados de qualquer usuário do tenant é restringida a solicitação de aprovação, caracterizando acesso restringido a um papel específico.",
+        "confidence": 0.8365,
+        "context_element_id": 5020
+      },
+      {
+        "id": 59,
+        "name": "Modelo de Extensão",
+        "value": "injeção de código customizado",
+        "method": "user-input",
+        "reasoning": "A tabela de perfis e o relacionamento many-to-one permitem extensão futura de perfis customizados por tenant, caracterizando um modelo de extensão de código.",
+        "confidence": 0.7705,
+        "context_element_id": 5059
+      },
+      {
+        "id": 60,
+        "name": "Modo de Seleção",
+        "value": "baseado em regras",
+        "method": "user-input",
+        "reasoning": "A seleção de variante é baseada em lógica de seleção de variante, caracterizando um modo de seleção baseado em regras.",
+        "confidence": 0.9072,
+        "context_element_id": 5095
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 7,
+  "active": true,
+  "sourceId": 23693,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:42:53.755Z",
+  "updatedAt": null
+}

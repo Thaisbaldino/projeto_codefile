@@ -1,0 +1,503 @@
+{
+  "id": 23685,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 22,
+          "name": "Dados de Usuário",
+          "format": "JSON com campos: nome_completo, email, nivel_hierarquico_id, status, tenant_id",
+          "origin": "Formulário de cadastro, edição ou autenticação",
+          "trigger": "Submissão de formulário ou tentativa de autenticação"
+        },
+        {
+          "id": 23,
+          "name": "Contexto de Operação",
+          "format": "JSON com campos: usuario_executor_id, tenant_id, tipo_operacao, timestamp",
+          "origin": "Sessão autenticada do usuário executor",
+          "trigger": "Início de operação sobre usuário (cadastro, edição, ativação, desativação, autenticação)"
+        },
+        {
+          "id": 24,
+          "name": "Estado Atual do Usuário",
+          "format": "Registro de usuário existente com todos os campos (para operações de edição, ativação, desativação)",
+          "origin": "Banco de dados relacional (tabela usuarios)",
+          "trigger": "Consulta ao banco de dados quando tipo_operacao != cadastro"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 33,
+          "name": "Resultado de Validação",
+          "format": "JSON com campos: validacao_aprovada (boolean), mensagem_erro (string), campo_invalido (string), tipo_validacao_falhada (enum)",
+          "destination": "Camada de aplicação (handler de usuários)"
+        },
+        {
+          "id": 34,
+          "name": "Evento de Auditoria",
+          "format": "JSON com campos: usuario_executor_id, tenant_id, tipo_operacao, resultado (aprovado|rejeitado), motivo_rejeicao, timestamp",
+          "destination": "Trilha de auditoria (log de ações)"
+        }
+      ],
+      "processing": [
+        {
+          "id": 25,
+          "step": "Validar preenchimento de campos obrigatórios",
+          "description": "Verificar se todos os campos obrigatórios (nome_completo, email, nivel_hierarquico_id, status) estão preenchidos e não estão em branco. Retornar erro específico por campo se algum estiver vazio."
+        },
+        {
+          "id": 26,
+          "step": "Validar formato de e-mail",
+          "description": "Verificar se o endereço de e-mail informado segue o padrão válido de formato de e-mail (RFC 5322). Rejeitar entradas em formato inválido com mensagem de erro específica."
+        },
+        {
+          "id": 27,
+          "step": "Validar unicidade de e-mail por tenant",
+          "description": "Consultar a tabela usuarios para verificar se o e-mail já existe para outro usuário no mesmo tenant. Para operações de edição, excluir o próprio usuário da verificação. Rejeitar se encontrar duplicação."
+        },
+        {
+          "id": 28,
+          "step": "Validar referência ao nível hierárquico",
+          "description": "Consultar a tabela niveis_hierarquicos para verificar se o nivel_hierarquico_id informado existe e pertence ao tenant. Rejeitar se a referência for inválida ou pertencer a outro tenant."
+        },
+        {
+          "id": 29,
+          "step": "Validar controle de acesso baseado em perfil",
+          "description": "Verificar se o usuario_executor_id possui perfil de administrador do tenant para operações de cadastro, edição, ativação e desativação. Rejeitar operações executadas por usuários sem perfil de administrador."
+        },
+        {
+          "id": 30,
+          "step": "Validar restrições específicas da operação",
+          "description": "Aplicar validações específicas conforme o tipo_operacao: (desativacao) impedir auto-desativação de administrador; (autenticacao) verificar status ativo do usuário; (ativacao) verificar que o usuário está inativo; (edicao) validar que não está tentando editar usuário de outro tenant."
+        },
+        {
+          "id": 31,
+          "step": "Validar isolamento de dados entre tenants",
+          "description": "Garantir que o tenant_id do usuário sendo validado corresponde ao tenant_id do usuario_executor_id. Rejeitar operações que tentam acessar usuários de tenants diferentes."
+        },
+        {
+          "id": 32,
+          "step": "Retornar resultado da validação",
+          "description": "Emitir decisão de aprovação (true) com mensagem vazia, ou rejeição (false) com mensagem de erro descritiva, campo_invalido e tipo_validacao_falhada."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 35,
+        "category": "validation",
+        "description": "O campo nome_completo é obrigatório e não pode estar em branco ou conter apenas espaços em branco.",
+        "enforcement": "code",
+        "verification": "Verificar que nome_completo.trim().length > 0 antes de persistir ou processar o usuário. Retornar erro se falhar."
+      },
+      {
+        "id": 36,
+        "category": "validation",
+        "description": "O campo email deve estar em formato válido conforme padrão RFC 5322 (ex: usuario@dominio.com).",
+        "enforcement": "code",
+        "verification": "Aplicar regex ou validador de e-mail padrão: ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}$ antes de persistir. Retornar erro se não corresponder."
+      },
+      {
+        "id": 37,
+        "category": "invariant",
+        "description": "O endereço de e-mail deve ser único dentro do escopo de cada tenant. Dois usuários do mesmo tenant não podem compartilhar o mesmo e-mail.",
+        "enforcement": "db_constraint",
+        "verification": "Índice único composto (tenant_id, email) na tabela usuarios garante unicidade. Tentativa de inserção ou atualização duplicada será rejeitada pelo banco de dados com erro de constraint violation."
+      },
+      {
+        "id": 38,
+        "category": "validation",
+        "description": "O campo nivel_hierarquico_id deve referenciar um nível hierárquico válido que existe na tabela niveis_hierarquicos e pertence ao mesmo tenant.",
+        "enforcement": "code",
+        "verification": "Consultar tabela niveis_hierarquicos com WHERE id = nivel_hierarquico_id AND tenant_id = tenant_id. Se nenhum registro for encontrado, retornar erro de referência inválida."
+      },
+      {
+        "id": 39,
+        "category": "authorization",
+        "description": "Apenas usuários com perfil de administrador do tenant podem executar operações de cadastro, edição, ativação e desativação de usuários.",
+        "enforcement": "code",
+        "verification": "Verificar que usuario_executor_id possui role 'administrador_tenant' no contexto do tenant_id. Consultar tabela de permissões ou sessão autenticada. Rejeitar operação se não possuir perfil."
+      },
+      {
+        "id": 40,
+        "category": "invariant",
+        "description": "Um administrador do tenant não pode desativar seu próprio perfil, evitando que o tenant fique sem nenhum administrador ativo.",
+        "enforcement": "code",
+        "verification": "Quando tipo_operacao = desativacao, verificar que usuario_executor_id != usuario_id_sendo_desativado. Se forem iguais, retornar erro: 'Não é permitido desativar o próprio perfil de administrador'."
+      },
+      {
+        "id": 41,
+        "category": "authorization",
+        "description": "Usuários com status inativo não podem realizar login ou acessar funcionalidades da plataforma.",
+        "enforcement": "code",
+        "verification": "Durante autenticação, após validar credenciais, verificar que status = 'ativo'. Se status = 'inativo', retornar erro genérico: 'Credenciais inválidas' (sem revelar o motivo real para evitar enumeração)."
+      },
+      {
+        "id": 42,
+        "category": "invariant",
+        "description": "Dados de usuários de um tenant não podem ser acessados, modificados ou visualizados por usuários de outro tenant. Isolamento multi-tenant é obrigatório em todas as operações.",
+        "enforcement": "code",
+        "verification": "Todas as consultas e operações sobre usuários devem incluir filtro WHERE tenant_id = tenant_id_do_usuario_autenticado. Rejeitar operações que tentam acessar usuários de tenants diferentes com erro: 'Acesso negado. Usuário não pertence a este tenant'."
+      },
+      {
+        "id": 43,
+        "category": "compliance",
+        "description": "Dados pessoais de usuários (nome completo, e-mail) devem ser tratados em conformidade com a LGPD, aplicando princípios de minimização de dados e proteção de informações pessoais.",
+        "enforcement": "code",
+        "verification": "Garantir que dados pessoais são coletados apenas quando necessário para a operação, armazenados de forma segura (e-mail em texto, senha em hash), transmitidos apenas via HTTPS, e acessados apenas por usuários autorizados. Implementar logs de auditoria para rastreabilidade."
+      },
+      {
+        "id": 44,
+        "category": "observability",
+        "description": "Toda operação de validação de usuário (aprovada ou rejeitada) deve ser registrada em log de auditoria com identificação do executor, tenant, tipo de operação, resultado e timestamp.",
+        "enforcement": "code",
+        "verification": "Após cada validação, registrar evento em tabela de auditoria com campos: usuario_executor_id, tenant_id, tipo_operacao, resultado (aprovado|rejeitado), motivo_rejeicao, timestamp. Verificar que logs são persistidos antes de retornar resposta ao cliente."
+      },
+      {
+        "id": 45,
+        "category": "validation",
+        "description": "O campo status deve ser um dos valores permitidos: 'ativo' ou 'inativo'. Nenhum outro valor é aceito.",
+        "enforcement": "code",
+        "verification": "Validar que status IN ('ativo', 'inativo') antes de persistir. Rejeitar com erro se o valor não estiver no conjunto permitido."
+      },
+      {
+        "id": 46,
+        "category": "invariant",
+        "description": "Quando um usuário é desativado, todas as suas sessões ativas devem ser invalidadas imediatamente, impedindo o uso continuado da plataforma.",
+        "enforcement": "code",
+        "verification": "Após persistir desativação (status = 'inativo'), consultar tabela de sessões ativas e invalidar todas as sessões onde usuario_id = usuario_desativado_id. Verificar que nenhuma sessão ativa permanece para o usuário desativado."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "Regras de Validação de Usuário é um conjunto de regras de negócio que encapsula as validações obrigatórias, restrições de integridade e critérios de elegibilidade aplicados durante o ciclo de vida completo de usuários na plataforma multi-tenant. Inclui validações de formato e unicidade de e-mail por tenant, verificação de preenchimento de campos obrigatórios, validação de status de ativação, controle de acesso baseado em perfil de administrador, isolamento de dados entre tenants, e restrições sobre auto-desativação de administradores. Essas regras são aplicadas em pontos críticos do fluxo: cadastro de novo usuário, edição de perfil, ativação/desativação de usuário, e autenticação. Servem como guardrails para manter a integridade dos dados de usuários, garantir conformidade com LGPD, e reforçar o isolamento multi-tenant em todas as operações."
+    },
+    "definition": {
+      "cases": [
+        {
+          "id": 2,
+          "description": "Validação de preenchimento obrigatório do campo nome completo durante cadastro",
+          "input_pattern": "Cadastro de novo usuário com nome vazio ou em branco",
+          "expected_output": "Rejeição com mensagem de erro: 'Campo nome completo é obrigatório'"
+        },
+        {
+          "id": 3,
+          "description": "Validação de formato de endereço de e-mail conforme padrão RFC 5322",
+          "input_pattern": "Cadastro de novo usuário com e-mail em formato inválido (ex: 'usuario@' ou 'usuario.com')",
+          "expected_output": "Rejeição com mensagem de erro: 'Formato de e-mail inválido'"
+        },
+        {
+          "id": 4,
+          "description": "Validação de unicidade de e-mail dentro do escopo do tenant",
+          "input_pattern": "Cadastro de novo usuário com e-mail já existente no mesmo tenant",
+          "expected_output": "Rejeição com mensagem de erro: 'E-mail já cadastrado nesta organização'"
+        },
+        {
+          "id": 5,
+          "description": "Validação de preenchimento obrigatório do campo nível hierárquico",
+          "input_pattern": "Cadastro de novo usuário sem seleção de nível hierárquico",
+          "expected_output": "Rejeição com mensagem de erro: 'Campo nível hierárquico é obrigatório'"
+        },
+        {
+          "id": 6,
+          "description": "Validação de controle de acesso baseado em perfil para operação de cadastro",
+          "input_pattern": "Tentativa de cadastro de usuário por usuário sem perfil de administrador do tenant",
+          "expected_output": "Rejeição com mensagem de erro: 'Acesso negado. Apenas administradores podem cadastrar usuários'"
+        },
+        {
+          "id": 7,
+          "description": "Validação de unicidade de e-mail durante edição de perfil, considerando o escopo do tenant",
+          "input_pattern": "Edição de perfil de usuário alterando e-mail para um valor já existente em outro usuário do mesmo tenant",
+          "expected_output": "Rejeição com mensagem de erro: 'E-mail já cadastrado nesta organização'"
+        },
+        {
+          "id": 8,
+          "description": "Validação de restrição para evitar que o tenant fique sem nenhum administrador ativo",
+          "input_pattern": "Tentativa de desativação do próprio perfil de administrador do tenant",
+          "expected_output": "Rejeição com mensagem de erro: 'Não é permitido desativar o próprio perfil de administrador'"
+        },
+        {
+          "id": 9,
+          "description": "Validação de status de ativação durante autenticação, com mensagem genérica para evitar enumeração",
+          "input_pattern": "Tentativa de login com usuário desativado (status = inativo)",
+          "expected_output": "Rejeição com mensagem de erro genérica: 'Credenciais inválidas' (sem revelar que o usuário está desativado)"
+        },
+        {
+          "id": 10,
+          "description": "Validação de referência válida ao nível hierárquico dentro do tenant",
+          "input_pattern": "Cadastro de novo usuário com nível hierárquico que não existe no tenant",
+          "expected_output": "Rejeição com mensagem de erro: 'Nível hierárquico selecionado não existe nesta organização'"
+        },
+        {
+          "id": 11,
+          "description": "Validação de isolamento de dados entre tenants, impedindo operações cruzadas",
+          "input_pattern": "Tentativa de editar ou desativar usuário de outro tenant por usuário autenticado em tenant diferente",
+          "expected_output": "Rejeição com mensagem de erro: 'Acesso negado. Usuário não pertence a este tenant'"
+        }
+      ],
+      "rule_spec": {
+        "id": 12,
+        "inputs": [
+          {
+            "id": 13,
+            "name": "dados_usuario",
+            "type": "object",
+            "description": "Objeto contendo os dados do usuário a ser validado (nome_completo, email, nivel_hierarquico_id, status)"
+          },
+          {
+            "id": 14,
+            "name": "tenant_id",
+            "type": "uuid",
+            "description": "Identificador do tenant ao qual o usuário pertence ou será vinculado"
+          },
+          {
+            "id": 15,
+            "name": "usuario_executor_id",
+            "type": "uuid",
+            "description": "Identificador do usuário autenticado que está executando a operação (para validação de acesso)"
+          },
+          {
+            "id": 16,
+            "name": "tipo_operacao",
+            "type": "enum[cadastro|edicao|ativacao|desativacao|autenticacao]",
+            "description": "Tipo de operação sendo realizada sobre o usuário, determinando qual conjunto de validações aplicar"
+          },
+          {
+            "id": 17,
+            "name": "usuario_existente",
+            "type": "object",
+            "description": "Dados do usuário existente no banco de dados (quando tipo_operacao = edicao, ativacao ou desativacao); null para cadastro"
+          }
+        ],
+        "outputs": [
+          {
+            "id": 18,
+            "name": "validacao_aprovada",
+            "type": "boolean",
+            "description": "Indica se todas as validações foram satisfeitas (true) ou se alguma validação falhou (false)"
+          },
+          {
+            "id": 19,
+            "name": "mensagem_erro",
+            "type": "string",
+            "description": "Mensagem de erro descritiva quando validacao_aprovada = false; vazio quando validacao_aprovada = true"
+          },
+          {
+            "id": 20,
+            "name": "campo_invalido",
+            "type": "string",
+            "description": "Nome do campo que falhou na validação (ex: 'email', 'nome_completo'); vazio quando validacao_aprovada = true"
+          },
+          {
+            "id": 21,
+            "name": "tipo_validacao_falhada",
+            "type": "enum[preenchimento|formato|unicidade|referencia|acesso|restricao_negocio|isolamento]",
+            "description": "Categoria da validação que falhou, facilitando o tratamento específico do erro na camada de apresentação"
+          }
+        ],
+        "decision": "Aplicar validações sequenciais conforme o tipo de operação: (1) Validar preenchimento de campos obrigatórios; (2) Validar formato de e-mail; (3) Validar unicidade de e-mail dentro do tenant; (4) Validar referência válida ao nível hierárquico; (5) Validar controle de acesso baseado em perfil do executor; (6) Validar restrições específicas da operação (ex: impedir auto-desativação de administrador); (7) Validar isolamento de dados entre tenants. Retornar decisão de aprovação (true) apenas quando todas as validações aplicáveis forem satisfeitas; caso contrário, retornar rejeição (false) com mensagem de erro específica."
+      }
+    },
+    "pendencies": [
+      {
+        "id": 62,
+        "section": "definition",
+        "description": "Definição clara dos níveis de permissão e perfis de usuário (ex: administrador_tenant, colaborador, gestor) não está explícita nos inputs. A regra de validação de controle de acesso referencia 'perfil de administrador do tenant', mas a estrutura exata de como os perfis são armazenados e consultados no banco de dados não foi fornecida.",
+        "resolutionOptions": [
+          {
+            "id": 63,
+            "text": "Criar um asset_definition separado (ASSET-029 Regras de Controle de Acesso por Perfil) que detalhe a estrutura de perfis, permissões e como são validadas. Referenciar esse asset nesta regra."
+          },
+          {
+            "id": 64,
+            "text": "Adicionar à definição desta regra uma tabela de mapeamento explícito de perfis permitidos para cada tipo de operação (cadastro, edição, ativação, desativação), com valores concretos como 'admin_tenant', 'admin_plataforma'."
+          },
+          {
+            "id": 65,
+            "text": "Documentar na feature_definition de Gerenciamento de Usuários qual é a estrutura de perfis esperada, e referenciar essa documentação nesta regra."
+          }
+        ],
+        "recommendedOptionId": 63
+      },
+      {
+        "id": 66,
+        "section": "definition",
+        "description": "A regra menciona validação de 'nível hierárquico válido', mas não está claro se existem restrições adicionais sobre quais níveis hierárquicos podem ser atribuídos a novos usuários (ex: um colaborador pode ser atribuído a qualquer nível, ou apenas a níveis abaixo do seu próprio nível?). A feature_definition de Definir Níveis Hierárquicos não menciona restrições de atribuição baseadas em hierarquia.",
+        "resolutionOptions": [
+          {
+            "id": 67,
+            "text": "Confirmar que não há restrições hierárquicas: qualquer usuário com perfil de administrador pode atribuir qualquer nível hierárquico a um novo usuário, independentemente de sua própria posição na hierarquia."
+          },
+          {
+            "id": 68,
+            "text": "Definir restrições hierárquicas explícitas (ex: um usuário só pode atribuir níveis iguais ou inferiores ao seu próprio nível) e adicionar validações correspondentes à regra."
+          },
+          {
+            "id": 69,
+            "text": "Criar um asset_definition separado para 'Regras de Atribuição de Nível Hierárquico' que detalhe as restrições e referenciá-lo nesta regra."
+          }
+        ],
+        "recommendedOptionId": 67
+      },
+      {
+        "id": 70,
+        "section": "rules",
+        "description": "A regra de invalidação de sessões após desativação de usuário (id 46) menciona 'consultar tabela de sessões ativas', mas não há asset_definition fornecido que detalhe a estrutura de sessões, como são armazenadas, ou qual é o mecanismo de invalidação. Isso é crítico para implementação.",
+        "resolutionOptions": [
+          {
+            "id": 71,
+            "text": "Criar um asset_definition para 'Tabela de Sessões Ativas' (Logical Data Structure) que detalhe o esquema, índices e mecanismo de invalidação de sessões."
+          },
+          {
+            "id": 72,
+            "text": "Referenciar um asset existente de gerenciamento de sessões (se houver) e detalhar como a invalidação é acionada a partir desta regra."
+          },
+          {
+            "id": 73,
+            "text": "Remover a regra de invalidação de sessões desta asset_definition e criar uma regra separada em um asset dedicado a gerenciamento de sessões."
+          }
+        ],
+        "recommendedOptionId": 71
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 52,
+        "then": "A validação retorna erro: 'Campo nome completo é obrigatório' e o cadastro não é persistido",
+        "type": "unit",
+        "when": "O usuário submete o formulário para cadastro",
+        "given": "Um formulário de cadastro de usuário com campo nome_completo vazio",
+        "scenario": "Validação de preenchimento obrigatório de nome completo",
+        "target_section": "definition"
+      },
+      {
+        "id": 53,
+        "then": "A validação retorna erro: 'Formato de e-mail inválido' e o cadastro não é persistido",
+        "type": "unit",
+        "when": "O usuário submete o formulário para cadastro",
+        "given": "Um formulário de cadastro com e-mail em formato inválido (ex: 'usuario@' ou 'usuario.com')",
+        "scenario": "Validação de formato de e-mail inválido",
+        "target_section": "definition"
+      },
+      {
+        "id": 54,
+        "then": "A validação retorna erro: 'E-mail já cadastrado nesta organização' e o novo cadastro não é persistido",
+        "type": "unit",
+        "when": "O formulário de cadastro é submetido com e-mail duplicado",
+        "given": "Um tenant com usuário existente de e-mail 'joao@empresa.com' e tentativa de cadastro de novo usuário com o mesmo e-mail",
+        "scenario": "Validação de unicidade de e-mail dentro do tenant",
+        "target_section": "definition"
+      },
+      {
+        "id": 55,
+        "then": "A validação retorna erro: 'Acesso negado. Apenas administradores podem cadastrar usuários' e a operação é bloqueada",
+        "type": "unit",
+        "when": "O usuário tenta submeter um formulário de cadastro de novo usuário",
+        "given": "Um usuário autenticado com perfil de colaborador (não administrador) tentando acessar a funcionalidade de cadastro de usuário",
+        "scenario": "Validação de controle de acesso para cadastro de usuário",
+        "target_section": "rules"
+      },
+      {
+        "id": 56,
+        "then": "A validação retorna erro: 'Não é permitido desativar o próprio perfil de administrador' e a desativação não é persistida",
+        "type": "unit",
+        "when": "O administrador confirma a ação de desativação",
+        "given": "Um administrador do tenant autenticado tentando desativar seu próprio perfil",
+        "scenario": "Validação de restrição de auto-desativação de administrador",
+        "target_section": "rules"
+      },
+      {
+        "id": 57,
+        "then": "A validação retorna erro: 'Acesso negado. Usuário não pertence a este tenant' e a operação é bloqueada",
+        "type": "integration",
+        "when": "O usuário do tenant A tenta editar um usuário que pertence ao tenant B",
+        "given": "Dois tenants (A e B) com usuários cadastrados, e um usuário do tenant A autenticado",
+        "scenario": "Validação de isolamento de dados entre tenants",
+        "target_section": "rules"
+      },
+      {
+        "id": 58,
+        "then": "A autenticação retorna erro genérico: 'Credenciais inválidas' (sem revelar que o usuário está desativado) e o login é bloqueado",
+        "type": "security",
+        "when": "O usuário submete credenciais válidas (e-mail e senha corretos) mas com status inativo",
+        "given": "Um usuário com status inativo (desativado) tentando fazer login",
+        "scenario": "Validação de autenticação com usuário desativado",
+        "target_section": "rules"
+      },
+      {
+        "id": 59,
+        "then": "A validação retorna erro: 'Nível hierárquico selecionado não existe nesta organização' e o cadastro não é persistido",
+        "type": "integration",
+        "when": "O formulário é submetido para cadastro",
+        "given": "Um formulário de cadastro de usuário com nivel_hierarquico_id que não existe na tabela de níveis hierárquicos do tenant",
+        "scenario": "Validação de referência ao nível hierárquico durante cadastro",
+        "target_section": "definition"
+      },
+      {
+        "id": 60,
+        "then": "A validação completa em tempo <= 100ms (p99) sem degradação perceptível na experiência do usuário",
+        "type": "performance",
+        "when": "Uma operação de validação de unicidade de e-mail é executada",
+        "given": "Um tenant com 5.000 usuários ativos cadastrados no banco de dados",
+        "scenario": "Validação de performance com grande volume de usuários",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 61,
+        "then": "A validação retorna erro: 'Status inválido. Valores permitidos: ativo, inativo' e o cadastro não é persistido",
+        "type": "unit",
+        "when": "O formulário é submetido para cadastro",
+        "given": "Um formulário de cadastro com campo status contendo valor inválido (ex: 'bloqueado' ou 'pendente')",
+        "scenario": "Validação de status permitido",
+        "target_section": "definition"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 47,
+        "target": "p99 <= 100ms para validação completa, mesmo em tenants com até 5.000 usuários ativos",
+        "category": "performance",
+        "requirement": "As validações de usuário devem ser executadas com tempo de resposta adequado, sem impacto perceptível na experiência do usuário.",
+        "verification": "Medir tempo de execução das validações em ambiente de teste com carga de 5.000 usuários. Registrar p99 em logs de performance. Validar que 99% das operações completam em <= 100ms."
+      },
+      {
+        "id": 48,
+        "target": "100% das validações críticas (formato, unicidade, acesso) implementadas no backend",
+        "category": "security",
+        "requirement": "Validações de e-mail e controle de acesso devem ser executadas no servidor (backend), nunca confiando apenas em validações do cliente (frontend).",
+        "verification": "Revisar código do backend para garantir que todas as validações são duplicadas no servidor. Testar que requisições manipuladas no cliente são rejeitadas pelo backend."
+      },
+      {
+        "id": 49,
+        "target": "Mensagem de erro padrão: 'Credenciais inválidas' para todos os casos de falha de autenticação",
+        "category": "security",
+        "requirement": "Mensagens de erro durante autenticação devem ser genéricas e não revelar se o e-mail existe ou se a senha está incorreta, prevenindo enumeração de usuários.",
+        "verification": "Testar múltiplos cenários de falha (e-mail inexistente, senha incorreta, usuário inativo) e verificar que a mesma mensagem genérica é retornada em todos os casos."
+      },
+      {
+        "id": 50,
+        "target": "Disponibilidade >= 99.9% (máximo 43 minutos de downtime por mês)",
+        "category": "availability",
+        "requirement": "As validações de usuário devem estar disponíveis com alta disponibilidade, pois sua indisponibilidade bloqueia operações críticas como cadastro, autenticação e gerenciamento de usuários.",
+        "verification": "Monitorar disponibilidade do serviço de validação. Registrar tempo de downtime. Validar que SLA de 99.9% é mantido ao longo do mês."
+      },
+      {
+        "id": 51,
+        "target": "100% das operações de validação registradas em log com campos: usuario_executor_id, tenant_id, tipo_operacao, resultado, motivo_rejeicao, timestamp",
+        "category": "observability",
+        "requirement": "Todas as validações (aprovadas e rejeitadas) devem ser registradas em log de auditoria para rastreabilidade completa das operações sobre usuários.",
+        "verification": "Consultar logs de auditoria e verificar que cada operação de validação possui um registro correspondente com todos os campos obrigatórios preenchidos."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 28,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T01:02:26.575Z",
+  "updatedAt": null
+}

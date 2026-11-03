@@ -1,0 +1,108 @@
+{
+  "id": 24034,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 22,
+        "name": "Principal entidade de domínio acessada por meio deste padrão",
+        "value": [
+          "usuarios"
+        ],
+        "method": "user-input",
+        "reasoning": "A consulta lista usuários ativos de um tenant filtrados por nível hierárquico, correspondendo ao domínio de entidade 'usuarios'.",
+        "confidence": 0.7644,
+        "context_element_id": 2694
+      },
+      {
+        "id": 24,
+        "name": "Fonte principal de dados de entrada para o LLM",
+        "value": [
+          "database-records"
+        ],
+        "method": "user-input",
+        "reasoning": "Os dados de usuário são armazenados em uma tabela de banco de dados.",
+        "confidence": 0.7269,
+        "context_element_id": 2736
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 34,
+        "name": "Implementar estratégias de cache em múltiplas camadas e replicação de dados críticos para melhorar o desempenho",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem cache em duas camadas, cada chamada ao banco de dados seria repetida em cada camada, o que diminuiria a performance e a escalabilidade.",
+        "confidence": 0.8757,
+        "context_element_id": 2869
+      },
+      {
+        "id": 42,
+        "name": "Implementar transações ACID com propriedades de atomicidade, consistência, isolamento e durabilidade para operações de dados críticas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem tratamento de transação, o banco de dados aceita múltiplas execuções simultâneas e a divergência entre elas é difícil de identificar.",
+        "confidence": 0.8117,
+        "context_element_id": 2953
+      },
+      {
+        "id": 47,
+        "name": "Implemente camadas de abstração para serviços comuns (armazenamento, mensageria, cache), isolando APIs específicas de fornecedores por meio de interfaces padronizadas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem abstração, cada instância da aplicação precisa copiar o mesmo código para cada rede, o que aumenta o custo de manutenção e a complexidade de atualização.",
+        "confidence": 0.7367,
+        "context_element_id": 3023
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 4,
+        "name": "Camada de Cache",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O cache é implementado em duas camadas: in-memory e Redis, com fallback para consistência distribuída.",
+        "confidence": 0.9685,
+        "context_element_id": 1361
+      },
+      {
+        "id": 5,
+        "name": "Gerenciamento de Transações",
+        "value": "fronteira de transação explícita",
+        "method": "user-input",
+        "reasoning": "A camada de aplicação inicia transação explícita, com commit/rollback atomicamente, caracterizando uma transação explicitamente definida.",
+        "confidence": 0.9606,
+        "context_element_id": 1362
+      },
+      {
+        "id": 19,
+        "name": "Exposição da Operação",
+        "value": "interno",
+        "method": "user-input",
+        "reasoning": "Operações multi-passo são responsabilidade da camada de aplicação, não da camada de banco de dados.",
+        "confidence": 0.9122,
+        "context_element_id": 1976
+      },
+      {
+        "id": 54,
+        "name": "Estratégia de Cache",
+        "value": "cache distribuído",
+        "method": "user-input",
+        "reasoning": "O cache é implementado em duas camadas: in-memory (local) e Redis (consistência distribuída), com invalidação coordenada entre as camadas.",
+        "confidence": 0.9525,
+        "context_element_id": 4496
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 7,
+  "active": true,
+  "sourceId": 23689,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:42:53.755Z",
+  "updatedAt": null
+}

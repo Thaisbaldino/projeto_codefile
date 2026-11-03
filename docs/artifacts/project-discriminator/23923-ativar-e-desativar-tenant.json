@@ -1,0 +1,94 @@
+{
+  "id": 23923,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [],
+    "best_practices": [
+      {
+        "id": 6,
+        "name": "Definir timeouts configuráveis para todas as operações críticas e monitorar orçamentos de tempo por transação/endpoint",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Uma janela de 60 segundos para propagar a invalidação é definida para evitar que a falha se espalhe por toda a rede e atrapalhe o cliente.",
+        "confidence": 0.8667,
+        "context_element_id": 2863
+      },
+      {
+        "id": 10,
+        "name": "Configurar revogação automática de acesso para contas comprometidas com invalidação imediata de tokens e sessões ativas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A revogação de token é feita em tempo real, antes mesmo da desativação, sem que o usuário saia do sistema.",
+        "confidence": 0.9835,
+        "context_element_id": 2946
+      },
+      {
+        "id": 12,
+        "name": "Implemente funcionalidade de pausar e retomar para operações longas, preservando o estado da sessão e permitindo a continuação após interrupções",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Reativar o tenant sem salvar o status das tarefas tornaria a operação sem sentido, e a reativação sem o status original seria uma falha de segurança.",
+        "confidence": 0.9247,
+        "context_element_id": 3043
+      },
+      {
+        "id": 13,
+        "name": "Mantenha um modelo de sistema com indicadores de progresso, status das operações e informações de estado visíveis para transparência operacional",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem status visual, a equipe não consegue identificar imediatamente quem está ativo ou inativo, o que compromete a operação.",
+        "confidence": 0.793,
+        "context_element_id": 3047
+      },
+      {
+        "id": 15,
+        "name": "Configure o sistema para sempre falhar em um estado seguro por meio de valores padrão conservadores, modo somente leitura ou desligamento controlado quando condições inseguras são detectadas",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem bloquear a operação, o sistema corre o risco de deixar a tarefa aberta e a operação sem registro, o que torna a correção depois difícil.",
+        "confidence": 0.788,
+        "context_element_id": 3070
+      },
+      {
+        "id": 16,
+        "name": "Implemente degradação graciosa que reduz progressivamente as funcionalidades não críticas enquanto mantém as operações essenciais, com comunicação clara aos usuários sobre as limitações temporárias",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem a mensagem explicativa, o usuário não sabe que a operação está parada e o sistema não pode ser reativado.",
+        "confidence": 0.7572,
+        "context_element_id": 3071
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 23,
+        "name": "Histórico de Atividades",
+        "value": "histórico completo",
+        "method": "user-input",
+        "reasoning": "O administrador interno pode visualizar o histórico completo das operações de ativação e desativação sobre um tenant específico, incluindo data, executor e motivo de cada mudança de status.",
+        "confidence": 0.8472,
+        "context_element_id": 4954
+      },
+      {
+        "id": 24,
+        "name": "Momento de Ativação",
+        "value": "dinâmico em tempo de execução",
+        "method": "user-input",
+        "reasoning": "A operação de ativação ou desativação de tenant é executada em tempo real, suportando o volume operacional estimado de até 50 tenants cadastrados na plataforma.",
+        "confidence": 0.7576,
+        "context_element_id": 5094
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 4,
+  "active": true,
+  "sourceId": 23602,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T14:58:49.768Z",
+  "updatedAt": null
+}

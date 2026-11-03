@@ -1,0 +1,548 @@
+{
+  "id": 23866,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 25,
+          "name": "Dados de Cadastro do Usuário",
+          "format": "application/json com campos: nome_completo (string), email (string), nivel_hierarquico_id (uuid)",
+          "origin": "Formulário de Cadastro (interface web)",
+          "trigger": "Submissão do formulário pelo administrador do tenant"
+        },
+        {
+          "id": 26,
+          "name": "Contexto de Autenticação",
+          "format": "JWT token contendo usuario_id, tenant_id, perfil",
+          "origin": "Sessão autenticada do administrador",
+          "trigger": "Requisição HTTP com header Authorization"
+        },
+        {
+          "id": 27,
+          "name": "Configuração do Tenant",
+          "format": "Objeto contendo id, nome, slug, status",
+          "origin": "Banco de dados (tabela tenants)",
+          "trigger": "Carregamento automático do contexto de tenant"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 43,
+          "name": "Confirmação de Cadastro Bem-sucedido",
+          "format": "JSON com mensagem de sucesso e dados do usuário criado: { id, nome_completo, email, nivel_hierarquico_id, status, data_criacao }",
+          "destination": "Interface web do administrador"
+        },
+        {
+          "id": 44,
+          "name": "Mensagem de Erro de Validação",
+          "format": "JSON com mensagem de erro específica e campo inválido: { erro, campo_invalido, tipo_validacao_falhada }",
+          "destination": "Interface web do administrador"
+        },
+        {
+          "id": 45,
+          "name": "Mensagem de Erro de Persistência",
+          "format": "JSON com mensagem de erro genérica: { erro, mensagem }",
+          "destination": "Interface web do administrador"
+        },
+        {
+          "id": 46,
+          "name": "Registro de Auditoria",
+          "format": "Log estruturado contendo: usuario_executor_id, tenant_id, timestamp, tipo_operacao, dados_usuario_criado",
+          "destination": "Sistema de Trilha de Auditoria"
+        }
+      ],
+      "processing": [
+        {
+          "id": 28,
+          "step": "Autenticar e Validar Acesso",
+          "description": "Validar que o usuário executor está autenticado, ativo e possui perfil de administrador do tenant; validar que o tenant está ativo."
+        },
+        {
+          "id": 29,
+          "step": "Exibir Formulário de Cadastro",
+          "description": "Apresentar ao administrador um formulário contendo campos obrigatórios (nome completo, e-mail, nível hierárquico) e opcionais (descrição), com indicações visuais de campos requeridos."
+        },
+        {
+          "id": 30,
+          "step": "Validar Preenchimento de Campos Obrigatórios",
+          "description": "Verificar que todos os campos obrigatórios (nome completo, e-mail, nível hierárquico) estão preenchidos e não estão em branco antes de processar."
+        },
+        {
+          "id": 31,
+          "step": "Validar Formato de E-mail",
+          "description": "Validar que o endereço de e-mail informado segue o formato válido conforme padrão RFC 5322, rejeitando entradas malformadas."
+        },
+        {
+          "id": 32,
+          "step": "Validar Unicidade de E-mail por Tenant",
+          "description": "Verificar que o e-mail não está duplicado em outro usuário do mesmo tenant, garantindo unicidade dentro da organização."
+        },
+        {
+          "id": 33,
+          "step": "Validar Referência ao Nível Hierárquico",
+          "description": "Verificar que o nível hierárquico selecionado existe e pertence ao tenant do executor, impedindo referências inválidas."
+        },
+        {
+          "id": 34,
+          "step": "Aplicar Regras de Validação de Usuário",
+          "description": "Executar o conjunto completo de regras de validação de usuário para operação de cadastro, incluindo validações de preenchimento, formato, unicidade, referência e isolamento."
+        },
+        {
+          "id": 35,
+          "step": "Aplicar Regras de Controle de Acesso por Perfil",
+          "description": "Executar regras de controle de acesso para garantir que apenas administrador do tenant pode cadastrar novos usuários."
+        },
+        {
+          "id": 36,
+          "step": "Aplicar Regra de Isolamento Multi-tenant",
+          "description": "Validar que o novo usuário será vinculado ao mesmo tenant do executor, impedindo operações cruzadas entre organizações."
+        },
+        {
+          "id": 37,
+          "step": "Gerar Identificador Único do Usuário",
+          "description": "Gerar um UUID único para o novo usuário que será persistido como identificador primário."
+        },
+        {
+          "id": 38,
+          "step": "Persistir Novo Usuário no Banco de Dados",
+          "description": "Inserir o novo usuário no repositório com todos os dados validados, registrando data e hora de criação e identificação do administrador executor."
+        },
+        {
+          "id": 39,
+          "step": "Registrar Auditoria de Cadastro",
+          "description": "Registrar em log de auditoria a operação de cadastro, incluindo identificação do executor, timestamp e dados principais do usuário criado."
+        },
+        {
+          "id": 40,
+          "step": "Retornar Confirmação de Sucesso",
+          "description": "Exibir mensagem de confirmação ao administrador informando que o cadastro foi concluído com sucesso, apresentando os dados principais do usuário criado."
+        },
+        {
+          "id": 41,
+          "step": "Tratar Erro de Validação",
+          "description": "Capturar erros de validação (campos obrigatórios, formato, unicidade, referência, acesso, isolamento) e retornar mensagem de erro específica ao administrador."
+        },
+        {
+          "id": 42,
+          "step": "Tratar Erro de Persistência",
+          "description": "Capturar erros de banco de dados ou falhas de persistência e retornar mensagem de erro clara ao administrador."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 47,
+        "category": "validation",
+        "description": "Validar que o campo nome completo não está vazio e contém ao menos um caractere alfabético válido.",
+        "enforcement": "code",
+        "verification": "Rejeição com mensagem 'Campo nome completo é obrigatório' quando nome_completo está vazio ou em branco."
+      },
+      {
+        "id": 48,
+        "category": "validation",
+        "description": "Validar que o endereço de e-mail segue o formato válido conforme padrão RFC 5322.",
+        "enforcement": "code",
+        "verification": "Rejeição com mensagem 'Formato de e-mail inválido' quando e-mail não corresponde ao padrão de validação."
+      },
+      {
+        "id": 49,
+        "category": "validation",
+        "description": "Validar que o e-mail é único dentro do escopo do tenant, impedindo duplicação de endereços de e-mail na mesma organização.",
+        "enforcement": "db_constraint",
+        "verification": "Índice único composto (tenant_id, email) na tabela usuarios; rejeição com mensagem 'E-mail já cadastrado nesta organização' em caso de violação."
+      },
+      {
+        "id": 50,
+        "category": "validation",
+        "description": "Validar que o nível hierárquico selecionado existe e pertence ao tenant do executor.",
+        "enforcement": "code",
+        "verification": "Consulta ao repositório de níveis hierárquicos; rejeição com mensagem 'Nível hierárquico selecionado não existe nesta organização' quando referência é inválida."
+      },
+      {
+        "id": 51,
+        "category": "authorization",
+        "description": "Restringir a operação de cadastro de usuário exclusivamente a usuários com perfil de administrador do tenant.",
+        "enforcement": "code",
+        "verification": "Validação de perfil do usuário executor; rejeição com mensagem 'Acesso negado. Apenas administradores podem cadastrar usuários' quando perfil é insuficiente."
+      },
+      {
+        "id": 52,
+        "category": "authorization",
+        "description": "Validar que o tenant do executor está ativo antes de permitir o cadastro de novo usuário.",
+        "enforcement": "code",
+        "verification": "Consulta ao status do tenant; rejeição com mensagem 'Acesso negado. Tenant inativo não pode acessar a plataforma' quando tenant está inativo."
+      },
+      {
+        "id": 53,
+        "category": "invariant",
+        "description": "Garantir que o novo usuário é vinculado ao mesmo tenant do executor, impedindo operações cruzadas entre organizações.",
+        "enforcement": "code",
+        "verification": "Validação de tenant_id do executor contra tenant_id do novo usuário; rejeição com mensagem 'Acesso negado. Tenant não pertence a este contexto' em caso de divergência."
+      },
+      {
+        "id": 54,
+        "category": "invariant",
+        "description": "Atribuir status inicial 'ativo' ao novo usuário cadastrado, habilitando seu acesso imediato à plataforma.",
+        "enforcement": "code",
+        "verification": "Verificação de que status = 'ativo' é definido automaticamente no momento da persistência; consulta ao banco de dados confirma status = 'ativo'."
+      },
+      {
+        "id": 55,
+        "category": "observability",
+        "description": "Registrar em log de auditoria toda operação de cadastro de usuário, incluindo identificação do administrador executor, timestamp e dados do usuário criado.",
+        "enforcement": "code",
+        "verification": "Entrada de auditoria criada com campos: usuario_executor_id, tenant_id, timestamp, tipo_operacao='cadastro_usuario', dados_usuario_criado; verificação de presença no sistema de trilha de auditoria."
+      },
+      {
+        "id": 56,
+        "category": "compliance",
+        "description": "Garantir que os dados pessoais do novo usuário (nome e e-mail) sejam tratados em conformidade com a LGPD, aplicando princípios de minimização de dados e proteção das informações pessoais.",
+        "enforcement": "code",
+        "verification": "Dados pessoais armazenados apenas quando necessários para funcionalidade; acesso restrito a usuários autenticados do mesmo tenant; logs de auditoria registram quem acessou os dados."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "O Fluxo de Cadastro de Usuário é um fluxo de negócio que orquestra o processo completo de registro de um novo colaborador em um tenant específico da plataforma multi-tenant. Coordena a validação de dados de entrada (nome completo, e-mail, nível hierárquico), a verificação de unicidade de e-mail por tenant, a aplicação de regras de controle de acesso (apenas administradores podem cadastrar), o isolamento rigoroso de dados entre organizações, a persistência do novo usuário no banco de dados, a atribuição de status inicial ativo, o registro de auditoria da operação, e a exibição de confirmação ou erro ao administrador. Materializa as funcionalidades de formulário de cadastro, validações de entrada, persistência e confirmação definidas na feature de cadastro de usuário, integrando validações de negócio, regras de conformidade com LGPD e rastreabilidade completa de ações administrativas."
+    },
+    "definition": {
+      "params": [
+        {
+          "id": 2,
+          "name": "flow_name",
+          "value": "cadastro-usuario"
+        },
+        {
+          "id": 3,
+          "name": "owner_module",
+          "value": "gestao-usuarios-organizacoes"
+        },
+        {
+          "id": 4,
+          "name": "execution_context",
+          "value": "tenant_scoped_synchronous"
+        },
+        {
+          "id": 5,
+          "name": "primary_actor",
+          "value": "administrador_tenant"
+        }
+      ],
+      "flow_spec": {
+        "steps": [
+          {
+            "id": 6,
+            "name": "Autenticar e Validar Acesso",
+            "description": "Validar que o usuário executor está autenticado, ativo e possui perfil de administrador do tenant; validar que o tenant está ativo."
+          },
+          {
+            "id": 7,
+            "name": "Exibir Formulário de Cadastro",
+            "description": "Apresentar ao administrador um formulário contendo campos obrigatórios (nome completo, e-mail, nível hierárquico) e opcionais (descrição), com indicações visuais de campos requeridos."
+          },
+          {
+            "id": 8,
+            "name": "Validar Preenchimento de Campos Obrigatórios",
+            "description": "Verificar que todos os campos obrigatórios (nome completo, e-mail, nível hierárquico) estão preenchidos e não estão em branco antes de processar."
+          },
+          {
+            "id": 9,
+            "name": "Validar Formato de E-mail",
+            "description": "Validar que o endereço de e-mail informado segue o formato válido conforme padrão RFC 5322, rejeitando entradas malformadas."
+          },
+          {
+            "id": 10,
+            "name": "Validar Unicidade de E-mail por Tenant",
+            "description": "Verificar que o e-mail não está duplicado em outro usuário do mesmo tenant, garantindo unicidade dentro da organização."
+          },
+          {
+            "id": 11,
+            "name": "Validar Referência ao Nível Hierárquico",
+            "description": "Verificar que o nível hierárquico selecionado existe e pertence ao tenant do executor, impedindo referências inválidas."
+          },
+          {
+            "id": 12,
+            "name": "Aplicar Regras de Validação de Usuário",
+            "description": "Executar o conjunto completo de regras de validação de usuário para operação de cadastro, incluindo validações de preenchimento, formato, unicidade, referência e isolamento."
+          },
+          {
+            "id": 13,
+            "name": "Aplicar Regras de Controle de Acesso por Perfil",
+            "description": "Executar regras de controle de acesso para garantir que apenas administrador do tenant pode cadastrar novos usuários."
+          },
+          {
+            "id": 14,
+            "name": "Aplicar Regra de Isolamento Multi-tenant",
+            "description": "Validar que o novo usuário será vinculado ao mesmo tenant do executor, impedindo operações cruzadas entre organizações."
+          },
+          {
+            "id": 15,
+            "name": "Gerar Identificador Único do Usuário",
+            "description": "Gerar um UUID único para o novo usuário que será persistido como identificador primário."
+          },
+          {
+            "id": 16,
+            "name": "Persistir Novo Usuário no Banco de Dados",
+            "description": "Inserir o novo usuário no repositório com todos os dados validados, registrando data e hora de criação e identificação do administrador executor."
+          },
+          {
+            "id": 17,
+            "name": "Registrar Auditoria de Cadastro",
+            "description": "Registrar em log de auditoria a operação de cadastro, incluindo identificação do executor, timestamp e dados principais do usuário criado."
+          },
+          {
+            "id": 18,
+            "name": "Retornar Confirmação de Sucesso",
+            "description": "Exibir mensagem de confirmação ao administrador informando que o cadastro foi concluído com sucesso, apresentando os dados principais do usuário criado."
+          },
+          {
+            "id": 19,
+            "name": "Tratar Erro de Validação",
+            "description": "Capturar erros de validação (campos obrigatórios, formato, unicidade, referência, acesso, isolamento) e retornar mensagem de erro específica ao administrador."
+          },
+          {
+            "id": 20,
+            "name": "Tratar Erro de Persistência",
+            "description": "Capturar erros de banco de dados ou falhas de persistência e retornar mensagem de erro clara ao administrador."
+          }
+        ],
+        "branches": [
+          {
+            "id": 21,
+            "condition": "validacao_falhou",
+            "description": "Desvio para tratamento de erro de validação",
+            "target_step": 19
+          },
+          {
+            "id": 22,
+            "condition": "persistencia_falhou",
+            "description": "Desvio para tratamento de erro de persistência",
+            "target_step": 20
+          }
+        ],
+        "compensations": [
+          {
+            "id": 23,
+            "action": "Reverter inserção do novo usuário no banco de dados",
+            "trigger": "Falha na persistência após validações bem-sucedidas"
+          },
+          {
+            "id": 24,
+            "action": "Remover entrada de auditoria de operação falhada",
+            "trigger": "Falha crítica que impede conclusão da operação"
+          }
+        ]
+      }
+    },
+    "pendencies": [
+      {
+        "id": 71,
+        "section": "definition",
+        "description": "Definição de limites de comprimento para campo nome_completo não está especificada. Necessário estabelecer limite máximo de caracteres (ex: 255, 500) para validação de entrada e armazenamento no banco de dados.",
+        "resolutionOptions": [
+          {
+            "id": 72,
+            "text": "Definir limite máximo de 255 caracteres para nome_completo, alinhado com padrão de campos de nome em sistemas web"
+          },
+          {
+            "id": 73,
+            "text": "Definir limite máximo de 500 caracteres para nome_completo, permitindo nomes compostos mais longos"
+          },
+          {
+            "id": 74,
+            "text": "Não estabelecer limite fixo; usar limite do banco de dados (TEXT ou VARCHAR sem limite explícito)"
+          }
+        ],
+        "recommendedOptionId": 72
+      },
+      {
+        "id": 75,
+        "section": "definition",
+        "description": "Comportamento esperado quando o tenant está inativo não está completamente especificado. Necessário clarificar se o fluxo deve ser bloqueado no início (antes de exibir formulário) ou apenas na persistência.",
+        "resolutionOptions": [
+          {
+            "id": 76,
+            "text": "Bloquear acesso ao formulário de cadastro no início do fluxo se tenant está inativo; retornar erro 'Tenant inativo' antes de exibir qualquer interface"
+          },
+          {
+            "id": 77,
+            "text": "Permitir exibição do formulário, mas bloquear persistência se tenant está inativo; retornar erro apenas na submissão"
+          }
+        ],
+        "recommendedOptionId": 76
+      },
+      {
+        "id": 78,
+        "section": "flow",
+        "description": "Integração com serviço de envio de e-mail de boas-vindas não está definida. Necessário especificar se um e-mail de boas-vindas deve ser enviado ao novo usuário cadastrado e em qual ponto do fluxo.",
+        "resolutionOptions": [
+          {
+            "id": 79,
+            "text": "Enviar e-mail de boas-vindas de forma síncrona após persistência bem-sucedida; bloquear confirmação até envio completar"
+          },
+          {
+            "id": 80,
+            "text": "Enviar e-mail de boas-vindas de forma assíncrona via fila; retornar confirmação imediatamente após persistência, independentemente do envio de e-mail"
+          },
+          {
+            "id": 81,
+            "text": "Não enviar e-mail de boas-vindas nesta versão; funcionalidade de notificações está fora do escopo"
+          }
+        ],
+        "recommendedOptionId": 81
+      },
+      {
+        "id": 82,
+        "section": "rules",
+        "description": "Regra de validação de força de senha não está definida. Necessário especificar se o fluxo de cadastro deve gerar uma senha temporária ou se o usuário deve definir sua própria senha.",
+        "resolutionOptions": [
+          {
+            "id": 83,
+            "text": "Gerar senha temporária aleatória no momento do cadastro; enviar ao usuário via e-mail seguro; usuário deve redefinir na primeira autenticação"
+          },
+          {
+            "id": 84,
+            "text": "Permitir que o administrador defina a senha inicial do novo usuário no formulário de cadastro"
+          },
+          {
+            "id": 85,
+            "text": "Não definir senha no cadastro; enviar link de redefinição de senha ao novo usuário; usuário define sua própria senha antes do primeiro login"
+          }
+        ],
+        "recommendedOptionId": 85
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 61,
+        "then": "Sistema rejeita com mensagem de erro 'Campo nome completo é obrigatório' e não persiste o usuário",
+        "type": "unit",
+        "when": "Administrador submete o formulário",
+        "given": "Formulário de cadastro com campo nome_completo vazio",
+        "scenario": "Validação de preenchimento obrigatório de nome completo",
+        "target_section": "rules"
+      },
+      {
+        "id": 62,
+        "then": "Sistema rejeita com mensagem de erro 'Formato de e-mail inválido' e não persiste o usuário",
+        "type": "unit",
+        "when": "Administrador submete o formulário",
+        "given": "Formulário de cadastro com e-mail em formato inválido (ex: 'usuario@' ou 'usuario.com')",
+        "scenario": "Validação de formato de e-mail",
+        "target_section": "rules"
+      },
+      {
+        "id": 63,
+        "then": "Sistema rejeita com mensagem de erro 'E-mail já cadastrado nesta organização' e não persiste o novo usuário",
+        "type": "unit",
+        "when": "Administrador do Tenant A submete o formulário",
+        "given": "Tenant A com usuário existente email@example.com; formulário de cadastro com mesmo e-mail",
+        "scenario": "Validação de unicidade de e-mail por tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 64,
+        "then": "Sistema rejeita com mensagem de erro 'Nível hierárquico selecionado não existe nesta organização' e não persiste o usuário",
+        "type": "unit",
+        "when": "Administrador submete o formulário",
+        "given": "Formulário de cadastro com nivel_hierarquico_id que não existe no tenant",
+        "scenario": "Validação de referência válida ao nível hierárquico",
+        "target_section": "rules"
+      },
+      {
+        "id": 65,
+        "then": "Sistema rejeita com mensagem de erro 'Acesso negado. Apenas administradores podem cadastrar usuários' e não persiste o usuário",
+        "type": "unit",
+        "when": "Colaborador submete requisição POST /api/users",
+        "given": "Usuário com perfil de colaborador tenta acessar formulário de cadastro",
+        "scenario": "Controle de acesso: apenas administrador pode cadastrar usuário",
+        "target_section": "rules"
+      },
+      {
+        "id": 66,
+        "then": "Sistema persiste o novo usuário com status 'ativo', retorna confirmação com dados do usuário criado, e registra auditoria da operação",
+        "type": "integration",
+        "when": "Administrador submete o formulário de cadastro",
+        "given": "Administrador autenticado do Tenant A com formulário preenchido corretamente (nome, e-mail único, nível hierárquico válido)",
+        "scenario": "Cadastro bem-sucedido de novo usuário com todos os dados válidos",
+        "target_section": "flow"
+      },
+      {
+        "id": 67,
+        "then": "Sistema retorna apenas usuários de Tenant B; usuário de Tenant A não aparece na listagem",
+        "type": "integration",
+        "when": "Usuário de Tenant B executa GET /api/users",
+        "given": "Novo usuário cadastrado em Tenant A; usuário autenticado em Tenant B tenta listar usuários",
+        "scenario": "Isolamento multi-tenant: usuário cadastrado em Tenant A não é visível em Tenant B",
+        "target_section": "rules"
+      },
+      {
+        "id": 68,
+        "then": "Sistema valida e rejeita o e-mail como formato inválido; nenhuma execução de SQL malicioso ocorre",
+        "type": "security",
+        "when": "Administrador submete o formulário",
+        "given": "Formulário de cadastro com e-mail contendo payload de injeção SQL (ex: \"'; DROP TABLE usuarios; --\")",
+        "scenario": "Proteção contra injeção SQL em campo de e-mail",
+        "target_section": "rules"
+      },
+      {
+        "id": 69,
+        "then": "Operação completa (validação + persistência + auditoria) conclui em p95 <= 500ms",
+        "type": "performance",
+        "when": "Administrador submete formulário de cadastro",
+        "given": "Tenant com 5.000 usuários ativos já cadastrados; novo cadastro sendo realizado",
+        "scenario": "Desempenho de cadastro sob carga de 5.000 usuários ativos",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 70,
+        "then": "Sistema valida dados, persiste novo usuário com status 'ativo', exibe mensagem de confirmação 'Usuário cadastrado com sucesso', registra auditoria, e novo usuário aparece na listagem de usuários do tenant",
+        "type": "e2e",
+        "when": "Administrador preenche formulário com dados válidos (nome: 'João Silva', email: 'joao@example.com', nível: 'Gerente') e clica em 'Cadastrar'",
+        "given": "Administrador autenticado em Tenant A acessa página de cadastro de usuário",
+        "scenario": "Fluxo completo de cadastro de usuário do formulário até confirmação",
+        "target_section": "flow"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 57,
+        "target": "p95 <= 500ms para operação completa de cadastro (validação + persistência + auditoria) em tenant com até 5.000 usuários ativos",
+        "category": "performance",
+        "requirement": "Concluir a operação de persistência do cadastro do colaborador e retornar a confirmação ao administrador em tempo adequado, mesmo sob carga de até 5.000 usuários ativos na plataforma.",
+        "verification": "Teste de carga com 5.000 usuários ativos; medição de latência p95 da operação POST /api/users; confirmação de que p95 <= 500ms."
+      },
+      {
+        "id": 58,
+        "target": "100% das validações executadas no servidor; nenhuma confiança em validações do cliente",
+        "category": "security",
+        "requirement": "Validar todas as entradas do formulário de cadastro no servidor (backend) antes de persistir, rejeitando dados malformados ou maliciosos.",
+        "verification": "Teste de segurança enviando payloads malformados, injeção SQL, XSS; confirmação de que todas as requisições são rejeitadas com mensagens de erro apropriadas."
+      },
+      {
+        "id": 59,
+        "target": "99.9% de disponibilidade (máximo 43 minutos de downtime por mês)",
+        "category": "availability",
+        "requirement": "Garantir que a funcionalidade de cadastro de usuário esteja disponível com alta disponibilidade, dado que sua indisponibilidade impede o onboarding de novos colaboradores.",
+        "verification": "Monitoramento contínuo de disponibilidade do endpoint POST /api/users; alertas quando disponibilidade cai abaixo de 99.9%; análise de logs de erro."
+      },
+      {
+        "id": 60,
+        "target": "100% dos eventos de cadastro registrados em log estruturado com campos obrigatórios: usuario_executor_id, tenant_id, timestamp, tipo_evento, dados_relevantes",
+        "category": "observability",
+        "requirement": "Registrar em log estruturado todos os eventos de cadastro bem-sucedido e falho, incluindo identificação do executor, timestamp, dados do usuário e motivo de falha.",
+        "verification": "Consulta ao sistema de logs; confirmação de que cada operação de cadastro gera entrada de log com todos os campos obrigatórios."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 23,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T08:15:13.940Z",
+  "updatedAt": null
+}

@@ -1,0 +1,131 @@
+{
+  "id": 24006,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 11,
+        "name": "Papel ou função do usuário que interage com este conceito",
+        "value": [
+          "administrador_tenant"
+        ],
+        "method": "user-input",
+        "reasoning": "O administrador do tenant é o usuário principal que interage com o conceito.",
+        "confidence": 0.7966,
+        "context_element_id": 2703
+      },
+      {
+        "id": 12,
+        "name": "Perfil ou papel de usuário que é o principal público-alvo da página",
+        "value": [
+          "administrador_plataforma"
+        ],
+        "method": "user-input",
+        "reasoning": "O perfil administrador_plataforma é o principal usuário da interface.",
+        "confidence": 0.7463,
+        "context_element_id": 2721
+      },
+      {
+        "id": 15,
+        "name": "Operação de domínio ou caso de uso que o handler processa",
+        "value": [
+          "confirmar desativação de usuário",
+          "user-activation",
+          "user-profile",
+          "update-user-profile"
+        ],
+        "method": "user-input",
+        "reasoning": "A operação processada é a confirmação de desativação de um usuário.\nA confirmação de ativação de usuário é um domínio operação de ativação de usuário.\nA edição de dados cadastrais do usuário é um uso de operação de perfil de usuário.\nA solicitação de edição de perfil é um domínio operação de atualização de perfil de usuário.",
+        "confidence": 0.7148,
+        "context_element_id": 2782
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 18,
+        "name": "Usar background jobs para executar tarefas intensivas em recursos sem impactar a responsividade do sistema",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A invalidação em background job é feita em 5 segundos após a desativação, sem interrupção do usuário, preservando a sessão em tempo de execução.",
+        "confidence": 0.7681,
+        "context_element_id": 2876
+      },
+      {
+        "id": 21,
+        "name": "Estabelecer um sistema de rastreabilidade abrangente com logs detalhados de todas as ações de usuários e mudanças do sistema",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem rastreabilidade completa, um ator que altera um perfil sem autorização é capaz de alterar o acesso de outro sem que ninguém saiba.",
+        "confidence": 0.7559,
+        "context_element_id": 2925
+      },
+      {
+        "id": 22,
+        "name": "Configurar tratamento seguro de erros com logging detalhado que não exponha informações sensíveis, mas permita análise forense",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Revelar o nome de um usuário ou o número de um tenant em uma mensagem de erro de negócio já fora do contexto do erro, é como dizer que o sistema não reconhece o problema, não a pessoa que o causou.",
+        "confidence": 0.7816,
+        "context_element_id": 2927
+      },
+      {
+        "id": 23,
+        "name": "Implementar identificação única de atores com sistemas de identidade centralizados e gerenciamento unificado de credenciais",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem controle de duplicidade, um usuário edita o próprio e-mail e a alteração se espalha por toda a base de dados.",
+        "confidence": 0.8143,
+        "context_element_id": 2928
+      },
+      {
+        "id": 27,
+        "name": "Implementar versionamento de dados com timestamps e controle de versão para rastreabilidade e auditoria",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Registro de data e hora da edição e identificação do usuário executor garante que a alteração seja reconhecida e auditada, sem que o próprio usuário mudar o próprio registro.",
+        "confidence": 0.8181,
+        "context_element_id": 2956
+      },
+      {
+        "id": 28,
+        "name": "Implemente operações idempotentes que podem ser executadas múltiplas vezes sem efeitos colaterais",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Repetir a mesma ação em massa sem confirmação pode alterar dados sensíveis de um tenant sem que o outro saiba.",
+        "confidence": 0.7229,
+        "context_element_id": 2968
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 32,
+        "name": "Modo de Execução",
+        "value": "síncrono",
+        "method": "user-input",
+        "reasoning": "O execution_context. tenant_scoped_synchronous é uma execução síncrona, característica típica de execução síncrona.",
+        "confidence": 0.9494,
+        "context_element_id": 4365
+      },
+      {
+        "id": 33,
+        "name": "Testes de Segurança",
+        "value": "segurança abrangente",
+        "method": "user-input",
+        "reasoning": "Testes de segurança são feitos com o objetivo de verificar que validações de acesso e isolamento são executadas antes de qualquer operação de banco de dados.",
+        "confidence": 0.7347,
+        "context_element_id": 4538
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 4,
+  "active": true,
+  "sourceId": 23834,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}

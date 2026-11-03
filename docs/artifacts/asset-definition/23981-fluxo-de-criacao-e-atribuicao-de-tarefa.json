@@ -1,0 +1,598 @@
+{
+  "id": 23981,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 44,
+          "name": "Dados do Formulário de Criação de Tarefa",
+          "format": "application/json { titulo: string, descricao?: string, responsavel_id: uuid, prioridade: enum[baixa|media|alta|urgente], status_inicial?: string, data_limite?: date }",
+          "origin": "Formulário de Tarefa (Interactive Surface)",
+          "trigger": "user_action_form_submission"
+        },
+        {
+          "id": 45,
+          "name": "Contexto de Autenticação do Usuário Criador",
+          "format": "application/json { usuario_id: uuid, tenant_id: uuid, status: enum[ativo|inativo], perfil: enum[colaborador|gestor|administrador] }",
+          "origin": "Camada de Identidade e Acesso",
+          "trigger": null
+        },
+        {
+          "id": 46,
+          "name": "Data Atual do Servidor",
+          "format": "date (YYYY-MM-DD)",
+          "origin": "Sistema de Tempo",
+          "trigger": null
+        }
+      ],
+      "outputs": [
+        {
+          "id": 58,
+          "name": "Tarefa Criada com Sucesso",
+          "format": "application/json { id: uuid, tenant_id: uuid, titulo: string, descricao?: string, responsavel_id: uuid, criador_id: uuid, prioridade: enum[baixa|media|alta|urgente], status: string, data_limite?: date, data_criacao: timestamp }",
+          "destination": "Módulo Gerenciamento de Tarefas (estado persistido)"
+        },
+        {
+          "id": 59,
+          "name": "Mensagem de Confirmação de Sucesso",
+          "format": "application/json { sucesso: true, mensagem: string, tarefa_id: uuid, redirecionamento?: string }",
+          "destination": "Interface do Usuário (Formulário de Tarefa)"
+        },
+        {
+          "id": 60,
+          "name": "Evento de Criação de Tarefa",
+          "format": "application/json { tipo: 'TarefaCriada', payload: { id: uuid, tenant_id: uuid, titulo: string, responsavel_id: uuid, criador_id: uuid, prioridade: enum[baixa|media|alta|urgente], status: string, data_limite?: date, data_criacao: timestamp } }",
+          "destination": "Barramento de Eventos de Domínio"
+        },
+        {
+          "id": 61,
+          "name": "Registro de Auditoria",
+          "format": "application/json { operacao: 'criar_tarefa', usuario_id: uuid, tenant_id: uuid, timestamp: timestamp, dados_tarefa: { id: uuid, titulo: string, responsavel_id: uuid, prioridade: enum[baixa|media|alta|urgente] }, resultado: enum[sucesso|falha] }",
+          "destination": "Trilha de Auditoria (Governance & Compliance Layer)"
+        },
+        {
+          "id": 62,
+          "name": "Mensagem de Erro de Validação",
+          "format": "application/json { sucesso: false, mensagem_erro: string, campo_invalido?: string, detalhes?: string }",
+          "destination": "Interface do Usuário (Formulário de Tarefa)"
+        }
+      ],
+      "processing": [
+        {
+          "id": 47,
+          "step": "Validar Preenchimento de Campos Obrigatórios",
+          "description": "Verifica se título, responsável e prioridade foram preenchidos no formulário."
+        },
+        {
+          "id": 48,
+          "step": "Validar Formato de Título",
+          "description": "Valida comprimento e caracteres do título (não vazio, máximo 255 caracteres)."
+        },
+        {
+          "id": 49,
+          "step": "Validar Formato de Responsável",
+          "description": "Valida que o responsável é um UUID válido selecionado da lista de colaboradores ativos do tenant."
+        },
+        {
+          "id": 50,
+          "step": "Validar Prioridade",
+          "description": "Valida que a prioridade é um dos valores permitidos (baixa, média, alta, urgente)."
+        },
+        {
+          "id": 51,
+          "step": "Validar Data Limite",
+          "description": "Valida que a data limite (se fornecida) é válida, não retroativa e em formato aceito."
+        },
+        {
+          "id": 52,
+          "step": "Consultar Responsável no Repositório de Usuários",
+          "description": "Busca o registro do responsável no repositório, validando existência, tenant e status ativo."
+        },
+        {
+          "id": 53,
+          "step": "Invocar Regra de Prioridade e Prazo",
+          "description": "Executa a regra de negócio para validar prioridade, prazo, isolamento multi-tenant e elegibilidade para destaque."
+        },
+        {
+          "id": 54,
+          "step": "Persistir Tarefa no Repositório",
+          "description": "Cria novo registro de tarefa no banco de dados com dados validados, UUID gerado, tenant_id, data de criação e criador_id."
+        },
+        {
+          "id": 55,
+          "step": "Registrar Evento em Trilha de Auditoria",
+          "description": "Registra operação de criação na trilha de auditoria com identificação do usuário, tenant, timestamp e dados da tarefa."
+        },
+        {
+          "id": 56,
+          "step": "Emitir Evento de Domínio TarefaCriada",
+          "description": "Emite evento de sucesso contendo identificadores e dados principais da tarefa criada para reação de outros componentes."
+        },
+        {
+          "id": 57,
+          "step": "Retornar Confirmação ao Usuário",
+          "description": "Retorna mensagem de sucesso ao usuário criador com identificadores da tarefa e redirecionamento para visualização."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 63,
+        "category": "validation",
+        "description": "O título da tarefa é obrigatório, não pode estar vazio, não pode exceder 255 caracteres, e deve conter apenas caracteres permitidos (alfanuméricos, espaços, hífens, underscores).",
+        "enforcement": "code",
+        "verification": "Validação executada no formulário (frontend) e no handler de criação de tarefa (backend) antes de persistência; rejeição com mensagem de erro específica se violado."
+      },
+      {
+        "id": 64,
+        "category": "validation",
+        "description": "O responsável da tarefa é obrigatório e deve ser um usuário ativo pertencente ao mesmo tenant do criador; não é permitida atribuição a usuários inativos ou de outros tenants.",
+        "enforcement": "code",
+        "verification": "Consulta ao repositório de usuários validando existência, status ativo e tenant_id; rejeição com mensagem de erro se responsável não atende critérios."
+      },
+      {
+        "id": 65,
+        "category": "validation",
+        "description": "A prioridade da tarefa é obrigatória e deve ser um dos valores permitidos: baixa, média, alta ou urgente; nenhum outro valor é aceito.",
+        "enforcement": "code",
+        "verification": "Validação de enum contra conjunto fechado de valores permitidos; rejeição com mensagem de erro se valor não está no conjunto."
+      },
+      {
+        "id": 66,
+        "category": "validation",
+        "description": "A data limite da tarefa (quando fornecida) deve ser uma data válida no calendário e não pode ser anterior à data atual do servidor; datas retroativas são rejeitadas.",
+        "enforcement": "code",
+        "verification": "Validação de formato de data e comparação com data atual do servidor; rejeição com mensagem de erro se data é inválida ou retroativa."
+      },
+      {
+        "id": 67,
+        "category": "authorization",
+        "description": "Apenas usuários autenticados e ativos pertencentes ao tenant podem criar tarefas; usuários não autenticados ou de tenants inativos são bloqueados.",
+        "enforcement": "code",
+        "verification": "Verificação de contexto de autenticação e status do tenant antes de permitir acesso ao fluxo; rejeição com erro de autenticação se não autenticado."
+      },
+      {
+        "id": 68,
+        "category": "invariant",
+        "description": "Isolamento multi-tenant é garantido: a tarefa criada é sempre vinculada ao tenant_id do usuário criador; nenhuma tarefa pode ser criada em tenant diferente daquele do usuário autenticado.",
+        "enforcement": "code",
+        "verification": "O tenant_id é extraído do contexto de autenticação do usuário e associado à tarefa no momento da persistência; validação no repositório garante que nenhuma tarefa pode ser criada com tenant_id diferente."
+      },
+      {
+        "id": 69,
+        "category": "compliance",
+        "description": "Conformidade com LGPD: dados pessoais do criador e responsável (nome, e-mail) são tratados conforme princípios de minimização de dados; apenas dados necessários para execução da tarefa são armazenados.",
+        "enforcement": "code",
+        "verification": "Auditoria de campos armazenados na tabela de tarefas; verificação de que apenas identificadores (UUIDs) e dados funcionais são persistidos, não dados pessoais completos."
+      },
+      {
+        "id": 70,
+        "category": "observability",
+        "description": "Toda operação de criação de tarefa é registrada em trilha de auditoria, incluindo identificação do usuário criador, tenant, timestamp, dados principais da tarefa e resultado (sucesso ou falha).",
+        "enforcement": "code",
+        "verification": "Verificação de que cada criação de tarefa gera entrada em trilha de auditoria; auditoria contém todos os campos obrigatórios (usuario_id, tenant_id, timestamp, dados_tarefa, resultado)."
+      },
+      {
+        "id": 71,
+        "category": "idempotency",
+        "description": "Criação de tarefa não é idempotente por design: múltiplas submissões do mesmo formulário resultam em múltiplas tarefas criadas; cliente deve implementar deduplicação se necessário.",
+        "enforcement": "code",
+        "verification": "Confirmação de que cada submissão do formulário gera nova tarefa com UUID único; não há mecanismo de deduplicação automática no fluxo."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "O Fluxo de Criação e Atribuição de Tarefa é o orquestrador de negócio responsável por materializar o ciclo inicial de uma atividade dentro do módulo Gerenciamento de Tarefas, coordenando a captura de dados do usuário (título, descrição, responsável, prioridade, prazo), validação de integridade (campos obrigatórios, formato de e-mail, unicidade de responsável ativo no tenant), persistência isolada por tenant, e geração de confirmação ou erro ao criador. Encadeia operações de validação de entrada, invocação de regras de negócio (Regras de Prioridade e Prazo, Regras de Transição de Status), consulta ao repositório de usuários para confirmar responsável ativo, persistência no repositório de tarefas, registro em trilha de auditoria para conformidade com LGPD, e emissão de evento de sucesso ou falha. Serve como ponto de entrada para a criação de tarefas, garantindo que cada nova atividade respeite isolamento multi-tenant, validações de negócio, rastreabilidade completa e conformidade regulatória antes de estar disponível para acompanhamento e execução."
+    },
+    "definition": {
+      "params": [
+        {
+          "id": 2,
+          "name": "flow_name",
+          "value": "criacao-atribuicao-tarefa"
+        },
+        {
+          "id": 3,
+          "name": "trigger_type",
+          "value": "user_action_form_submission"
+        },
+        {
+          "id": 4,
+          "name": "execution_mode",
+          "value": "synchronous_with_audit_async"
+        },
+        {
+          "id": 5,
+          "name": "tenant_isolation_strategy",
+          "value": "strict_scoped_to_authenticated_user_tenant"
+        }
+      ],
+      "flow_spec": {
+        "steps": [
+          {
+            "id": 6,
+            "name": "Validar Preenchimento de Campos Obrigatórios",
+            "description": "Verifica se todos os campos obrigatórios do formulário de criação de tarefa (título, responsável, prioridade) foram preenchidos pelo usuário antes de prosseguir com validações mais complexas."
+          },
+          {
+            "id": 7,
+            "name": "Validar Formato de Título",
+            "description": "Valida que o título da tarefa não está vazio, não excede o limite máximo de 255 caracteres e contém apenas caracteres permitidos."
+          },
+          {
+            "id": 8,
+            "name": "Validar Formato de E-mail do Responsável",
+            "description": "Valida que o identificador do responsável selecionado corresponde a um formato válido de UUID e que o usuário foi selecionado a partir da lista de colaboradores ativos do tenant."
+          },
+          {
+            "id": 9,
+            "name": "Validar Prioridade",
+            "description": "Valida que o valor de prioridade selecionado é um dos valores permitidos (baixa, média, alta, urgente) conforme definido pelas Regras de Prioridade e Prazo."
+          },
+          {
+            "id": 10,
+            "name": "Validar Data Limite",
+            "description": "Valida que a data limite informada (se fornecida) é uma data válida no calendário, não é retroativa (anterior à data atual), e está em formato aceito pelo sistema."
+          },
+          {
+            "id": 11,
+            "name": "Consultar Responsável no Repositório de Usuários",
+            "description": "Busca o registro do usuário responsável selecionado no repositório de usuários, validando que o usuário existe, pertence ao mesmo tenant do criador, e possui status ativo."
+          },
+          {
+            "id": 12,
+            "name": "Invocar Regra de Prioridade e Prazo",
+            "description": "Executa a regra de negócio Regras de Prioridade e Prazo de Tarefas para validar a combinação de prioridade e prazo, garantir isolamento multi-tenant, confirmar responsável ativo no tenant, e determinar elegibilidade para destaque de criticidade."
+          },
+          {
+            "id": 13,
+            "name": "Persistir Tarefa no Repositório",
+            "description": "Invoca o repositório de tarefas para criar um novo registro de tarefa com os dados validados, gerando UUID único, registrando tenant_id do criador, data de criação, criador_id, e status inicial conforme definido."
+          },
+          {
+            "id": 14,
+            "name": "Registrar Evento de Criação em Trilha de Auditoria",
+            "description": "Registra a operação de criação de tarefa na trilha de auditoria, incluindo identificação do usuário criador, tenant, timestamp, dados principais da tarefa criada, e conformidade com requisitos de rastreabilidade LGPD."
+          },
+          {
+            "id": 15,
+            "name": "Emitir Evento de Sucesso",
+            "description": "Emite evento de domínio TarefaCriada contendo identificadores e dados principais da tarefa recém-criada, permitindo que outros componentes (visualizações, notificações futuras) reajam à criação."
+          },
+          {
+            "id": 16,
+            "name": "Retornar Confirmação ao Usuário",
+            "description": "Retorna mensagem de confirmação de sucesso ao usuário criador, incluindo identificadores da tarefa criada e redirecionamento para visualização detalhada ou lista de tarefas."
+          }
+        ],
+        "branches": [
+          {
+            "id": 17,
+            "condition": "titulo_vazio OR titulo_excede_limite",
+            "description": "Se o título está vazio ou excede 255 caracteres, desvia para tratamento de erro de validação de título.",
+            "target_step": 18
+          },
+          {
+            "id": 19,
+            "condition": "responsavel_nao_selecionado OR responsavel_uuid_invalido",
+            "description": "Se nenhum responsável foi selecionado ou o UUID é inválido, desvia para tratamento de erro de seleção de responsável.",
+            "target_step": 20
+          },
+          {
+            "id": 21,
+            "condition": "prioridade_invalida",
+            "description": "Se o valor de prioridade não é um dos valores permitidos, desvia para tratamento de erro de prioridade.",
+            "target_step": 22
+          },
+          {
+            "id": 23,
+            "condition": "data_limite_retroativa OR data_limite_invalida",
+            "description": "Se a data limite é anterior à data atual ou em formato inválido, desvia para tratamento de erro de prazo.",
+            "target_step": 24
+          },
+          {
+            "id": 25,
+            "condition": "responsavel_nao_encontrado_no_repositorio",
+            "description": "Se o responsável selecionado não existe no repositório de usuários ou não pertence ao tenant, desvia para tratamento de erro de responsável inválido.",
+            "target_step": 26
+          },
+          {
+            "id": 27,
+            "condition": "responsavel_inativo",
+            "description": "Se o responsável selecionado existe mas possui status inativo, desvia para tratamento de erro de responsável inativo.",
+            "target_step": 28
+          },
+          {
+            "id": 29,
+            "condition": "regra_prioridade_prazo_falha",
+            "description": "Se a regra de negócio Regras de Prioridade e Prazo retorna validação falha, desvia para tratamento de erro de regra de negócio.",
+            "target_step": 30
+          },
+          {
+            "id": 31,
+            "condition": "persistencia_falha",
+            "description": "Se a persistência da tarefa no repositório falha (erro de banco de dados, constraint violation), desvia para tratamento de erro de persistência.",
+            "target_step": 32
+          },
+          {
+            "id": 33,
+            "condition": "auditoria_falha",
+            "description": "Se o registro em trilha de auditoria falha, desvia para tratamento de erro de auditoria (não impede sucesso da criação, mas registra falha).",
+            "target_step": 34
+          }
+        ],
+        "compensations": [
+          {
+            "id": 35,
+            "action": "Exibir Mensagem de Erro de Validação de Título",
+            "trigger": "titulo_vazio OR titulo_excede_limite"
+          },
+          {
+            "id": 36,
+            "action": "Exibir Mensagem de Erro de Seleção de Responsável",
+            "trigger": "responsavel_nao_selecionado OR responsavel_uuid_invalido"
+          },
+          {
+            "id": 37,
+            "action": "Exibir Mensagem de Erro de Prioridade Inválida",
+            "trigger": "prioridade_invalida"
+          },
+          {
+            "id": 38,
+            "action": "Exibir Mensagem de Erro de Data Limite Retroativa ou Inválida",
+            "trigger": "data_limite_retroativa OR data_limite_invalida"
+          },
+          {
+            "id": 39,
+            "action": "Exibir Mensagem de Erro de Responsável Não Encontrado",
+            "trigger": "responsavel_nao_encontrado_no_repositorio"
+          },
+          {
+            "id": 40,
+            "action": "Exibir Mensagem de Erro de Responsável Inativo",
+            "trigger": "responsavel_inativo"
+          },
+          {
+            "id": 41,
+            "action": "Exibir Mensagem de Erro de Regra de Negócio",
+            "trigger": "regra_prioridade_prazo_falha"
+          },
+          {
+            "id": 42,
+            "action": "Exibir Mensagem de Erro de Persistência",
+            "trigger": "persistencia_falha"
+          },
+          {
+            "id": 43,
+            "action": "Registrar Falha de Auditoria em Log de Sistema",
+            "trigger": "auditoria_falha"
+          }
+        ]
+      }
+    },
+    "pendencies": [
+      {
+        "id": 90,
+        "section": "definition",
+        "description": "Status inicial da tarefa não está explicitamente definido no fluxo. As features de criação de tarefa (sourceId 8) mencionam 'status inicial' mas não especificam qual é o valor padrão (ex: 'A Fazer'). Necessário confirmar se status inicial é sempre 'A Fazer' ou se pode ser selecionado pelo usuário no formulário de criação.",
+        "resolutionOptions": [
+          {
+            "id": 91,
+            "text": "Status inicial é sempre 'A Fazer' (fixo); usuário não pode selecionar status na criação, apenas na edição posterior."
+          },
+          {
+            "id": 92,
+            "text": "Status inicial é selecionável pelo usuário no formulário de criação a partir dos status fixos disponíveis (A Fazer, Em Andamento, Concluído)."
+          },
+          {
+            "id": 93,
+            "text": "Status inicial é 'A Fazer' por padrão, mas pode ser sobrescrito por usuários com perfil de administrador ou gestor."
+          }
+        ],
+        "recommendedOptionId": 91
+      },
+      {
+        "id": 94,
+        "section": "flow",
+        "description": "Comportamento de erro quando a trilha de auditoria falha não está completamente especificado. O fluxo menciona que falha de auditoria desvia para tratamento de erro, mas não está claro se a criação da tarefa é revertida (rollback) ou se a tarefa é persistida mesmo com falha de auditoria.",
+        "resolutionOptions": [
+          {
+            "id": 95,
+            "text": "Falha de auditoria causa rollback completo: tarefa não é persistida, usuário recebe erro e deve tentar novamente."
+          },
+          {
+            "id": 96,
+            "text": "Falha de auditoria não impede sucesso da criação: tarefa é persistida, mas falha de auditoria é registrada em log de sistema para investigação posterior."
+          },
+          {
+            "id": 97,
+            "text": "Falha de auditoria causa rollback apenas se for erro crítico (ex: falha de conexão); erros não-críticos (ex: timeout) permitem que tarefa seja persistida com auditoria assíncrona."
+          }
+        ],
+        "recommendedOptionId": 96
+      },
+      {
+        "id": 98,
+        "section": "rules",
+        "description": "Limite máximo de comprimento para campo de descrição da tarefa não está especificado. As features mencionam que descrição é opcional e pode ser detalhada, mas não definem limite máximo de caracteres.",
+        "resolutionOptions": [
+          {
+            "id": 99,
+            "text": "Descrição não tem limite máximo de comprimento; campo é TEXT ilimitado no banco de dados."
+          },
+          {
+            "id": 100,
+            "text": "Descrição tem limite máximo de 5.000 caracteres, alinhado com padrões de UX para campos de texto longo."
+          },
+          {
+            "id": 101,
+            "text": "Descrição tem limite máximo de 10.000 caracteres para permitir documentação detalhada de tarefas complexas."
+          }
+        ],
+        "recommendedOptionId": 100
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 79,
+        "then": "Fluxo rejeita submissão com mensagem de erro 'Título é obrigatório' e não persiste tarefa no banco de dados",
+        "type": "unit",
+        "when": "Formulário de criação de tarefa é submetido com campo título em branco",
+        "given": "Usuário autenticado no tenant A tenta criar tarefa com título vazio",
+        "scenario": "Validação de título vazio é rejeitada com mensagem de erro específica",
+        "target_section": "rules"
+      },
+      {
+        "id": 80,
+        "then": "Fluxo rejeita submissão com mensagem de erro 'Título não pode exceder 255 caracteres' e não persiste tarefa",
+        "type": "unit",
+        "when": "Formulário de criação de tarefa é submetido com título acima do limite de 255 caracteres",
+        "given": "Usuário autenticado no tenant A tenta criar tarefa com título contendo 300 caracteres",
+        "scenario": "Validação de título que excede limite de caracteres é rejeitada",
+        "target_section": "rules"
+      },
+      {
+        "id": 81,
+        "then": "Fluxo consulta repositório de usuários, identifica status inativo, rejeita submissão com mensagem 'Responsável selecionado não está ativo' e não persiste tarefa",
+        "type": "unit",
+        "when": "Formulário de criação de tarefa é submetido com responsável_id de usuário com status inativo",
+        "given": "Usuário autenticado no tenant A tenta criar tarefa atribuindo a usuário inativo do mesmo tenant",
+        "scenario": "Validação de responsável inativo é rejeitada",
+        "target_section": "rules"
+      },
+      {
+        "id": 82,
+        "then": "Fluxo rejeita submissão com mensagem de erro 'Prioridade inválida' e não persiste tarefa",
+        "type": "unit",
+        "when": "Formulário de criação de tarefa é submetido com prioridade fora do conjunto permitido (baixa, média, alta, urgente)",
+        "given": "Usuário autenticado no tenant A tenta criar tarefa com prioridade 'crítica' (valor não permitido)",
+        "scenario": "Validação de prioridade inválida é rejeitada",
+        "target_section": "rules"
+      },
+      {
+        "id": 83,
+        "then": "Fluxo rejeita submissão com mensagem de erro 'Data limite não pode ser anterior à data atual' e não persiste tarefa",
+        "type": "unit",
+        "when": "Formulário de criação de tarefa é submetido com data_limite = 2024-01-01 e data atual = 2024-12-15",
+        "given": "Usuário autenticado no tenant A tenta criar tarefa com data limite anterior à data atual",
+        "scenario": "Validação de data limite retroativa é rejeitada",
+        "target_section": "rules"
+      },
+      {
+        "id": 84,
+        "then": "Fluxo valida todos os campos, consulta repositório de usuários confirmando responsável ativo, persiste tarefa no banco de dados com UUID gerado, registra em trilha de auditoria, emite evento TarefaCriada, e retorna mensagem de sucesso com tarefa_id ao usuário",
+        "type": "integration",
+        "when": "Formulário de criação de tarefa é submetido com todos os campos obrigatórios preenchidos corretamente",
+        "given": "Usuário autenticado no tenant A com dados válidos (título, responsável ativo, prioridade, prazo futuro)",
+        "scenario": "Criação de tarefa com sucesso persiste dados no banco de dados e retorna confirmação",
+        "target_section": "flow"
+      },
+      {
+        "id": 85,
+        "then": "Repositório de tarefas rejeita consulta com erro 'Tarefa não encontrada' porque tenant_id da tarefa não corresponde ao tenant_id do usuário de tenant B",
+        "type": "integration",
+        "when": "Usuário de tenant B tenta buscar tarefa criada por usuário de tenant A usando tarefa_id",
+        "given": "Usuário autenticado no tenant A cria tarefa com sucesso; usuário autenticado no tenant B tenta acessar a tarefa criada",
+        "scenario": "Isolamento multi-tenant é garantido: tarefa criada em tenant A não é acessível por usuário de tenant B",
+        "target_section": "rules"
+      },
+      {
+        "id": 86,
+        "then": "Fluxo consulta repositório de usuários, identifica que responsável pertence a tenant diferente, rejeita submissão com mensagem de erro e não persiste tarefa",
+        "type": "security",
+        "when": "Formulário de criação de tarefa é submetido com responsavel_id de usuário de tenant diferente",
+        "given": "Usuário autenticado no tenant A tenta criar tarefa atribuindo a usuário que pertence ao tenant B",
+        "scenario": "Tentativa de criar tarefa com responsável de outro tenant é bloqueada",
+        "target_section": "rules"
+      },
+      {
+        "id": 87,
+        "then": "Fluxo verifica contexto de autenticação, identifica ausência de token válido, rejeita requisição com erro 401 Unauthorized e não permite acesso ao formulário",
+        "type": "security",
+        "when": "Requisição de criação de tarefa é enviada sem token de autenticação válido",
+        "given": "Usuário não autenticado tenta acessar fluxo de criação de tarefa",
+        "scenario": "Tentativa de criar tarefa sem autenticação é bloqueada",
+        "target_section": "rules"
+      },
+      {
+        "id": 88,
+        "then": "Fluxo completa operação (validação + persistência + auditoria) e retorna confirmação em tempo <= 500ms (p95) e <= 1000ms (p99)",
+        "type": "performance",
+        "when": "Usuário autenticado submete formulário de criação de tarefa com dados válidos",
+        "given": "Plataforma operando com 5.000 usuários ativos, 10.000 tarefas por tenant, carga normal de requisições",
+        "scenario": "Criação de tarefa completa-se dentro de SLA de desempenho sob carga normal",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 89,
+        "then": "Evento TarefaCriada contém payload com estrutura { id: uuid, tenant_id: uuid, titulo: string, responsavel_id: uuid, criador_id: uuid, prioridade: enum[baixa|media|alta|urgente], status: string, data_limite?: date, data_criacao: timestamp }",
+        "type": "contract",
+        "when": "Fluxo emite evento de domínio após persistência bem-sucedida",
+        "given": "Tarefa é criada com sucesso no fluxo de criação e atribuição",
+        "scenario": "Evento de domínio TarefaCriada é emitido com estrutura esperada após criação bem-sucedida",
+        "target_section": "definition"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 72,
+        "target": "p95 <= 500ms, p99 <= 1000ms para operação completa (validação + persistência + auditoria)",
+        "category": "performance",
+        "requirement": "O fluxo de criação de tarefa deve ser concluído e retornar confirmação ao usuário em tempo adequado, mesmo sob carga de até 5.000 usuários ativos e 10.000 tarefas por tenant.",
+        "verification": "Teste de carga com 5.000 usuários simultâneos criando tarefas; medição de latência p95 e p99; verificação de que nenhuma requisição excede 1000ms."
+      },
+      {
+        "id": 73,
+        "target": "p95 <= 50ms para busca de usuário por ID e tenant_id",
+        "category": "performance",
+        "requirement": "Consultas ao repositório de usuários para validação de responsável devem ser executadas com tempo de resposta mínimo, utilizando índices de banco de dados.",
+        "verification": "Verificação de que índice idx_usuarios_tenant_email existe e é utilizado; teste de latência de consulta com 100.000 usuários no banco de dados."
+      },
+      {
+        "id": 74,
+        "target": "Suporte para até 10.000 tarefas por tenant no primeiro ano; arquitetura preparada para sharding por tenant_id",
+        "category": "scalability",
+        "requirement": "O fluxo deve suportar crescimento progressivo de volume de tarefas sem degradação de desempenho; arquitetura deve permitir particionamento de dados por tenant em versões futuras.",
+        "verification": "Revisão de design de banco de dados; verificação de que queries utilizam tenant_id como primeiro critério de filtragem; teste de desempenho com 10.000 tarefas por tenant."
+      },
+      {
+        "id": 75,
+        "target": "100% de validação de entrada em backend; rejeição de qualquer entrada que não atende critérios de formato e comprimento",
+        "category": "security",
+        "requirement": "Validação de entrada é executada em múltiplas camadas (frontend e backend) para prevenir injeção de SQL, XSS e outras vulnerabilidades; dados de entrada são sanitizados antes de persistência.",
+        "verification": "Teste de segurança com payloads maliciosos (SQL injection, XSS, command injection); verificação de que todas as entradas são validadas e sanitizadas."
+      },
+      {
+        "id": 76,
+        "target": "100% de validação de tenant_id em todas as operações; rejeição de qualquer requisição que tenta acessar dados de outro tenant",
+        "category": "security",
+        "requirement": "Isolamento multi-tenant é garantido em todas as operações; nenhuma tarefa pode ser criada ou acessada por usuário de tenant diferente, mesmo com manipulação de parâmetros.",
+        "verification": "Teste de segurança tentando criar tarefa com tenant_id diferente do usuário autenticado; verificação de que requisição é rejeitada com erro de autorização."
+      },
+      {
+        "id": 77,
+        "target": "99.9% de disponibilidade (máximo 43 minutos de downtime por mês)",
+        "category": "availability",
+        "requirement": "O fluxo de criação de tarefa deve estar disponível com alta disponibilidade, dado que sua indisponibilidade impede que usuários criem novas atividades.",
+        "verification": "Monitoramento contínuo de disponibilidade do endpoint de criação de tarefa; alertas quando disponibilidade cai abaixo de 99.9%; teste de failover de banco de dados."
+      },
+      {
+        "id": 78,
+        "target": "100% de cobertura de logging; logs contêm usuario_id, tenant_id, timestamp, operacao, resultado e detalhes de erro quando aplicável",
+        "category": "observability",
+        "requirement": "Todas as operações do fluxo são registradas em logs estruturados com identificação de usuário, tenant, timestamp e resultado, permitindo rastreamento completo de ações.",
+        "verification": "Verificação de que cada etapa do fluxo gera entrada em log; análise de logs para confirmar presença de todos os campos obrigatórios."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 31,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T16:55:19.686Z",
+  "updatedAt": null
+}

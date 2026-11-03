@@ -1,0 +1,341 @@
+{
+  "id": 23841,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 11,
+          "name": "Requisição de Provisionamento",
+          "format": "application/json",
+          "origin": "Cliente HTTP (administrador interno da plataforma)",
+          "trigger": "POST /api/tenants com payload contendo nome_organizacao e slug_tenant"
+        },
+        {
+          "id": 12,
+          "name": "Token de Autenticação",
+          "format": "JWT",
+          "origin": "Header Authorization (Bearer token)",
+          "trigger": null
+        }
+      ],
+      "outputs": [
+        {
+          "id": 20,
+          "name": "Resposta de Sucesso",
+          "format": "application/json com status 201 Created",
+          "destination": "Cliente HTTP"
+        },
+        {
+          "id": 21,
+          "name": "Resposta de Erro",
+          "format": "application/json com status 400/401/403/409 conforme tipo de erro",
+          "destination": "Cliente HTTP"
+        },
+        {
+          "id": 22,
+          "name": "Evento de Auditoria",
+          "format": "Evento estruturado com user_id, tenant_id, timestamp, ação, dados alterados",
+          "destination": "Trilha de Auditoria de Ações (asset 53)"
+        }
+      ],
+      "processing": [
+        {
+          "id": 13,
+          "step": "Validar Autenticação",
+          "description": "Extrair e validar token JWT do header Authorization, verificando assinatura, expiração e claims obrigatórios (sub, tenant_id, perfil)"
+        },
+        {
+          "id": 14,
+          "step": "Validar Autorização",
+          "description": "Verificar que o usuário executor possui perfil de administrador_plataforma; rejeitar com 403 se perfil for administrador_tenant, gestor ou colaborador"
+        },
+        {
+          "id": 15,
+          "step": "Validar Entrada",
+          "description": "Validar preenchimento de campos obrigatórios (nome_organizacao não vazio, slug_tenant em formato válido: 3-50 caracteres, apenas minúsculas/números/hífens); retornar 400 com detalhes de violação se falhar"
+        },
+        {
+          "id": 16,
+          "step": "Validar Unicidade de Slug",
+          "description": "Consultar banco de dados para verificar se slug_tenant já existe em outro tenant; retornar 409 CONFLICT se duplicado"
+        },
+        {
+          "id": 17,
+          "step": "Provisionar Tenant",
+          "description": "Criar novo registro de tenant com status inicial 'ativo', data_criacao = now(), e estrutura de dados isolada (tabelas vazias para usuários, tarefas, etc. deste tenant)"
+        },
+        {
+          "id": 18,
+          "step": "Registrar Auditoria",
+          "description": "Emitir evento de auditoria contendo user_id do executor, tenant_id criado, timestamp, e dados do tenant provisionado"
+        },
+        {
+          "id": 19,
+          "step": "Formatar Resposta",
+          "description": "Construir envelope de sucesso com dados do tenant criado (id, nome_organizacao, slug_tenant, status, data_criacao) e metadados (timestamp, request_id)"
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 23,
+        "category": "authorization",
+        "description": "Apenas usuários com perfil de administrador_plataforma podem provisionar novos tenants; administradores de tenant, gestores e colaboradores devem ser rejeitados com mensagem 'Acesso negado. Apenas administradores internos da plataforma podem provisionar tenants'",
+        "enforcement": "code",
+        "verification": "Validar claim 'perfil' do JWT antes de processar requisição; rejeitar com 403 FORBIDDEN se perfil ≠ administrador_plataforma"
+      },
+      {
+        "id": 24,
+        "category": "validation",
+        "description": "Campo nome_organizacao é obrigatório e não pode estar vazio; campo slug_tenant é obrigatório e deve respeitar padrão ^[a-z0-9-]{3,50}$ (3-50 caracteres, apenas minúsculas, números e hífens)",
+        "enforcement": "code",
+        "verification": "Validar preenchimento e formato antes de persistir; retornar 400 com detalhes específicos por campo se validação falhar"
+      },
+      {
+        "id": 25,
+        "category": "invariant",
+        "description": "Slug de tenant deve ser único na plataforma; não é permitido provisionar dois tenants com o mesmo slug",
+        "enforcement": "db_constraint",
+        "verification": "Constraint UNIQUE na coluna slug_tenant da tabela tenants; validação prévia em código antes de INSERT para retornar 409 CONFLICT com mensagem clara"
+      },
+      {
+        "id": 26,
+        "category": "compliance",
+        "description": "Toda operação de provisionamento de tenant deve ser registrada em log de auditoria com identificação do administrador executor, timestamp, tenant_id criado e dados da organização, em conformidade com requisitos de rastreabilidade da plataforma",
+        "enforcement": "code",
+        "verification": "Emitir evento de auditoria após sucesso de provisionamento; validar que evento foi persistido na trilha de auditoria"
+      },
+      {
+        "id": 27,
+        "category": "invariant",
+        "description": "Novo tenant provisionado deve ter status inicial 'ativo' e estrutura de dados isolada criada automaticamente (tabelas vazias para usuários, tarefas, histórico de status, etc. deste tenant específico)",
+        "enforcement": "code",
+        "verification": "Validar que tenant criado possui status = 'ativo' e que consultas subsequentes ao banco de dados para este tenant retornam apenas dados deste tenant, não de outros"
+      },
+      {
+        "id": 28,
+        "category": "authorization",
+        "description": "Isolamento multi-tenant: operação de provisionamento não deve expor ou permitir acesso a dados de tenants existentes; cada tenant é uma entidade isolada",
+        "enforcement": "code",
+        "verification": "Validar que resposta de sucesso contém apenas dados do tenant criado; validar que listagem de tenants (GET /api/tenants) não retorna dados de tenants não solicitados"
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "Endpoints de Tenants é um conjunto de operações HTTP que expõe funcionalidades de provisionamento, ativação e desativação de organizações (tenants) na plataforma, permitindo que administradores internos criem, listem e gerenciem o ciclo de vida de tenants através de contratos REST bem-definidos. Implementa validação de entrada (unicidade de slug, formato de identificador), autenticação via JWT, controle de acesso restrito a administradores da plataforma, isolamento completo de dados entre tenants, tratamento de erros padronizado, e rastreabilidade completa de ações administrativas em logs de auditoria. Cada operação valida que o usuário executor é administrador da plataforma, que o tenant alvo existe e está no estado correto para a operação solicitada, e que nenhum dado de um tenant interfere com outro."
+    },
+    "definition": {
+      "endpoint": {
+        "id": 2,
+        "auth": "bearer",
+        "path": "/api/tenants",
+        "method": "POST",
+        "responses": [
+          {
+            "id": 3,
+            "body": "{ id: uuid, nome_organizacao: string, slug_tenant: string, status: enum[ativo|inativo], data_criacao: timestamp }",
+            "status_code": 201
+          },
+          {
+            "id": 4,
+            "body": "{ error: { code: string, message: string, details?: object } }",
+            "status_code": 400
+          },
+          {
+            "id": 5,
+            "body": "{ error: { code: \"UNAUTHORIZED\", message: string } }",
+            "status_code": 401
+          },
+          {
+            "id": 6,
+            "body": "{ error: { code: \"FORBIDDEN\", message: string } }",
+            "status_code": 403
+          },
+          {
+            "id": 7,
+            "body": "{ error: { code: \"CONFLICT\", message: string, details: { field: string, reason: string } } }",
+            "status_code": 409
+          }
+        ],
+        "request_body": "{ nome_organizacao: string, slug_tenant: string }",
+        "side_effects": [
+          {
+            "id": 8,
+            "description": "Registra entrada de auditoria com identificação do administrador interno executor, timestamp, slug do tenant e dados da organização provisionada"
+          },
+          {
+            "id": 9,
+            "description": "Emite evento de auditoria para conformidade com LGPD e rastreabilidade de provisionamento de tenant"
+          },
+          {
+            "id": 10,
+            "description": "Cria estrutura de dados isolada para o novo tenant no banco de dados, garantindo segregação completa de informações"
+          }
+        ]
+      }
+    },
+    "pendencies": [
+      {
+        "id": 42,
+        "section": "definition",
+        "description": "Falta especificação de comportamento quando a criação de estrutura de dados isolada para o novo tenant falha (ex: erro de banco de dados durante criação de tabelas vazias). Deve-se definir se a operação é totalmente revertida (rollback) ou se o tenant é criado em estado 'parcialmente_provisionado'.",
+        "resolutionOptions": [
+          {
+            "id": 43,
+            "text": "Implementar transação ACID: se criação de estrutura de dados falhar, fazer rollback completo do tenant e retornar 500 INTERNAL_ERROR ao cliente"
+          },
+          {
+            "id": 44,
+            "text": "Criar tenant com status 'provisionamento_pendente' e executar criação de estrutura de dados em background worker; cliente recebe 202 ACCEPTED e pode consultar status posterior"
+          },
+          {
+            "id": 45,
+            "text": "Criar tenant com status 'ativo' mas marcar estrutura de dados como 'incompleta'; background job tenta completar; se falhar após N tentativas, desativar tenant e alertar administrador"
+          }
+        ],
+        "recommendedOptionId": 43
+      },
+      {
+        "id": 46,
+        "section": "non_functional_requirements",
+        "description": "Falta especificação de limite de taxa (rate limiting) para operações de provisionamento de tenant. Deve-se definir se há limite de quantos tenants um administrador pode provisionar por hora/dia para prevenir abuso ou erro acidental em massa.",
+        "resolutionOptions": [
+          {
+            "id": 47,
+            "text": "Sem rate limiting: permitir provisionamento ilimitado de tenants (assume-se que apenas administradores internos confiáveis têm acesso)"
+          },
+          {
+            "id": 48,
+            "text": "Rate limiting por administrador: máximo 10 tenants por hora por user_id; retornar 429 TOO_MANY_REQUESTS se excedido"
+          },
+          {
+            "id": 49,
+            "text": "Rate limiting global: máximo 50 tenants por hora em toda a plataforma; retornar 429 TOO_MANY_REQUESTS se excedido"
+          }
+        ],
+        "recommendedOptionId": 47
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 34,
+        "then": "A requisição é rejeitada com status 403 FORBIDDEN e mensagem 'Acesso negado. Apenas administradores internos da plataforma podem provisionar tenants'",
+        "type": "unit",
+        "when": "O usuário tenta executar POST /api/tenants com payload válido (nome_organizacao e slug_tenant)",
+        "given": "Um usuário com perfil de administrador_tenant autenticado com token JWT válido",
+        "scenario": "Validação de autorização para provisionamento de tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 35,
+        "then": "A requisição é rejeitada com status 400 BAD REQUEST e mensagem de erro indicando que slug_tenant deve conter apenas minúsculas, números e hífens",
+        "type": "unit",
+        "when": "O administrador tenta executar POST /api/tenants com slug_tenant = 'MAIUSCULA' (contém maiúsculas, violando padrão)",
+        "given": "Um administrador da plataforma autenticado com token JWT válido",
+        "scenario": "Validação de formato de slug_tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 36,
+        "then": "A requisição é rejeitada com status 409 CONFLICT e mensagem 'Slug de tenant já existe. Escolha um identificador único'",
+        "type": "unit",
+        "when": "O administrador tenta executar POST /api/tenants com slug_tenant = 'empresa-a' (duplicado)",
+        "given": "Um tenant com slug 'empresa-a' já existe na plataforma; um administrador da plataforma autenticado",
+        "scenario": "Validação de unicidade de slug_tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 37,
+        "then": "A requisição retorna status 201 CREATED com dados do tenant criado (id, nome_organizacao, slug_tenant, status='ativo', data_criacao); estrutura de dados isolada é criada no banco; evento de auditoria é registrado",
+        "type": "integration",
+        "when": "O administrador executa POST /api/tenants com payload { nome_organizacao: 'Empresa Nova LTDA', slug_tenant: 'empresa-nova' }",
+        "given": "Um administrador da plataforma autenticado com token JWT válido; nenhum tenant com slug 'empresa-nova' existe",
+        "scenario": "Provisionamento bem-sucedido de novo tenant",
+        "target_section": "flow"
+      },
+      {
+        "id": 38,
+        "then": "A requisição é rejeitada com status 401 UNAUTHORIZED e mensagem 'Token ausente, inválido ou expirado'",
+        "type": "security",
+        "when": "A requisição é enviada ao endpoint",
+        "given": "Uma requisição POST /api/tenants sem header Authorization",
+        "scenario": "Rejeição de requisição sem token de autenticação",
+        "target_section": "rules"
+      },
+      {
+        "id": 39,
+        "then": "A requisição é rejeitada com status 401 UNAUTHORIZED e mensagem 'Token ausente, inválido ou expirado'",
+        "type": "security",
+        "when": "O administrador tenta executar POST /api/tenants com token expirado",
+        "given": "Um administrador da plataforma com token JWT expirado (iat + 3600 segundos < now)",
+        "scenario": "Rejeição de requisição com token expirado",
+        "target_section": "rules"
+      },
+      {
+        "id": 40,
+        "then": "A resposta segue envelope padrão de sucesso com estrutura { data: { id, nome_organizacao, slug_tenant, status, data_criacao }, meta: { timestamp, request_id, version } }",
+        "type": "contract",
+        "when": "A resposta é retornada ao cliente",
+        "given": "Um provisionamento de tenant bem-sucedido",
+        "scenario": "Contrato de resposta de sucesso para provisionamento",
+        "target_section": "definition"
+      },
+      {
+        "id": 41,
+        "then": "A resposta segue envelope padrão de erro com estrutura { error: { code: 'CONFLICT', message: string, details: { field: 'slug_tenant', reason: string } }, meta: { timestamp, request_id } } e status 409",
+        "type": "contract",
+        "when": "A resposta de erro é retornada ao cliente",
+        "given": "Uma tentativa de provisionamento com slug duplicado",
+        "scenario": "Contrato de resposta de erro para conflito de slug",
+        "target_section": "definition"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 29,
+        "target": "TLS 1.2+, HSTS max-age >= 31536000 segundos",
+        "category": "security",
+        "requirement": "Todas as comunicações de provisionamento de tenant devem ocorrer exclusivamente via HTTPS com TLS 1.2 ou superior, garantindo confidencialidade de dados administrativos em trânsito",
+        "verification": "Validar que requisições HTTP (não-HTTPS) são redirecionadas ou rejeitadas; verificar headers HSTS em respostas"
+      },
+      {
+        "id": 30,
+        "target": "Validação de assinatura RS256, expiração <= 3600 segundos, claims presentes",
+        "category": "security",
+        "requirement": "Token JWT utilizado para autenticação deve ser validado quanto a assinatura (RS256), expiração (3600 segundos) e claims obrigatórios (sub, tenant_id, perfil) antes de permitir operação de provisionamento",
+        "verification": "Rejeitar requisições com token inválido, expirado ou sem claims obrigatórios com 401 UNAUTHORIZED"
+      },
+      {
+        "id": 31,
+        "target": "p99 <= 500ms para operação de provisionamento (validação + criação + auditoria)",
+        "category": "performance",
+        "requirement": "Operação de provisionamento de tenant deve ser concluída e retornar resposta ao administrador em tempo adequado, mesmo sob carga de até 50 tenants cadastrados na plataforma no primeiro ano",
+        "verification": "Medir latência de requisição POST /api/tenants em ambiente de teste com 50 tenants existentes; validar que p99 não excede 500ms"
+      },
+      {
+        "id": 32,
+        "target": "Disponibilidade >= 99.9% (SLA de 43.2 minutos de downtime por mês)",
+        "category": "availability",
+        "requirement": "Serviço de provisionamento de tenants deve estar disponível com alta disponibilidade, dado que sua indisponibilidade impede o onboarding de novos clientes na plataforma",
+        "verification": "Monitorar uptime do endpoint POST /api/tenants; alertar se disponibilidade cair abaixo de 99.9% em janela de 30 dias"
+      },
+      {
+        "id": 33,
+        "target": "100% das operações registradas com request_id único e rastreável",
+        "category": "observability",
+        "requirement": "Todas as operações de provisionamento de tenant devem ser rastreáveis através de logs estruturados contendo request_id, user_id do executor, tenant_id criado, timestamp, status da operação e detalhes de erro (se aplicável)",
+        "verification": "Validar que cada requisição POST /api/tenants gera log estruturado com todos os campos obrigatórios; correlacionar logs por request_id"
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 40,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T07:11:02.874Z",
+  "updatedAt": null
+}

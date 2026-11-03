@@ -1,0 +1,591 @@
+{
+  "id": 23978,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 17,
+          "name": "Credenciais de Usuário",
+          "format": "application/json",
+          "origin": "Cliente HTTP (formulário de login)",
+          "trigger": "POST /api/auth/login"
+        },
+        {
+          "id": 18,
+          "name": "Contexto de Requisição",
+          "format": "HTTP headers (User-Agent, X-Forwarded-For)",
+          "origin": "Middleware HTTP",
+          "trigger": null
+        }
+      ],
+      "outputs": [
+        {
+          "id": 37,
+          "name": "Tokens de Sessão",
+          "format": "application/json",
+          "destination": "Cliente HTTP (navegador ou aplicação)"
+        },
+        {
+          "id": 38,
+          "name": "Dados do Usuário Autenticado",
+          "format": "application/json",
+          "destination": "Cliente HTTP"
+        },
+        {
+          "id": 39,
+          "name": "Mensagem de Erro",
+          "format": "application/json",
+          "destination": "Cliente HTTP"
+        },
+        {
+          "id": 40,
+          "name": "Evento de Auditoria",
+          "format": "event",
+          "destination": "Sistema de Auditoria"
+        }
+      ],
+      "processing": [
+        {
+          "id": 19,
+          "step": "Validar preenchimento de campos obrigatórios",
+          "description": "Verificar que os campos de e-mail e senha estão presentes e não estão em branco no payload da requisição"
+        },
+        {
+          "id": 20,
+          "step": "Validar formato de e-mail",
+          "description": "Validar que o endereço de e-mail segue o padrão RFC 5322 antes de processar a autenticação"
+        },
+        {
+          "id": 21,
+          "step": "Aplicar rate limiting por IP e e-mail",
+          "description": "Verificar se o endereço IP ou e-mail atingiu o limite de tentativas de login permitidas (5 em 15 minutos); bloquear temporariamente se limite foi excedido"
+        },
+        {
+          "id": 22,
+          "step": "Buscar usuário por e-mail",
+          "description": "Consultar repositório de usuários para localizar um usuário com o e-mail informado, sem especificar o tenant (será identificado pelo e-mail)"
+        },
+        {
+          "id": 23,
+          "step": "Identificar tenant do usuário",
+          "description": "Extrair o tenant_id do usuário encontrado, garantindo que a sessão autenticada estará vinculada ao tenant correto"
+        },
+        {
+          "id": 24,
+          "step": "Validar status de ativação do usuário",
+          "description": "Verificar que o usuário encontrado possui status ativo; se inativo, retornar mensagem de erro genérica sem revelar que o usuário existe"
+        },
+        {
+          "id": 25,
+          "step": "Validar status de ativação do tenant",
+          "description": "Verificar que o tenant ao qual o usuário pertence possui status ativo; se inativo, bloquear o acesso de todos os usuários daquela organização"
+        },
+        {
+          "id": 26,
+          "step": "Comparar senha informada com hash armazenado",
+          "description": "Utilizar algoritmo de comparação seguro (timing-safe) para validar que a senha informada corresponde ao hash armazenado com argon2id"
+        },
+        {
+          "id": 27,
+          "step": "Gerar token de acesso JWT",
+          "description": "Gerar token JWT assinado com algoritmo RS256, contendo identificação do usuário, tenant, perfil e data de expiração (3600 segundos)"
+        },
+        {
+          "id": 28,
+          "step": "Gerar token de refresh",
+          "description": "Gerar token de refresh com validade estendida (7 dias) para permitir renovação de sessão sem necessidade de re-autenticação"
+        },
+        {
+          "id": 29,
+          "step": "Persistir sessão no repositório",
+          "description": "Armazenar hash do refresh token, JTI do access token, IP da requisição e metadados de sessão na tabela de sessões para rastreamento e revogação"
+        },
+        {
+          "id": 30,
+          "step": "Registrar auditoria de login bem-sucedido",
+          "description": "Registrar em log de auditoria a autenticação bem-sucedida, incluindo identificação do usuário, tenant, timestamp, endereço IP e resultado da operação"
+        },
+        {
+          "id": 31,
+          "step": "Limpar contador de tentativas falhadas",
+          "description": "Resetar o contador de tentativas de login malsucedidas para o usuário e endereço IP após autenticação bem-sucedida"
+        },
+        {
+          "id": 32,
+          "step": "Retornar tokens e dados do usuário",
+          "description": "Retornar ao cliente os tokens de acesso e refresh, dados do usuário autenticado e informações do tenant em envelope de sucesso"
+        },
+        {
+          "id": 33,
+          "step": "Incrementar contador de tentativas falhadas",
+          "description": "Incrementar o contador de tentativas de login malsucedidas para o usuário ou endereço IP quando as credenciais forem inválidas"
+        },
+        {
+          "id": 34,
+          "step": "Registrar auditoria de login falhado",
+          "description": "Registrar em log de auditoria a tentativa de autenticação falhada, incluindo e-mail informado, timestamp, endereço IP e motivo da falha"
+        },
+        {
+          "id": 35,
+          "step": "Retornar mensagem de erro genérica",
+          "description": "Exibir mensagem de erro genérica e não discriminatória ('Credenciais inválidas') sem indicar se o e-mail ou a senha está incorreto, a fim de evitar enumeração de usuários"
+        },
+        {
+          "id": 36,
+          "step": "Bloquear temporariamente novas tentativas",
+          "description": "Bloquear novas tentativas de login para o usuário ou endereço IP após atingir o limite máximo de tentativas falhadas, exibindo mensagem informativa sobre o bloqueio e tempo de espera"
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 41,
+        "category": "validation",
+        "description": "Campos de e-mail e senha são obrigatórios e não podem estar em branco no payload da requisição POST /api/auth/login",
+        "enforcement": "code",
+        "verification": "Middleware de validação rejeita requisição com status 400 e detalhes específicos de campo ausente"
+      },
+      {
+        "id": 42,
+        "category": "validation",
+        "description": "Endereço de e-mail informado deve estar em formato válido conforme padrão RFC 5322 antes de processar autenticação",
+        "enforcement": "code",
+        "verification": "Validador de e-mail rejeita formato inválido com mensagem de erro específica"
+      },
+      {
+        "id": 43,
+        "category": "rate_limit",
+        "description": "Máximo de 5 tentativas de login falhadas por endereço IP em janela de 15 minutos; bloqueio temporário de 15 minutos após limite atingido",
+        "enforcement": "code",
+        "verification": "Contador de tentativas falhadas é verificado antes de processar login; requisição retorna status 429 com retry_after_seconds quando limite é atingido"
+      },
+      {
+        "id": 44,
+        "category": "authorization",
+        "description": "Usuário deve estar com status ativo no tenant para realizar login; usuários inativos são bloqueados sem revelação de existência",
+        "enforcement": "code",
+        "verification": "Validação de status_ativo é executada após localizar usuário; mensagem de erro genérica é retornada independentemente de usuário existir ou estar inativo"
+      },
+      {
+        "id": 45,
+        "category": "authorization",
+        "description": "Tenant ao qual o usuário pertence deve estar com status ativo para permitir login de qualquer usuário daquela organização",
+        "enforcement": "code",
+        "verification": "Validação de status_ativo do tenant é executada após identificar tenant do usuário; acesso é bloqueado com mensagem de erro genérica se tenant está inativo"
+      },
+      {
+        "id": 46,
+        "category": "invariant",
+        "description": "Senha de usuário é sempre armazenada em formato de hash seguro (argon2id com m=64MiB, t=3, p=4) e nunca em texto simples ou formato reversível",
+        "enforcement": "db_constraint",
+        "verification": "Coluna password_hash na tabela de usuários contém apenas hashes argon2id; comparação de senha utiliza algoritmo timing-safe para evitar ataques de timing"
+      },
+      {
+        "id": 47,
+        "category": "invariant",
+        "description": "Token de acesso JWT é assinado com algoritmo RS256 e contém claims de user_id, email, tenant_id, nivel_hierarquico_id, iat e exp com TTL de 3600 segundos",
+        "enforcement": "code",
+        "verification": "Token gerado é validado contra chave pública RS256; payload é decodificado e claims são verificados em cada requisição autenticada"
+      },
+      {
+        "id": 48,
+        "category": "invariant",
+        "description": "Refresh token é armazenado em formato de hash SHA-256 na tabela de sessões e nunca em texto simples; apenas hash é persistido",
+        "enforcement": "db_constraint",
+        "verification": "Coluna refresh_token_hash na tabela sessions contém apenas hashes SHA-256; comparação de refresh token utiliza algoritmo timing-safe"
+      },
+      {
+        "id": 49,
+        "category": "compliance",
+        "description": "Todas as tentativas de login (bem-sucedidas e falhadas) são registradas em log de auditoria com identificação do usuário, tenant, timestamp, endereço IP e motivo, em conformidade com requisitos de rastreabilidade da plataforma",
+        "enforcement": "code",
+        "verification": "Entrada de auditoria é criada para cada tentativa de login; logs são consultáveis por user_id, tenant_id, timestamp e resultado"
+      },
+      {
+        "id": 50,
+        "category": "compliance",
+        "description": "Dados pessoais do usuário (e-mail) tratados no fluxo de autenticação estão em conformidade com LGPD, aplicando princípios de minimização de dados e proteção das informações pessoais",
+        "enforcement": "code",
+        "verification": "E-mail é transmitido apenas via HTTPS com TLS 1.2+; armazenamento de e-mail segue política de retenção de dados; acesso a e-mail é auditado"
+      },
+      {
+        "id": 51,
+        "category": "authorization",
+        "description": "Sessão autenticada de um usuário está estritamente vinculada ao seu tenant; nenhum acesso cruzado a dados ou funcionalidades de outras organizações é permitido",
+        "enforcement": "code",
+        "verification": "Middleware de isolamento de tenant valida que tenant_id do token JWT corresponde ao tenant_id da requisição; requisições com tenant_id divergente são bloqueadas com status 403"
+      },
+      {
+        "id": 52,
+        "category": "idempotency",
+        "description": "Múltiplas requisições POST /api/auth/login com as mesmas credenciais em rápida sucessão resultam em múltiplas sessões independentes (sem idempotência); cada requisição gera novo par de tokens",
+        "enforcement": "code",
+        "verification": "Cada requisição POST /api/auth/login gera novo access_token e refresh_token com JTI único; sessões anteriores não são reutilizadas"
+      },
+      {
+        "id": 53,
+        "category": "observability",
+        "description": "Cada requisição de autenticação recebe um request_id único para rastreamento de ponta a ponta em logs e métricas de observabilidade",
+        "enforcement": "code",
+        "verification": "Request_id é gerado no middleware de entrada, propagado através de toda a requisição e incluído em todas as entradas de log e eventos de auditoria"
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "Endpoints de Autenticação expõe as operações HTTP críticas que permitem que clientes (frontend web, aplicações móveis) autentiquem-se na plataforma multi-tenant através de login com e-mail e senha, gerenciem sessões autenticadas e renovem tokens expirados. Implementa validação rigorosa de credenciais contra o repositório de usuários, identificação automática do tenant correto baseada no e-mail, geração segura de tokens JWT com expiração configurada, proteção contra força bruta com rate limiting, isolamento completo de dados entre tenants, tratamento de erros não-discriminatório para prevenção de enumeração de usuários, e rastreabilidade completa de tentativas de autenticação em logs de auditoria."
+    },
+    "definition": {
+      "params": [
+        {
+          "id": 2,
+          "name": "base_path",
+          "value": "/api/auth"
+        },
+        {
+          "id": 3,
+          "name": "rate_limit_login_max_attempts",
+          "value": "5"
+        },
+        {
+          "id": 4,
+          "name": "rate_limit_login_window_minutes",
+          "value": "15"
+        },
+        {
+          "id": 5,
+          "name": "rate_limit_password_recovery_per_hour",
+          "value": "3"
+        },
+        {
+          "id": 6,
+          "name": "access_token_ttl_seconds",
+          "value": "3600"
+        },
+        {
+          "id": 7,
+          "name": "refresh_token_ttl_days",
+          "value": "7"
+        },
+        {
+          "id": 8,
+          "name": "password_recovery_token_ttl_minutes",
+          "value": "30"
+        }
+      ],
+      "endpoints": [
+        {
+          "id": 9,
+          "auth": "none",
+          "path": "/login",
+          "method": "POST",
+          "responses": [
+            {
+              "id": 10,
+              "body": "{ access_token: string, refresh_token: string, user: { id: uuid, email: string, tenant_id: uuid, nivel_hierarquico_id: uuid, status: enum[ativo|inativo] }, tenant: { id: uuid, slug: string, status: enum[ativo|inativo] } }",
+              "status_code": 200
+            },
+            {
+              "id": 11,
+              "body": "{ error: { code: string, message: string, details?: object } }",
+              "status_code": 400
+            },
+            {
+              "id": 12,
+              "body": "{ error: { code: \"UNAUTHORIZED\", message: \"Credenciais inválidas\" } }",
+              "status_code": 401
+            },
+            {
+              "id": 13,
+              "body": "{ error: { code: \"RATE_LIMITED\", message: string, details: { retry_after_seconds: integer } } }",
+              "status_code": 429
+            }
+          ],
+          "request_body": "{ email: string, password: string }",
+          "side_effects": [
+            {
+              "id": 14,
+              "description": "Registra entrada de auditoria com identificação do usuário, tenant, timestamp, endereço IP e resultado da autenticação (sucesso ou motivo da falha)"
+            },
+            {
+              "id": 15,
+              "description": "Emite evento user_authenticated para rastreamento de sessões ativas e detecção de anomalias de segurança"
+            },
+            {
+              "id": 16,
+              "description": "Incrementa contador de tentativas falhadas por IP e e-mail em caso de falha, aplicando bloqueio temporário após limite configurado"
+            }
+          ]
+        }
+      ]
+    },
+    "pendencies": [
+      {
+        "id": 75,
+        "section": "definition",
+        "description": "Necessário definir se o endpoint POST /api/auth/login deve suportar autenticação multi-fator (MFA) nesta versão ou se será adicionado em versão futura. Atualmente, a feature de autenticação não menciona MFA, mas a arquitetura deve estar preparada para sua adição.",
+        "resolutionOptions": [
+          {
+            "id": 76,
+            "text": "Implementar suporte básico a MFA via TOTP (Time-based One-Time Password) nesta versão, adicionando campo opcional 'totp_code' ao payload de login e validação de TOTP após validação de credenciais"
+          },
+          {
+            "id": 77,
+            "text": "Não implementar MFA nesta versão; manter arquitetura extensível para adição futura de MFA sem reestruturação significativa"
+          },
+          {
+            "id": 78,
+            "text": "Implementar suporte a MFA via SMS como alternativa a TOTP, integrando com serviço de SMS externo"
+          }
+        ],
+        "recommendedOptionId": 77
+      },
+      {
+        "id": 79,
+        "section": "definition",
+        "description": "Necessário definir o comportamento exato do endpoint POST /api/auth/logout: deve invalidar apenas o access_token atual ou todos os refresh_tokens ativos do usuário em todos os dispositivos?",
+        "resolutionOptions": [
+          {
+            "id": 80,
+            "text": "Invalidar apenas o access_token e refresh_token da requisição atual; usuário permanece autenticado em outros dispositivos"
+          },
+          {
+            "id": 81,
+            "text": "Invalidar todos os refresh_tokens ativos do usuário em todos os dispositivos; logout em um dispositivo desconecta em todos os outros"
+          },
+          {
+            "id": 82,
+            "text": "Fornecer opção ao usuário: logout apenas do dispositivo atual ou logout de todos os dispositivos"
+          }
+        ],
+        "recommendedOptionId": 81
+      },
+      {
+        "id": 83,
+        "section": "flow",
+        "description": "Necessário definir o mecanismo exato de armazenamento e validação de refresh_token: deve ser armazenado em tabela de sessões com hash SHA-256 ou em cache distribuído (Redis) com TTL automático?",
+        "resolutionOptions": [
+          {
+            "id": 84,
+            "text": "Armazenar refresh_token_hash em tabela de sessões (sessions) no banco de dados relacional; limpeza de sessões expiradas via job de manutenção agendado"
+          },
+          {
+            "id": 85,
+            "text": "Armazenar refresh_token em cache distribuído (Redis) com TTL automático de 7 dias; sem necessidade de job de limpeza"
+          },
+          {
+            "id": 86,
+            "text": "Usar abordagem híbrida: armazenar em Redis para validação rápida e em banco de dados para auditoria de longo prazo"
+          }
+        ],
+        "recommendedOptionId": 84
+      },
+      {
+        "id": 87,
+        "section": "rules",
+        "description": "Necessário definir se o rate limiting de login deve ser aplicado por endereço IP, por e-mail ou por combinação de ambos. Atualmente, a especificação menciona 'por IP' mas a prática de segurança recomenda combinação.",
+        "resolutionOptions": [
+          {
+            "id": 88,
+            "text": "Aplicar rate limiting apenas por endereço IP (5 tentativas em 15 minutos por IP)"
+          },
+          {
+            "id": 89,
+            "text": "Aplicar rate limiting apenas por e-mail (5 tentativas em 15 minutos por e-mail)"
+          },
+          {
+            "id": 90,
+            "text": "Aplicar rate limiting por combinação de IP e e-mail (5 tentativas em 15 minutos para cada combinação única)"
+          }
+        ],
+        "recommendedOptionId": 90
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 62,
+        "then": "Middleware rejeita a requisição com status 400 e retorna erro específico indicando que o formato de e-mail é inválido",
+        "type": "unit",
+        "when": "A requisição é processada pelo middleware de validação de entrada",
+        "given": "Um payload de requisição POST /api/auth/login com campo email contendo valor inválido (ex: 'usuario@' ou 'usuario.com')",
+        "scenario": "Validação de formato de e-mail",
+        "target_section": "definition"
+      },
+      {
+        "id": 63,
+        "then": "Middleware rejeita a requisição com status 400 e retorna erro específico indicando que o campo password é obrigatório",
+        "type": "unit",
+        "when": "A requisição é processada pelo middleware de validação de entrada",
+        "given": "Um payload de requisição POST /api/auth/login com campo password ausente ou vazio",
+        "scenario": "Validação de campos obrigatórios",
+        "target_section": "definition"
+      },
+      {
+        "id": 64,
+        "then": "Endpoint retorna status 200 com access_token JWT válido, refresh_token, dados do usuário e informações do tenant",
+        "type": "integration",
+        "when": "Uma requisição POST /api/auth/login é enviada com e-mail e senha corretos",
+        "given": "Um usuário ativo cadastrado no tenant com e-mail 'usuario@empresa.com' e senha válida armazenada em hash argon2id",
+        "scenario": "Autenticação bem-sucedida com credenciais válidas",
+        "target_section": "flow"
+      },
+      {
+        "id": 65,
+        "then": "Endpoint retorna status 401 com mensagem de erro genérica ('Credenciais inválidas') sem indicar qual campo está incorreto; contador de tentativas falhadas é incrementado",
+        "type": "integration",
+        "when": "Uma requisição POST /api/auth/login é enviada com e-mail correto mas senha incorreta",
+        "given": "Um usuário ativo cadastrado no tenant com e-mail 'usuario@empresa.com' e senha válida",
+        "scenario": "Autenticação falhada com credenciais inválidas",
+        "target_section": "flow"
+      },
+      {
+        "id": 66,
+        "then": "Endpoint retorna status 401 com mensagem de erro genérica ('Credenciais inválidas') sem revelar que o usuário existe ou está inativo",
+        "type": "integration",
+        "when": "Uma requisição POST /api/auth/login é enviada com e-mail e senha corretos",
+        "given": "Um usuário com status inativo cadastrado no tenant com e-mail 'usuario@empresa.com'",
+        "scenario": "Bloqueio de usuário inativo",
+        "target_section": "flow"
+      },
+      {
+        "id": 67,
+        "then": "Endpoint retorna status 401 com mensagem de erro genérica ('Credenciais inválidas') sem revelar que o tenant está desativado",
+        "type": "integration",
+        "when": "Uma requisição POST /api/auth/login é enviada com e-mail e senha corretos",
+        "given": "Um usuário ativo pertencente a um tenant com status inativo",
+        "scenario": "Bloqueio de tenant inativo",
+        "target_section": "flow"
+      },
+      {
+        "id": 68,
+        "then": "Endpoint retorna status 429 com mensagem de bloqueio temporário e campo retry_after_seconds indicando tempo de espera (900 segundos)",
+        "type": "security",
+        "when": "Uma 6ª requisição POST /api/auth/login é enviada do mesmo endereço IP dentro da janela de 15 minutos",
+        "given": "Um endereço IP que realiza 5 tentativas de login falhadas em 10 minutos",
+        "scenario": "Rate limiting contra força bruta",
+        "target_section": "rules"
+      },
+      {
+        "id": 69,
+        "then": "Todas as requisições retornam a mesma mensagem de erro genérica ('Credenciais inválidas') independentemente de o e-mail existir ou não",
+        "type": "security",
+        "when": "O atacante envia múltiplas requisições POST /api/auth/login com e-mails diferentes e senhas aleatórias",
+        "given": "Um atacante que tenta descobrir quais e-mails estão cadastrados no sistema",
+        "scenario": "Proteção contra enumeração de usuários",
+        "target_section": "rules"
+      },
+      {
+        "id": 70,
+        "then": "A senha está armazenada em formato de hash argon2id e não pode ser recuperada; comparação de senha utiliza algoritmo timing-safe",
+        "type": "security",
+        "when": "Um atacante obtém acesso ao banco de dados e consulta a coluna password_hash",
+        "given": "Uma senha de usuário armazenada no banco de dados",
+        "scenario": "Criptografia de senha em repouso",
+        "target_section": "rules"
+      },
+      {
+        "id": 71,
+        "then": "Endpoint autentica o usuário contra o tenant correto identificado pelo e-mail; sessão é vinculada exclusivamente ao tenant do usuário autenticado",
+        "type": "integration",
+        "when": "Uma requisição POST /api/auth/login é enviada com o e-mail compartilhado",
+        "given": "Dois usuários com o mesmo e-mail cadastrados em tenants diferentes (cenário improvável mas possível)",
+        "scenario": "Isolamento de dados entre tenants",
+        "target_section": "rules"
+      },
+      {
+        "id": 72,
+        "then": "Todas as requisições retornam status 200 em tempo <= 200ms (p99); nenhuma requisição é perdida ou retorna erro de timeout",
+        "type": "performance",
+        "when": "As requisições são processadas pelo endpoint POST /api/auth/login",
+        "given": "Uma carga de 500 requisições simultâneas de autenticação com credenciais válidas",
+        "scenario": "Desempenho sob carga de autenticação",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 73,
+        "then": "Resposta contém campos obrigatórios: access_token (string), refresh_token (string), user (objeto com id, email, tenant_id, nivel_hierarquico_id, status), tenant (objeto com id, slug, status)",
+        "type": "contract",
+        "when": "Endpoint POST /api/auth/login retorna status 200",
+        "given": "Uma autenticação bem-sucedida",
+        "scenario": "Contrato de resposta de sucesso",
+        "target_section": "definition"
+      },
+      {
+        "id": 74,
+        "then": "Resposta contém campos obrigatórios: error (objeto com code e message); code é 'UNAUTHORIZED' e message é genérica ('Credenciais inválidas')",
+        "type": "contract",
+        "when": "Endpoint POST /api/auth/login retorna status 401",
+        "given": "Uma autenticação falhada",
+        "scenario": "Contrato de resposta de erro",
+        "target_section": "definition"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 54,
+        "target": "p99 <= 200ms em condições normais de carga (até 5.000 usuários ativos simultâneos)",
+        "category": "performance",
+        "requirement": "Operação de autenticação (validação de credenciais, geração de tokens, persistência de sessão) deve ser concluída e retornar resposta ao cliente",
+        "verification": "Teste de carga com 5.000 usuários simultâneos; métrica de latência p99 é monitorada em tempo real via observabilidade"
+      },
+      {
+        "id": 55,
+        "target": "Até 50 tenants e 5.000 usuários ativos na plataforma no primeiro ano; arquitetura preparada para 10x crescimento",
+        "category": "scalability",
+        "requirement": "Endpoints de autenticação devem suportar crescimento de usuários e tenants sem degradação de desempenho",
+        "verification": "Testes de carga progressivos; índices de banco de dados otimizados para consultas de autenticação; cache em nível de aplicação para dados de tenant"
+      },
+      {
+        "id": 56,
+        "target": "100% das requisições POST /api/auth/* devem ser transmitidas via HTTPS; TLS 1.2+ obrigatório",
+        "category": "security",
+        "requirement": "Todas as comunicações de autenticação devem ser criptografadas em trânsito utilizando HTTPS com TLS 1.2 ou superior",
+        "verification": "Teste de segurança verifica que requisições HTTP (não-HTTPS) são bloqueadas; certificado SSL/TLS é válido e atualizado"
+      },
+      {
+        "id": 57,
+        "target": "Algoritmo argon2id com m=64MiB, t=3, p=4; tempo de hash >= 100ms por tentativa",
+        "category": "security",
+        "requirement": "Senhas de usuários devem ser armazenadas em formato de hash seguro resistente a ataques de força bruta",
+        "verification": "Teste de segurança valida que senhas não podem ser recuperadas do hash; tempo de comparação de senha é >= 100ms"
+      },
+      {
+        "id": 58,
+        "target": "Máximo 5 tentativas falhadas por IP em 15 minutos; bloqueio temporário de 15 minutos após limite",
+        "category": "security",
+        "requirement": "Rate limiting deve proteger contra ataques de força bruta em endpoints de autenticação",
+        "verification": "Teste de segurança executa 10 tentativas de login com credenciais inválidas; 6ª tentativa retorna status 429 com retry_after_seconds"
+      },
+      {
+        "id": 59,
+        "target": "99.9% uptime (máximo 43 minutos de downtime por mês); RTO <= 5 minutos, RPO <= 1 minuto",
+        "category": "availability",
+        "requirement": "Serviço de autenticação deve estar disponível com alta disponibilidade, dado que sua indisponibilidade impede o acesso de todos os usuários à plataforma",
+        "verification": "Monitoramento contínuo de disponibilidade; alertas automáticos para degradação de serviço; testes de failover de banco de dados"
+      },
+      {
+        "id": 60,
+        "target": "100% das tentativas de login (sucesso e falha) são registradas; logs contêm user_id, tenant_id, timestamp, IP, resultado e motivo da falha",
+        "category": "observability",
+        "requirement": "Todas as operações de autenticação devem ser registradas em log de auditoria com informações suficientes para investigação de incidentes de segurança",
+        "verification": "Consulta de logs de auditoria retorna entrada para cada tentativa de login; campos obrigatórios estão presentes e preenchidos"
+      },
+      {
+        "id": 61,
+        "target": "Custo de autenticação <= 0,001 USD por login (estimativa de computação + armazenamento); cache reduz consultas ao banco de dados em 50%",
+        "category": "cost",
+        "requirement": "Operações de autenticação devem ser otimizadas para minimizar consumo de recursos de computação e armazenamento",
+        "verification": "Análise de custo de operações de autenticação; métricas de cache hit rate >= 50% para consultas de tenant"
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 38,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T16:42:01.210Z",
+  "updatedAt": null
+}

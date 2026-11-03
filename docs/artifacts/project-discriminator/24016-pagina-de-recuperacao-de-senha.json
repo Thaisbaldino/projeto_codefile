@@ -1,0 +1,270 @@
+{
+  "id": 24016,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 14,
+        "name": "Degradação de Desempenho",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "A carga de 5.000 usuários ativos sob demanda é maior do que o limite de 100 usuários simultâneos, indicando que o sistema sobe de carga.",
+        "confidence": 0.7663,
+        "context_element_id": 2811
+      },
+      {
+        "id": 15,
+        "name": "Gargalos e Timeouts",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Requisições em excesso sobrecarregam o sistema, causando falhas de tempo de espera e frustração do usuário.",
+        "confidence": 0.7467,
+        "context_element_id": 2813
+      },
+      {
+        "id": 16,
+        "name": "Autenticação e Controle de Acesso",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem feedback em tempo real, o usuário fica confiante sem saber que a senha é fraca, e a falha é silenciosa.",
+        "confidence": 0.8202,
+        "context_element_id": 2824
+      },
+      {
+        "id": 17,
+        "name": "Validação de Entrada e Injeção",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Senha fraca é aceita sem feedback, e o usuário fica confiante sem saber que a senha não vale nada.",
+        "confidence": 0.8204,
+        "context_element_id": 2825
+      },
+      {
+        "id": 18,
+        "name": "Ordenação e Duplicação de Mensagens",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Enfileiramento sem confirmação de entrega ou reenvio de volta à origem é o que ocorre quando o e-mail é enviado sem envio direto.",
+        "confidence": 0.729,
+        "context_element_id": 2833
+      }
+    ],
+    "attributes": [
+      {
+        "id": 8,
+        "name": "Tipo específico de evento ou mensagem que está sendo comunicado",
+        "value": [
+          "generic-message",
+          "email-recuperacao",
+          "email-sent",
+          "email-existe-na-base AND usuario-ativo AND tenant-ativo",
+          "email-existente, usuario-inativo, tenant-inativo"
+        ],
+        "method": "user-input",
+        "reasoning": "A mensagem de confirmação é genérica e não discrimina se o e-mail existe ou não na base, prevenindo enumeração de usuários.\nO e-mail de recuperação enviado para a confirmação de solicitação é do tipo 'email-recuperacao'.\nO evento específico comunicado é o envio de e-mail.\nO e-mail de recuperação é enviado quando a base de usuários do tenant existe, o usuário ativo está ativo e o tenant ativo.\nA confirmação de solicitação exibida confirma o estado do usuário (email-existente, usuario-inativo ou tenant-inativo).",
+        "confidence": 0.7175,
+        "context_element_id": 2755
+      },
+      {
+        "id": 10,
+        "name": "Tipo principal de falha ou degradação que o padrão deve mitigar",
+        "value": [
+          "service-unavailability",
+          "retry, fallback, notification to user"
+        ],
+        "method": "user-input",
+        "reasoning": "A indisponibilidade do fluxo de recuperação de senha é o tipo de falha primário a ser mitigado.\nA integração com o serviço de envio de e-mail transacional foi identificada como crítica, com tratamento de falhas de envio especificado por retry, fallback e notificação ao usuário.",
+        "confidence": 0.7086,
+        "context_element_id": 2771
+      },
+      {
+        "id": 13,
+        "name": "Operação de domínio ou caso de uso que o handler processa",
+        "value": [
+          "authenticate-user",
+          "send-notification"
+        ],
+        "method": "user-input",
+        "reasoning": "A submissão de nova senha é um domínio operação de autenticação.\nO e-mail de recuperação é um evento de notificação.",
+        "confidence": 0.8161,
+        "context_element_id": 2782
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 19,
+        "name": "Implementar rate limiting com throttling configurável por endpoint e amostragem de requisições em cenários de alta carga",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O sistema verifica o limite de requisições em 15 minutos, bloqueando temporariamente o e-mail ou o IP que atingiram o limite.\nA contagem de requisições em cache ou banco de dados é configurada com rate-limit.\nRequisição de recuperação é um recurso de alta demanda, e o limite de 10 por email e IP é ajustado conforme o uso.",
+        "confidence": 0.7513,
+        "context_element_id": 2860
+      },
+      {
+        "id": 20,
+        "name": "Configurar filas de prioridade para processar eventos críticos primeiro, estabelecendo políticas de priorização baseadas em SLA",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "E-mails de recuperação de senha são processados antes de outros tipos de e-mail, garantindo que a comunicação crítica seja entregue em tempo.",
+        "confidence": 0.9595,
+        "context_element_id": 2861
+      },
+      {
+        "id": 21,
+        "name": "Definir timeouts configuráveis para todas as operações críticas e monitorar orçamentos de tempo por transação/endpoint",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O prazo de 30 minutos para expirar o token reduz a janela de exposição, minimizando a chance de falha de autenticação.",
+        "confidence": 0.9123,
+        "context_element_id": 2863
+      },
+      {
+        "id": 22,
+        "name": "Implementar retry automático com exponential backoff, jitter e circuit breaker para prevenir falhas em cascata",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Repetir a tentativa em intervalos crescentes evita que o sistema se esvazie devido a falhas isoladas e mantém a operação em execução.",
+        "confidence": 0.8396,
+        "context_element_id": 2895
+      },
+      {
+        "id": 23,
+        "name": "Implementar validação rigorosa de entradas e prevenção de condições que levem a exceções",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Redefinição de senha é um ato de confiança que deve ser feito com segurança, e divergências entre campos são sinais de fraude.",
+        "confidence": 0.9198,
+        "context_element_id": 2909
+      },
+      {
+        "id": 24,
+        "name": "Definir metas de disponibilidade mensuráveis com SLA/SLO e monitoramento de conformidade",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem recuperação de senha disponível, bloqueados ficam sem acesso e a plataforma perde o prazo de SLA.",
+        "confidence": 0.9642,
+        "context_element_id": 2916
+      },
+      {
+        "id": 25,
+        "name": "Implementar autorização granular com RBAC, ABAC e ACLs baseada no princípio do menor privilégio e Zero Trust",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Repetição de solicitação de recuperação de senha para o mesmo usuário é o que expõe o sistema a tentativa de enumerar usuários, e a mensagem genérica evita que o usuário identifique o erro.",
+        "confidence": 0.7799,
+        "context_element_id": 2930
+      },
+      {
+        "id": 26,
+        "name": "Implementar criptografia robusta para dados em trânsito e em repouso usando algoritmos aprovados e gerenciamento seguro de chaves",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Token criptografado é o único meio de acesso a senha, e a entropia é o limite que protege contra força bruta.",
+        "confidence": 0.9769,
+        "context_element_id": 2933
+      },
+      {
+        "id": 27,
+        "name": "Alterar todas as configurações padrão do sistema, incluindo senhas, portas, protocolos e parâmetros de segurança",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Reiniciar o processo com a mesma senha já testada não serve para recuperar a senha; o usuário precisa confirmar a nova senha corretamente.",
+        "confidence": 0.7075,
+        "context_element_id": 2935
+      },
+      {
+        "id": 28,
+        "name": "Implementar validação rigorosa de entradas com sanitização, whitelists de caracteres permitidos e prevenção contra ataques de injeção",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Caracteres especiais são a única maneira de um número simples ser reconhecido como um número, e sem eles, o sistema não reconhece o número como tal.",
+        "confidence": 0.8139,
+        "context_element_id": 2936
+      },
+      {
+        "id": 29,
+        "name": "Configurar revogação automática de acesso para contas comprometidas com invalidação imediata de tokens e sessões ativas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Redefinição bem-sucedida de uma sessão JWT ativa é a única maneira de invalidar a sessão, e isso ocorre no momento exato da redefinição.",
+        "confidence": 0.9874,
+        "context_element_id": 2946
+      },
+      {
+        "id": 30,
+        "name": "Implementar bloqueio automático de recursos sob ataque com isolamento temporário e redirecionamento de tráfego",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Bloqueio temporário com indicação de tempo de espera é a reação automática a um ataque de rate limit, sem depender de uma decisão manual.",
+        "confidence": 0.8296,
+        "context_element_id": 2947
+      },
+      {
+        "id": 31,
+        "name": "Implementar validação de dados em múltiplas camadas com verificações de tipo, formato, faixa e regras de negócio antes da persistência",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Entrada malformada é rejeitada antes de chegar ao sistema, evitando que o erro se espalhe para o restante da operação.",
+        "confidence": 0.9216,
+        "context_element_id": 2954
+      },
+      {
+        "id": 32,
+        "name": "Gere automaticamente trilhas de auditoria capturando todas as operações críticas com timestamps, identificação do usuário, dados antes/depois e contexto da operação",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Recovery solicitação e redefinição concluídas são operações críticas que exigem registro completo e temporário.",
+        "confidence": 0.947,
+        "context_element_id": 3012
+      },
+      {
+        "id": 33,
+        "name": "Implemente logs de auditoria estruturados e centralizados que capturam todas as operações de negócio com correlação de transações e metadados de contexto",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O registro completo de cada operação de recuperação de senha, com timestamp, usuário, entidade e resultado, é o único registro que permite reconstruir o histórico de incidentes.",
+        "confidence": 0.9302,
+        "context_element_id": 3016
+      },
+      {
+        "id": 34,
+        "name": "Crie registros imutáveis usando tecnologias como blockchain, cadeias de hash ou armazenamento write-once-read-many (WORM) para garantir a integridade histórica",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Uma chave única e expirada é o que garante que o usuário não possa recuperar o acesso a partir de um registro já usado.",
+        "confidence": 0.8668,
+        "context_element_id": 3018
+      },
+      {
+        "id": 35,
+        "name": "Configure controles de privacidade rigorosos incluindo minimização de dados, anonimização automática, controles de acesso granulares e auditoria do uso de informações pessoais sensíveis",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Dados pessoais do usuário são tratados no fluxo de recuperação de senha, e a LGPD exige minimização de dados e proteção das informações pessoais.",
+        "confidence": 0.8487,
+        "context_element_id": 3075
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 44,
+        "name": "Modo de Recuperação",
+        "value": "recuperação automática",
+        "method": "internal-inference",
+        "reasoning": "A recuperação de senha é automática, com envio de um link de confirmação e expiração de tokens após certo período.",
+        "confidence": 0.7613,
+        "context_element_id": 4416
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 3,
+  "active": true,
+  "sourceId": 23962,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}

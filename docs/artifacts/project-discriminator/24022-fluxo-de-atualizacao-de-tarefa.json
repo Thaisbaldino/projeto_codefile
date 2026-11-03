@@ -1,0 +1,109 @@
+{
+  "id": 24022,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 18,
+        "name": "Critério ou dimensão que determina qual variante deve ser ativada",
+        "value": [
+          "user-role"
+        ],
+        "method": "internal-inference",
+        "reasoning": "A validação do identificador do responsável selecionado é baseada em seu papel de usuário, não em uma característica de role ou plan de assinatura.",
+        "confidence": 0.7203,
+        "context_element_id": 2687
+      },
+      {
+        "id": 19,
+        "name": "Principal entidade de domínio acessada por meio deste padrão",
+        "value": [
+          "contracts"
+        ],
+        "method": "user-input",
+        "reasoning": "A resposta do fluxo é o contrato, um entidade do domínio de contratos.",
+        "confidence": 0.7697,
+        "context_element_id": 2694
+      },
+      {
+        "id": 20,
+        "name": "Perfil ou papel de usuário que é o principal público-alvo da página",
+        "value": [
+          "content-editor"
+        ],
+        "method": "user-input",
+        "reasoning": "O editor é o único usuário que recebe a confirmação de sucesso, enquanto outros usuários veem as atualizações apenas ao recarregar a página ou ao próximo polling.",
+        "confidence": 0.7692,
+        "context_element_id": 2721
+      },
+      {
+        "id": 21,
+        "name": "Cadência de atualização esperada dos dados ou do estado visível na superfície",
+        "value": [
+          "near-real-time",
+          "periodic-refresh"
+        ],
+        "method": "user-input",
+        "reasoning": "A atualização de visualizações em tempo real é especificada, mas o mecanismo de execução não é detalhado.\nA consulta do cliente ao servidor é feita a cada 5 segundos, caracterizando cadência de atualização periódica.",
+        "confidence": 0.819,
+        "context_element_id": 2730
+      },
+      {
+        "id": 22,
+        "name": "Tipo específico de evento ou mensagem que está sendo comunicado",
+        "value": [
+          "TarefaEditada"
+        ],
+        "method": "internal-inference",
+        "reasoning": "O evento de domínio TarefaEditada é comunicado como evento de domínio TarefaEditada.",
+        "confidence": 0.7095,
+        "context_element_id": 2755
+      },
+      {
+        "id": 24,
+        "name": "SLA ou tolerância a falhas esperada",
+        "value": [
+          "99.9% uptime mensal",
+          "p99 de latência <= 500ms, p95 de 300ms, taxa de erro < 0.1%",
+          "latency p99 <= 500ms"
+        ],
+        "method": "user-input",
+        "reasoning": "A disponibilidade do fluxo de edição de tarefa é garantida com 99,9% de uptime mensal.\nO SLA exigido é de p99 de latência de 500ms, p95 de 300ms e taxa de erro de menos de 0.1% sob carga de 5.000 usuários simultâneos.\nA SLA exigida é que a latência p99 de edição de tarefa seja de 500ms ou menos.",
+        "confidence": 0.7683,
+        "context_element_id": 2772
+      }
+    ],
+    "best_practices": [],
+    "discriminators": [
+      {
+        "id": 1,
+        "name": "Separação CQRS",
+        "value": "true",
+        "method": "internal-inference",
+        "reasoning": "Os endpoints separados para PATCH e PUT representam uma separação CQRS entre leitura e escrita.",
+        "confidence": 0.8329,
+        "context_element_id": 1359
+      },
+      {
+        "id": 56,
+        "name": "Frequência de Atualização do Índice",
+        "value": "tempo real",
+        "method": "user-input",
+        "reasoning": "A atualização de visualizações em tempo real reflete as alterações sem recarregamento, caracterizando cadência real-time.",
+        "confidence": 0.8277,
+        "context_element_id": 4710
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 2,
+  "active": true,
+  "sourceId": 23986,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}

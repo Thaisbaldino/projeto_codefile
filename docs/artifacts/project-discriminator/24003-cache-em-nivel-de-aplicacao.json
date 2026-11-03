@@ -1,0 +1,217 @@
+{
+  "id": 24003,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 20,
+        "name": "Esgotamento de Recursos",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "O limite de 512 MB por instância de aplicação é o valor mínimo recomendado para evitar sobrecarga de memória.",
+        "confidence": 0.7629,
+        "context_element_id": 2812
+      },
+      {
+        "id": 22,
+        "name": "Observabilidade e Detecção",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem mecanismo de detecção, medição e alerta em tempo real, problemas de performance não são identificados em tempo útil, e a correção é feita depois.",
+        "confidence": 0.7914,
+        "context_element_id": 2814
+      },
+      {
+        "id": 24,
+        "name": "Configuração de Segurança",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem restrição, dados de um tenant são acessíveis por outro, e a divergência de chave ou erro de invalidação não é detectada.",
+        "confidence": 0.7558,
+        "context_element_id": 2828
+      },
+      {
+        "id": 25,
+        "name": "Retenção e Políticas",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem regra de evicção, dados frequentemente acessados são evitrados, o que pode violar a regra de privacidade de dados pessoais.",
+        "confidence": 0.8429,
+        "context_element_id": 2849
+      }
+    ],
+    "attributes": [
+      {
+        "id": 14,
+        "name": "Caso de uso específico para o qual o LLM será empregado",
+        "value": [
+          "Listagem de tarefas"
+        ],
+        "method": "user-input",
+        "reasoning": "A LRU é usada como padrão para a listagem de tarefas, o uso primário do LLM.",
+        "confidence": 0.773,
+        "context_element_id": 2733
+      },
+      {
+        "id": 16,
+        "name": "Tipo principal de falha ou degradação que o padrão deve mitigar",
+        "value": [
+          "cache-unavailable"
+        ],
+        "method": "user-input",
+        "reasoning": "Falha de cache (Redis indisponível ou in-memory corrompido) não deve impedir operação da aplicação; fallback automático para consulta ao banco de dados ocorre em <= 100ms.",
+        "confidence": 0.9149,
+        "context_element_id": 2771
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 26,
+        "name": "Definir timeouts configuráveis para todas as operações críticas e monitorar orçamentos de tempo por transação/endpoint",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem monitoramento de tempo, o cache seria refeito a cada requisição, consumindo recursos sem propósito.",
+        "confidence": 0.8722,
+        "context_element_id": 2863
+      },
+      {
+        "id": 27,
+        "name": "Implementar estratégias de cache em múltiplas camadas e replicação de dados críticos para melhorar o desempenho",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem cache, o banco de dados seria o único ponto de acesso, e o tempo de resposta seria o do banco de dados.",
+        "confidence": 0.8794,
+        "context_element_id": 2869
+      },
+      {
+        "id": 29,
+        "name": "Implementar monitoramento contínuo de métricas de sistema, aplicação e infraestrutura com alertas automáticos baseados em thresholds dinâmicos",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem disparar alerta quando o cache sobe, o problema só é notado quando já está fora do padrão.",
+        "confidence": 0.7997,
+        "context_element_id": 2879
+      },
+      {
+        "id": 30,
+        "name": "Implementar redundância em todos os componentes críticos, eliminando pontos únicos de falha",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem backup, a falha de um único ponto de falha deixa a operação parada e a integridade do sistema comprometida.",
+        "confidence": 0.887,
+        "context_element_id": 2912
+      },
+      {
+        "id": 32,
+        "name": "Usar checksums e funções de hash para verificar a integridade dos dados durante a transmissão e o armazenamento",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem o tenant_id como prefixo ou componente, dados de um tenant são retornados para requisição de outro, mesmo em caso de colisão de hash ou erro de invalidação.",
+        "confidence": 0.7426,
+        "context_element_id": 2955
+      },
+      {
+        "id": 35,
+        "name": "Configure limites máximos para filas de mensagens e buffers para evitar o crescimento descontrolado de recursos e dos custos associados",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem limite definido, o cache cresce sem controle, e o sistema fica sobrecarregado com dados que não são acessados.",
+        "confidence": 0.7625,
+        "context_element_id": 3029
+      },
+      {
+        "id": 36,
+        "name": "Implemente operações em lote para permitir que os usuários executem múltiplas ações semelhantes simultaneamente com uma única confirmação",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Uma requisição que não aguarda o resultado da primeira consulta é executada em paralelo, e a concorrência é o problema que se expõe.",
+        "confidence": 0.8252,
+        "context_element_id": 3044
+      },
+      {
+        "id": 37,
+        "name": "Configure controles de privacidade rigorosos incluindo minimização de dados, anonimização automática, controles de acesso granulares e auditoria do uso de informações pessoais sensíveis",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O cache armazena dados pessoais sensíveis, e a reação é redação em logs e monitoramento conforme a política de PII da observabilidade, sem exigir confirmação explícita.",
+        "confidence": 0.7779,
+        "context_element_id": 3075
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 2,
+        "name": "Propósito Operacional",
+        "value": "cache",
+        "method": "internal-inference",
+        "reasoning": "A LRU é usada como padrão de cache para a listagem de tarefas típica.",
+        "confidence": 0.7549,
+        "context_element_id": 1322
+      },
+      {
+        "id": 7,
+        "name": "Validação de Qualidade de Dados",
+        "value": "true",
+        "method": "user-input",
+        "reasoning": "A validação de TTL por tipo de cache é uma etapa explicitamente incluída no pipeline.",
+        "confidence": 0.7951,
+        "context_element_id": 1401
+      },
+      {
+        "id": 11,
+        "name": "Natureza da Operação",
+        "value": "operação de escrita",
+        "method": "user-input",
+        "reasoning": "O evento de escrita é de natureza operação de escrita, com identificação da entidade alterada, tipo de operação e tenant afetado.",
+        "confidence": 0.7764,
+        "context_element_id": 1974
+      },
+      {
+        "id": 12,
+        "name": "Estratégia de Processamento",
+        "value": "micro-lote",
+        "method": "user-input",
+        "reasoning": "Notificação de invalidação entre instâncias é processada em micro-batch, com latência de sincronização de até 100ms.",
+        "confidence": 0.8463,
+        "context_element_id": 1984
+      },
+      {
+        "id": 42,
+        "name": "Armazenamento de Resultados",
+        "value": "resposta de API",
+        "method": "user-input",
+        "reasoning": "O resultado é retornado imediatamente em cache, sem consultar o banco de dados, caracterizando resposta API.",
+        "confidence": 0.8776,
+        "context_element_id": 4328
+      },
+      {
+        "id": 46,
+        "name": "Cache de Respostas",
+        "value": "true",
+        "method": "user-input",
+        "reasoning": "A resposta é retornada imediatamente em cache, sem consultar o banco de dados, caracterizando cache de resposta.",
+        "confidence": 0.9528,
+        "context_element_id": 4624
+      },
+      {
+        "id": 47,
+        "name": "Tipo de Interação",
+        "value": "somente leitura",
+        "method": "user-input",
+        "reasoning": "A requisição de leitura (listagem, filtro, pesquisa, ordenação e paginação) é de leitura, sem interação direta do usuário.",
+        "confidence": 0.8247,
+        "context_element_id": 4868
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 5,
+  "active": true,
+  "sourceId": 23752,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}

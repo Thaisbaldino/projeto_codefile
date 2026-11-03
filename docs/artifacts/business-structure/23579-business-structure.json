@@ -1,0 +1,53 @@
+{
+  "id": 23579,
+  "projectId": 4118,
+  "type": "business_structure",
+  "content": {
+    "modules": [
+      {
+        "id": 1,
+        "name": "Gestão de Usuários e Organizações",
+        "capabilities": [
+          {
+            "id": 2,
+            "name": "Cadastro e Configuração de Usuários"
+          },
+          {
+            "id": 3,
+            "name": "Autenticação e Controle de Acesso"
+          },
+          {
+            "id": 4,
+            "name": "Provisionamento de Tenants"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "name": "Gerenciamento de Tarefas",
+        "capabilities": [
+          {
+            "id": 6,
+            "name": "Criação e Atribuição de Tarefas"
+          },
+          {
+            "id": 7,
+            "name": "Acompanhamento e Atualização de Tarefas"
+          },
+          {
+            "id": 8,
+            "name": "Visualização de Tarefas"
+          }
+        ]
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": null,
+  "sourceType": null,
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-10T20:17:37.472Z",
+  "updatedAt": null
+}

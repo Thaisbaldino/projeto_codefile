@@ -1,0 +1,145 @@
+{
+  "id": 23956,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 18,
+        "name": "Proteção de Dados e Vazamento",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem proteção adequada, dados pessoais e sensíveis armazenados em banco de dados são expostos indevidamente, o que resulta em violação de privacidade, multas severas e perda de confiança do cliente.",
+        "confidence": 0.9304,
+        "context_element_id": 2826
+      }
+    ],
+    "attributes": [
+      {
+        "id": 9,
+        "name": "Framework regulatório ou compliance que a regra deve atender",
+        "value": [
+          "FIPS 140-2 Level 1"
+        ],
+        "method": "user-input",
+        "reasoning": "A implementação atende ao FIPS 140-2 Level 1, com algoritmos aprovados e sem requisitos de hardware específico, para conformidade regulatória.",
+        "confidence": 0.7593,
+        "context_element_id": 2699
+      },
+      {
+        "id": 15,
+        "name": "Frameworks regulatórios ou padrões de compliance que devem ser atendidos",
+        "value": [
+          "FIPS 140-2 Level 1"
+        ],
+        "method": "user-input",
+        "reasoning": "A implementação atende ao FIPS 140-2 Level 1, com algoritmos aprovados e sem requisitos de hardware específico, para conformidade regulatória.",
+        "confidence": 0.9204,
+        "context_element_id": 2801
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 22,
+        "name": "Configurar a detecção de atrasos suspeitos de mensagens com timestamps e análise temporal para identificar ataques de replay",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Repetição de tentativa de login é identificada por tempo de resposta diferente, não por diferença de entrada.",
+        "confidence": 0.7599,
+        "context_element_id": 2924
+      },
+      {
+        "id": 25,
+        "name": "Automatizar práticas de segurança com deployment seguro, varredura de vulnerabilidades e aplicação consistente de políticas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem rastreio de quem acessou o que, o acesso não é reconhecido nem reprovado, e a perda de chaves é silenciosa.",
+        "confidence": 0.9002,
+        "context_element_id": 2937
+      },
+      {
+        "id": 26,
+        "name": "Garantir confidencialidade com controles de acesso granulares baseados na classificação dos dados e no princípio need-to-know",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem controle de quem acessa o que, o acesso não é reconhecido nem reprovado, e a perda de chaves é silenciosa.",
+        "confidence": 0.7963,
+        "context_element_id": 2939
+      },
+      {
+        "id": 27,
+        "name": "Implementar não repúdio para ações críticas usando assinaturas digitais e timestamps criptográficos auditáveis",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem trilha de auditoria, a prova de que o dado foi alterado ou exposto é apenas a confirmação de quem o fez.",
+        "confidence": 0.7914,
+        "context_element_id": 2941
+      },
+      {
+        "id": 28,
+        "name": "Garantir a autenticidade de identidades e origens usando certificados digitais, PKI e validação de cadeia de confiança (chain-of-trust)",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Certificado vencido ou alterado é aceito sem que ninguém saiba, e a confiança é quebrada quando alguém confia em um documento que não existe.",
+        "confidence": 0.9492,
+        "context_element_id": 2943
+      },
+      {
+        "id": 30,
+        "name": "Usar checksums e funções de hash para verificar a integridade dos dados durante a transmissão e o armazenamento",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem confirmação de token, o sistema aceita tentativa de invasão e a senha é usada para acessar o sistema.",
+        "confidence": 0.9128,
+        "context_element_id": 2955
+      },
+      {
+        "id": 31,
+        "name": "Implemente operações idempotentes que podem ser executadas múltiplas vezes sem efeitos colaterais",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A operação de hash de senha é determinística apenas em relação ao salt fornecido, com cada nova senha gerando um novo salt aleatório, garantindo que o mesmo texto simples em cada tentativa de autenticação produza hashes diferentes.",
+        "confidence": 0.7771,
+        "context_element_id": 2968
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 7,
+        "name": "Padrão de Interação",
+        "value": "requisição-resposta síncrona",
+        "method": "internal-inference",
+        "reasoning": "A requisição POST /api/auth/login retorna um payload estruturado em JSON, com acesso e expiração de token, em uma resposta síncrona.",
+        "confidence": 0.8551,
+        "context_element_id": 1975
+      },
+      {
+        "id": 37,
+        "name": "Estratégia de Erros",
+        "value": "mecanismo de retentativa",
+        "method": "user-input",
+        "reasoning": "A redefinição de senha é rejeitada com erro 'token already used' ou 'token invalid', caracterizando um mecanismo de reavaliação de tentativa de redefinição.",
+        "confidence": 0.8317,
+        "context_element_id": 4207
+      },
+      {
+        "id": 39,
+        "name": "Estratégia de Tokens",
+        "value": "somente primitivo",
+        "method": "user-input",
+        "reasoning": "O gerador de token é criptograficamente seguro com crypto.randomBytes ou equivalente, sem estratégia de tokenização mais avançada.",
+        "confidence": 0.8799,
+        "context_element_id": 4979
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 4,
+  "active": true,
+  "sourceId": 23656,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T14:58:49.768Z",
+  "updatedAt": null
+}

@@ -1,0 +1,283 @@
+{
+  "id": 24040,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 14,
+        "name": "Autenticação e Controle de Acesso",
+        "method": "internal-inference",
+        "reasoning": "Sem rate limiting, um ataque de login explícito pode levar a acesso precário a dados sensíveis ou ações privilegiadas.",
+        "confidence": 0.8373,
+        "context_element_id": 2824
+      },
+      {
+        "id": 15,
+        "name": "Vulnerabilidades de Dependências e Endpoints",
+        "method": "user-input",
+        "reasoning": "Dependências quebradas por falha de atualização deixam a aplicação exposta a ataques conhecidos, e a manutenção manual é uma tarefa difícil e custosa.",
+        "confidence": 0.8461,
+        "context_element_id": 2827
+      }
+    ],
+    "attributes": [],
+    "best_practices": [
+      {
+        "id": 16,
+        "name": "Implementar retry automático com exponential backoff, jitter e circuit breaker para prevenir falhas em cascata",
+        "method": "user-input",
+        "reasoning": "A mensagem é reprocessada a cada falha, e o backoff exponencial evita que o sistema se encontre com uma fila cheia.",
+        "confidence": 0.8647,
+        "context_element_id": 2895
+      },
+      {
+        "id": 17,
+        "name": "Implementar validação rigorosa de entradas e prevenção de condições que levem a exceções",
+        "method": "user-input",
+        "reasoning": "Sem validação consistente, a entrada de dados quebra a integridade do sistema e a confiabilidade do back-end.",
+        "confidence": 0.7804,
+        "context_element_id": 2909
+      },
+      {
+        "id": 18,
+        "name": "Gerenciar mudanças por meio de automação com pipelines CI/CD e deployment automatizado",
+        "method": "user-input",
+        "reasoning": "Repositórios GitHub são o ambiente de execução, e a autenticação e as múltiplas entidades do projeto são as regras de negócio a serem seguradas.",
+        "confidence": 0.9824,
+        "context_element_id": 2919
+      },
+      {
+        "id": 19,
+        "name": "Implementar autorização granular com RBAC, ABAC e ACLs baseada no princípio do menor privilégio e Zero Trust",
+        "method": "user-input",
+        "reasoning": "Sem separação de acesso, um ataque a um tenant poderia propagar para outros, e a responsabilidade de cada entidade seria questionada.",
+        "confidence": 0.8091,
+        "context_element_id": 2930
+      },
+      {
+        "id": 20,
+        "name": "Implementar criptografia robusta para dados em trânsito e em repouso usando algoritmos aprovados e gerenciamento seguro de chaves",
+        "method": "user-input",
+        "reasoning": "Segredos sensíveis armazenados em HashiCorp Vault são protegidos por referência, não por chaves ou credenciais expostas diretamente.",
+        "confidence": 0.9091,
+        "context_element_id": 2933
+      },
+      {
+        "id": 21,
+        "name": "Estabelecer isolamento entre entidades usando containerização, virtualização e separação de ambientes por criticidade",
+        "method": "user-input",
+        "reasoning": "Ambientes de teste e produção precisam ter a mesma configuração para que o resultado seja comparável, e isso só se consegue com separação de entidade.",
+        "confidence": 0.8126,
+        "context_element_id": 2934
+      },
+      {
+        "id": 22,
+        "name": "Automatizar práticas de segurança com deployment seguro, varredura de vulnerabilidades e aplicação consistente de políticas",
+        "method": "user-input",
+        "reasoning": "Regras de segurança e conformidade são testadas automaticamente, sem depender de intervenção manual.",
+        "confidence": 0.7826,
+        "context_element_id": 2937
+      },
+      {
+        "id": 23,
+        "name": "Manter accountability com rastreabilidade completa das ações por ator, incluindo contexto temporal e origem da requisição",
+        "method": "user-input",
+        "reasoning": "Sem rastreabilidade de erro em produção, a responsabilidade é atribuída a quem não pode ser identificado, e a correção só aparece depois de meses.",
+        "confidence": 0.8333,
+        "context_element_id": 2942
+      },
+      {
+        "id": 24,
+        "name": "Implementar validação de dados em múltiplas camadas com verificações de tipo, formato, faixa e regras de negócio antes da persistência",
+        "method": "user-input",
+        "reasoning": "Entrada de dados é testada em múltiplas camadas antes de chegar ao banco, garantindo consistência entre React Hook Form e NestJS.",
+        "confidence": 0.959,
+        "context_element_id": 2954
+      },
+      {
+        "id": 25,
+        "name": "Implemente versionamento de esquema com numeração sequencial e políticas de compatibilidade para evolução controlada",
+        "method": "user-input",
+        "reasoning": "Sem controle de versão, alterações em esquema e banco de dados se confundem, e a integração entre ambas não funciona.",
+        "confidence": 0.8336,
+        "context_element_id": 2961
+      },
+      {
+        "id": 26,
+        "name": "Abstraia serviços comuns em componentes reutilizáveis para reduzir a duplicação de código e as dependências cruzadas",
+        "method": "user-input",
+        "reasoning": "Reutilizar o mesmo código em múltiplas partes do sistema é uma prática que evita repetição e torna o código mais limpo e fácil de manter.",
+        "confidence": 0.7821,
+        "context_element_id": 2978
+      },
+      {
+        "id": 27,
+        "name": "Projete para substituição de componentes em tempo de execução sem interrupção do sistema",
+        "method": "internal-inference",
+        "reasoning": "Sem interrupção do sistema, a equipe pode testar o desenvolvimento em tempo real, sem precisar parar o build para ver o que mudou.",
+        "confidence": 0.9375,
+        "context_element_id": 2986
+      },
+      {
+        "id": 28,
+        "name": "Implemente interfaces de teste especializadas que permitam acesso a estados internos e controle de comportamento",
+        "method": "user-input",
+        "reasoning": "Sem testes de integração, qualquer alteração na estrutura desses endpoints pode causar falhas que não sejam detectadas até que o sistema seja testado.",
+        "confidence": 0.8414,
+        "context_element_id": 2990
+      },
+      {
+        "id": 29,
+        "name": "Projete componentes testáveis de forma independente com interfaces claras e dependências explícitas",
+        "method": "internal-inference",
+        "reasoning": "Sem testes separados, qualquer alteração em uma parte do sistema afeta diretamente a outra, e a equipe não consegue identificar o impacto.",
+        "confidence": 0.8244,
+        "context_element_id": 2996
+      },
+      {
+        "id": 30,
+        "name": "Garanta a analisabilidade por meio de código legível, estrutura compreensível e documentação adequada",
+        "method": "user-input",
+        "reasoning": "Sem um padrão de estilo fixo, cada revisor tem que entender o que cada campo representa, o que torna a revisão de código mais lenta e menos confiável.",
+        "confidence": 0.7815,
+        "context_element_id": 3005
+      },
+      {
+        "id": 31,
+        "name": "Automatize as verificações de conformidade por meio de pipelines de CI/CD e scanners que validam configurações, código e dependências contra padrões regulatórios",
+        "method": "user-input",
+        "reasoning": "Regras de segurança e conformidade LGPD exigem que o código seja verificado automaticamente, não apenas manualmente.",
+        "confidence": 0.847,
+        "context_element_id": 3011
+      },
+      {
+        "id": 32,
+        "name": "Use padrões e componentes consistentes por meio de design systems e bibliotecas compartilhadas para garantir a uniformidade da experiência",
+        "method": "internal-inference",
+        "reasoning": "Cada ícone é o mesmo em todas as tabelas e cartões, sem que cada um tenha seu próprio design, garantindo consistência visual.",
+        "confidence": 0.9666,
+        "context_element_id": 3056
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 3,
+        "name": "Estratégia de ORM",
+        "value": "ORM completo",
+        "method": "user-input",
+        "reasoning": "O Repositório de Tarefas e Repositório de Usuários e Tenants usa Prisma como ORM com migrações, type-safety e suporte a PostgreSQL.",
+        "confidence": 0.8001,
+        "context_element_id": 1364
+      },
+      {
+        "id": 8,
+        "name": "Arquitetura de Gateway",
+        "value": "padrão BFF",
+        "method": "user-input",
+        "reasoning": "O reverse proxy Nginx é usado para roteamento, SSL termination e serving de assets estáticos, caracterizando um padrão de intermediador de gateway (bff-pattern).",
+        "confidence": 0.7866,
+        "context_element_id": 1942
+      },
+      {
+        "id": 37,
+        "name": "Padrão de Handler",
+        "value": "orquestrador fachada",
+        "method": "user-input",
+        "reasoning": "A Unidade de Processamento Backend orquestra handlers temáticos e workers assíncronos, caracterizando um orçamento de facade-orchestrador.",
+        "confidence": 0.8948,
+        "context_element_id": 4202
+      },
+      {
+        "id": 42,
+        "name": "Nível de Automação",
+        "value": "totalmente automatizado",
+        "method": "internal-inference",
+        "reasoning": "Auto-Animate adiciona transições de layout automaticamente, sem necessidade de configuração manual.",
+        "confidence": 0.78,
+        "context_element_id": 4533
+      },
+      {
+        "id": 43,
+        "name": "Isolamento de Testes",
+        "value": "integrado ao sistema",
+        "method": "user-input",
+        "reasoning": "Os endpoints REST expostos pelo Handler de Usuários e Organizações e pelo Handler de Tarefas são integrados ao sistema, exigindo testes de integração.",
+        "confidence": 0.8056,
+        "context_element_id": 4534
+      },
+      {
+        "id": 46,
+        "name": "Estilo de Integração",
+        "value": "nativo da plataforma",
+        "method": "user-input",
+        "reasoning": "A plataforma é uma aplicação web SPA, reativa e reutilizável, alinhada ao ecossistema TypeScript e às bibliotecas de drag-and-drop necessárias para o Kanban.",
+        "confidence": 0.8397,
+        "context_element_id": 4827
+      },
+      {
+        "id": 48,
+        "name": "Nível de Acesso",
+        "value": "público",
+        "method": "user-input",
+        "reasoning": "A tarefa, usuários e tenants são rotas públicas da aplicação.",
+        "confidence": 0.8074,
+        "context_element_id": 4866
+      },
+      {
+        "id": 49,
+        "name": "Arquitetura de Roteamento",
+        "value": "aplicação de página única",
+        "method": "user-input",
+        "reasoning": "O projeto é um single-page application, com frontend e backend em TypeScript em um monorepo.",
+        "confidence": 0.7213,
+        "context_element_id": 4908
+      },
+      {
+        "id": 50,
+        "name": "Modelo de Zona de Acesso",
+        "value": "misto público e protegido",
+        "method": "user-input",
+        "reasoning": "A aplicação web é protegida e acessível em ambas as regiões, com múltiplas rotas protegidas e públicas.",
+        "confidence": 0.8854,
+        "context_element_id": 4910
+      },
+      {
+        "id": 52,
+        "name": "Complexidade da UI",
+        "value": "complexo",
+        "method": "user-input",
+        "reasoning": "O Shadcn/ui oferece componentes acessíveis e customizáveis para tabelas, modais, formulários e painéis Kanban, caracterizando uma interface de complexidade.",
+        "confidence": 0.7076,
+        "context_element_id": 4946
+      },
+      {
+        "id": 53,
+        "name": "Abordagem de Estilização",
+        "value": "utility first",
+        "method": "user-input",
+        "reasoning": "Tailwind CSS fornece o sistema de design utilitário necessário para estilizar as telas densas de lista, Kanban e formulários de forma consistente e responsiva.",
+        "confidence": 0.9834,
+        "context_element_id": 4980
+      },
+      {
+        "id": 55,
+        "name": "Impacto no Usuário",
+        "value": "somente backend",
+        "method": "internal-inference",
+        "reasoning": "O projeto é desenvolvido em NestJS, um framework de back-end, sem impacto direto na interface do usuário.",
+        "confidence": 0.839,
+        "context_element_id": 5099
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 24029,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:42:53.755Z",
+  "updatedAt": null
+}

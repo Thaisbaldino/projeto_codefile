@@ -1,0 +1,1101 @@
+{
+  "id": 23639,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 87,
+          "name": "Valores escalares para cálculo",
+          "format": "Primitivos JavaScript (string, number, Date, boolean)",
+          "origin": "Handlers, Fluxos de Negócio, Regras",
+          "trigger": null
+        },
+        {
+          "id": 88,
+          "name": "Entidades de domínio (Task, User, Tenant)",
+          "format": "Objetos de entidade com estrutura definida no domínio",
+          "origin": "Repositórios de dados, Handlers",
+          "trigger": null
+        },
+        {
+          "id": 89,
+          "name": "Configurações e parâmetros de localização",
+          "format": "Strings (locale, timezone) e números (duração em minutos)",
+          "origin": "Contexto de requisição, Configuração de aplicação",
+          "trigger": null
+        }
+      ],
+      "outputs": [
+        {
+          "id": 97,
+          "name": "Valores booleanos de validação",
+          "format": "boolean (true/false)",
+          "destination": "Handlers, Fluxos de Negócio, Regras"
+        },
+        {
+          "id": 98,
+          "name": "Valores calculados e transformados",
+          "format": "Strings, números, objetos Date, hashes criptográficos",
+          "destination": "Handlers, Repositórios de dados"
+        },
+        {
+          "id": 99,
+          "name": "DTOs prontos para serialização",
+          "format": "Objetos JSON com estrutura normalizada",
+          "destination": "API, Camada de apresentação"
+        },
+        {
+          "id": 100,
+          "name": "Conteúdo formatado para exibição",
+          "format": "Strings formatadas (datas localizadas, HTML)",
+          "destination": "Interface do usuário, Serviço de e-mail"
+        },
+        {
+          "id": 101,
+          "name": "Tokens e valores aleatórios seguros",
+          "format": "Strings hexadecimais ou base64",
+          "destination": "Repositórios de dados, Camada de sessão"
+        }
+      ],
+      "processing": [
+        {
+          "id": 90,
+          "step": "Validação de entrada",
+          "description": "Valida formato e conteúdo de valores de entrada (email, prioridade, status, slug de tenant) antes de processamento."
+        },
+        {
+          "id": 91,
+          "step": "Cálculo temporal",
+          "description": "Realiza operações de comparação e cálculo de datas (verificação de atraso, cálculo de expiração de sessão)."
+        },
+        {
+          "id": 92,
+          "step": "Transformação criptográfica",
+          "description": "Aplica algoritmos de hash seguro (argon2id para senhas, SHA-256 para tokens) para armazenamento seguro."
+        },
+        {
+          "id": 93,
+          "step": "Geração de valores seguros",
+          "description": "Gera tokens criptograficamente seguros e valores aleatórios com entropia suficiente."
+        },
+        {
+          "id": 94,
+          "step": "Transformação de estrutura de dados",
+          "description": "Converte entidades de domínio em DTOs, normalizando formatos e removendo dados sensíveis."
+        },
+        {
+          "id": 95,
+          "step": "Normalização de texto",
+          "description": "Sanitiza e normaliza strings (títulos de tarefas, nomes de níveis hierárquicos) removendo caracteres inválidos e espaços excessivos."
+        },
+        {
+          "id": 96,
+          "step": "Geração de conteúdo formatado",
+          "description": "Produz strings formatadas para exibição (datas localizadas) e conteúdo de e-mail (HTML com links e informações)."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 102,
+        "category": "validation",
+        "description": "Toda entrada de e-mail deve estar em formato válido (RFC 5322 simplificado) antes de ser persistida ou utilizada em operações de autenticação.",
+        "enforcement": "code",
+        "verification": "Função validateEmail retorna false para formatos inválidos; testes unitários cobrem casos válidos e inválidos (ex: 'user@domain.com' vs 'invalid.email')."
+      },
+      {
+        "id": 103,
+        "category": "validation",
+        "description": "Toda senha deve ter comprimento mínimo de 8 caracteres e atingir score de complexidade mínimo de 50 pontos antes de ser aceita.",
+        "enforcement": "code",
+        "verification": "Função validatePasswordComplexity retorna false para senhas abaixo do threshold; testes unitários validam senhas fracas, médias e fortes."
+      },
+      {
+        "id": 104,
+        "category": "validation",
+        "description": "Toda prioridade de tarefa deve corresponder a um dos valores fixos definidos pelo sistema (ex: Baixa, Média, Alta, Urgente) antes de ser persistida.",
+        "enforcement": "code",
+        "verification": "Função validateTaskPriority retorna false para valores fora do conjunto permitido; testes unitários cobrem todos os valores válidos e inválidos."
+      },
+      {
+        "id": 105,
+        "category": "validation",
+        "description": "Todo status de tarefa deve corresponder a um dos status fixos definidos pelo sistema antes de ser persistido.",
+        "enforcement": "code",
+        "verification": "Função validateTaskStatus retorna false para valores fora do conjunto permitido; testes unitários cobrem todos os status válidos e inválidos."
+      },
+      {
+        "id": 106,
+        "category": "validation",
+        "description": "Todo slug de tenant deve respeitar o padrão de formato permitido (letras minúsculas, números e hífens, sem espaços ou caracteres especiais) antes de ser persistido.",
+        "enforcement": "code",
+        "verification": "Função validateTenantSlug retorna false para formatos inválidos; testes unitários cobrem slugs válidos e inválidos."
+      },
+      {
+        "id": 107,
+        "category": "compliance",
+        "description": "Toda senha deve ser armazenada exclusivamente em formato de hash seguro utilizando argon2id com parâmetros: m=65536 KiB, t=3 iterações, p=4 paralelismo, comprimento de hash=32 bytes. Nunca em texto simples ou formato reversível.",
+        "enforcement": "code",
+        "verification": "Função hashPassword utiliza argon2id com parâmetros especificados; testes de segurança verificam que hashes não são reversíveis e que senhas diferentes produzem hashes diferentes."
+      },
+      {
+        "id": 108,
+        "category": "compliance",
+        "description": "Todo token de recuperação de senha deve ser gerado com entropia mínima de 128 bits utilizando gerador criptograficamente seguro do sistema operacional.",
+        "enforcement": "code",
+        "verification": "Função generateSecureToken utiliza crypto.randomBytes com comprimento mínimo de 16 bytes (128 bits); testes de segurança verificam distribuição aleatória e impossibilidade de previsão."
+      },
+      {
+        "id": 109,
+        "category": "compliance",
+        "description": "Todo token de recuperação de senha deve ser armazenado em banco de dados exclusivamente em formato de hash seguro, nunca em texto simples.",
+        "enforcement": "code",
+        "verification": "Função hashToken aplica SHA-256 ao token antes de armazenamento; testes verificam que tokens expostos no banco não podem ser utilizados diretamente."
+      },
+      {
+        "id": 110,
+        "category": "compliance",
+        "description": "Toda transformação de entidade User para DTO deve remover dados sensíveis (hash de senha, tokens) antes de serialização para API.",
+        "enforcement": "code",
+        "verification": "Função transformUserToDTO omite campos sensíveis; testes unitários verificam que DTO não contém senhas, tokens ou dados pessoais não necessários."
+      },
+      {
+        "id": 111,
+        "category": "invariant",
+        "description": "Toda data de atraso de tarefa deve ser calculada no servidor (backend) para garantir consistência independente do fuso horário ou dispositivo do cliente.",
+        "enforcement": "code",
+        "verification": "Função isDateOverdue utiliza data/hora do servidor; testes verificam que resultado é consistente independentemente da localização do cliente."
+      },
+      {
+        "id": 112,
+        "category": "idempotency",
+        "description": "Toda transformação de entidade para DTO deve ser idempotente: aplicar a transformação múltiplas vezes ao mesmo objeto deve produzir o mesmo resultado.",
+        "enforcement": "code",
+        "verification": "Funções transformTaskToDTO e transformUserToDTO não modificam estado externo; testes verificam que múltiplas invocações produzem resultados idênticos."
+      },
+      {
+        "id": 113,
+        "category": "validation",
+        "description": "Todo título de tarefa deve ter comprimento máximo de 255 caracteres e ser sanitizado removendo caracteres de controle antes de persistência.",
+        "enforcement": "code",
+        "verification": "Função sanitizeTaskTitle trunca ao máximo e remove caracteres inválidos; testes unitários cobrem títulos válidos, muito longos e com caracteres especiais."
+      },
+      {
+        "id": 114,
+        "category": "validation",
+        "description": "Todo nome de nível hierárquico deve ter comprimento máximo de 100 caracteres e ser normalizado removendo espaços excessivos antes de persistência.",
+        "enforcement": "code",
+        "verification": "Função normalizeHierarchyLevelName trunca ao máximo e normaliza espaços; testes unitários cobrem nomes válidos, muito longos e com espaçamento irregular."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "O Toolkit de Suporte Técnico é um conjunto estruturado de utilitários reutilizáveis e passivos que fornece operações de cálculo temporal, transformação de dados (DTOs de tarefas e usuários), validação de entrada, criptografia de senhas, geração de tokens seguros e manipulação de formatos de dados. Esses utilitários são invocados sob demanda por handlers, fluxos de negócio e regras, sem possuir ciclo de vida ou execução autônoma próprios, servindo como camada de suporte técnico compartilhada entre múltiplos componentes da plataforma."
+    },
+    "definition": {
+      "params": [
+        {
+          "id": 74,
+          "name": "argon2id_memory_cost_kib",
+          "value": "65536"
+        },
+        {
+          "id": 75,
+          "name": "argon2id_iterations",
+          "value": "3"
+        },
+        {
+          "id": 76,
+          "name": "argon2id_parallelism",
+          "value": "4"
+        },
+        {
+          "id": 77,
+          "name": "argon2id_hash_length_bytes",
+          "value": "32"
+        },
+        {
+          "id": 78,
+          "name": "verification_token_length_bytes",
+          "value": "32"
+        },
+        {
+          "id": 79,
+          "name": "min_entropy_threshold_bits",
+          "value": "128"
+        },
+        {
+          "id": 80,
+          "name": "password_min_length",
+          "value": "8"
+        },
+        {
+          "id": 81,
+          "name": "password_complexity_minimum_score",
+          "value": "50"
+        },
+        {
+          "id": 82,
+          "name": "session_duration_minutes",
+          "value": "480"
+        },
+        {
+          "id": 83,
+          "name": "password_reset_token_expiration_minutes",
+          "value": "60"
+        },
+        {
+          "id": 84,
+          "name": "task_title_max_length",
+          "value": "255"
+        },
+        {
+          "id": 85,
+          "name": "hierarchy_level_name_max_length",
+          "value": "100"
+        },
+        {
+          "id": 86,
+          "name": "tenant_slug_pattern",
+          "value": "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$"
+        }
+      ],
+      "exports": [
+        {
+          "id": 2,
+          "name": "isDateOverdue",
+          "notes": "Utilizado para identificar tarefas com prazo vencido. A comparação é realizada no servidor para garantir consistência independente do fuso horário do cliente.",
+          "signature": "isDateOverdue(targetDate: Date, referenceDate?: Date): boolean",
+          "preconditions": [
+            {
+              "id": 3,
+              "condition": "targetDate deve ser uma instância válida de Date ou string em formato ISO 8601"
+            },
+            {
+              "id": 4,
+              "condition": "referenceDate, se fornecida, deve ser uma instância válida de Date ou string em formato ISO 8601"
+            }
+          ],
+          "postconditions": [
+            {
+              "id": 5,
+              "condition": "retorna true se targetDate é anterior à data de referência (padrão: data/hora atual do servidor), false caso contrário"
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "name": "formatDateForDisplay",
+          "notes": "Utilizado para exibir datas de prazo e criação de tarefas na interface do usuário, respeitando preferências de localização.",
+          "signature": "formatDateForDisplay(date: Date, locale: string): string",
+          "preconditions": [
+            {
+              "id": 7,
+              "condition": "date deve ser uma instância válida de Date"
+            },
+            {
+              "id": 8,
+              "condition": "locale deve ser um código de localização válido (ex: 'pt-BR', 'en-US')"
+            }
+          ],
+          "postconditions": [
+            {
+              "id": 9,
+              "condition": "retorna string formatada da data de acordo com a localização especificada"
+            }
+          ]
+        },
+        {
+          "id": 10,
+          "name": "hashPassword",
+          "notes": "Utilizado durante cadastro de usuário e redefinição de senha. Nunca armazena ou retorna a senha em texto simples.",
+          "throws": [
+            {
+              "id": 13,
+              "error_name": "InvalidPasswordError"
+            },
+            {
+              "id": 14,
+              "error_name": "HashingError"
+            }
+          ],
+          "signature": "hashPassword(plainPassword: string): Promise<string>",
+          "preconditions": [
+            {
+              "id": 11,
+              "condition": "plainPassword deve ser uma string não vazia com comprimento mínimo de 8 caracteres"
+            }
+          ],
+          "postconditions": [
+            {
+              "id": 12,
+              "condition": "retorna Promise que resolve para hash seguro da senha utilizando argon2id"
+            }
+          ]
+        },
+        {
+          "id": 15,
+          "name": "verifyPassword",
+          "notes": "Utilizado durante autenticação de usuário para validar credenciais sem expor a senha em texto simples.",
+          "signature": "verifyPassword(plainPassword: string, hashedPassword: string): Promise<boolean>",
+          "preconditions": [
+            {
+              "id": 16,
+              "condition": "plainPassword deve ser uma string não vazia"
+            },
+            {
+              "id": 17,
+              "condition": "hashedPassword deve ser um hash válido gerado por hashPassword"
+            }
+          ],
+          "postconditions": [
+            {
+              "id": 18,
+              "condition": "retorna Promise que resolve para true se a senha corresponde ao hash, false caso contrário"
+            }
+          ]
+        },
+        {
+          "id": 19,
+          "name": "generateSecureToken",
+          "notes": "Utilizado para gerar tokens de recuperação de senha e tokens de sessão. Utiliza gerador criptograficamente seguro do sistema operacional.",
+          "signature": "generateSecureToken(length?: number): string",
+          "preconditions": [
+            {
+              "id": 20,
+              "condition": "length, se fornecido, deve ser um inteiro positivo entre 16 e 256"
+            }
+          ],
+          "postconditions": [
+            {
+              "id": 21,
+              "condition": "retorna string de token criptograficamente seguro com entropia suficiente para resistir a ataques de força bruta"
+            }
+          ]
+        },
+        {
+          "id": 22,
+          "name": "hashToken",
+          "notes": "Utilizado para armazenar tokens de recuperação de senha de forma segura, impedindo que exposição do banco de dados comprometa os tokens.",
+          "signature": "hashToken(token: string): string",
+          "preconditions": [
+            {
+              "id": 23,
+              "condition": "token deve ser uma string não vazia"
+            }
+          ],
+          "postconditions": [
+            {
+              "id": 24,
+              "condition": "retorna hash seguro do token para armazenamento em banco de dados"
+            }
+          ]
+        },
+        {
+          "id": 25,
+          "name": "validateEmail",
+          "notes": "Utilizado para validação de entrada em formulários de cadastro, edição de perfil e login. Valida apenas o formato, não a existência da caixa de correio.",
+          "signature": "validateEmail(email: string): boolean",
+          "preconditions": [
+            {
+              "id": 26,
+              "condition": "email deve ser uma string não vazia"
+            }
+          ],
+          "postconditions": [
+            {
+              "id": 27,
+              "condition": "retorna true se o email está em formato válido, false caso contrário"
+            }
+          ]
+        },
+        {
+          "id": 28,
+          "name": "sanitizeTaskTitle",
+          "notes": "Utilizado para normalizar títulos de tarefas antes da persistência, removendo caracteres de controle e espaços excessivos.",
+          "signature": "sanitizeTaskTitle(title: string, maxLength?: number): string",
+          "preconditions": [
+            {
+              "id": 29,
+              "condition": "title deve ser uma string não vazia"
+            },
+            {
+              "id": 30,
+              "condition": "maxLength, se fornecido, deve ser um inteiro positivo (padrão: 255)"
+            }
+          ],
+          "postconditions": [
+            {
+              "id": 31,
+              "condition": "retorna string sanitizada, truncada ao comprimento máximo, com espaços em branco normalizados"
+            }
+          ]
+        },
+        {
+          "id": 32,
+          "name": "transformTaskToDTO",
+          "notes": "Utilizado para transformar entidades Task do banco de dados em DTOs para transmissão na API, incluindo formatação de datas e valores.",
+          "signature": "transformTaskToDTO(task: Task, userLocale: string): TaskDTO",
+          "preconditions": [
+            {
+              "id": 33,
+              "condition": "task deve ser um objeto Task válido com todos os campos obrigatórios preenchidos"
+            },
+            {
+              "id": 34,
+              "condition": "userLocale deve ser um código de localização válido"
+            }
+          ],
+          "postconditions": [
+            {
+              "id": 35,
+              "condition": "retorna objeto TaskDTO com datas formatadas, valores normalizados e estrutura pronta para serialização JSON"
+            }
+          ]
+        },
+        {
+          "id": 36,
+          "name": "transformUserToDTO",
+          "notes": "Utilizado para transformar entidades User do banco de dados em DTOs para transmissão na API, garantindo que dados sensíveis não sejam expostos.",
+          "signature": "transformUserToDTO(user: User): UserDTO",
+          "preconditions": [
+            {
+              "id": 37,
+              "condition": "user deve ser um objeto User válido com todos os campos obrigatórios preenchidos"
+            }
+          ],
+          "postconditions": [
+            {
+              "id": 38,
+              "condition": "retorna objeto UserDTO com dados sensíveis removidos (ex: hash de senha) e estrutura pronta para serialização JSON"
+            }
+          ]
+        },
+        {
+          "id": 39,
+          "name": "validateTaskPriority",
+          "notes": "Utilizado para validar valores de prioridade em formulários de criação e edição de tarefas.",
+          "signature": "validateTaskPriority(priority: string): boolean",
+          "preconditions": [
+            {
+              "id": 40,
+              "condition": "priority deve ser uma string não vazia"
+            }
+          ],
+          "postconditions": [
+            {
+              "id": 41,
+              "condition": "retorna true se priority corresponde a um dos valores válidos definidos pelo sistema, false caso contrário"
+            }
+          ]
+        },
+        {
+          "id": 42,
+          "name": "validateTaskStatus",
+          "notes": "Utilizado para validar valores de status em operações de alteração de status de tarefas.",
+          "signature": "validateTaskStatus(status: string): boolean",
+          "preconditions": [
+            {
+              "id": 43,
+              "condition": "status deve ser uma string não vazia"
+            }
+          ],
+          "postconditions": [
+            {
+              "id": 44,
+              "condition": "retorna true se status corresponde a um dos status fixos definidos pelo sistema, false caso contrário"
+            }
+          ]
+        },
+        {
+          "id": 45,
+          "name": "generatePasswordResetEmail",
+          "notes": "Utilizado para gerar o conteúdo HTML do e-mail transacional de recuperação de senha, incluindo link seguro e informações de expiração.",
+          "signature": "generatePasswordResetEmail(userName: string, resetLink: string, expirationMinutes: number): string",
+          "preconditions": [
+            {
+              "id": 46,
+              "condition": "userName deve ser uma string não vazia"
+            },
+            {
+              "id": 47,
+              "condition": "resetLink deve ser uma URL válida contendo o token de recuperação"
+            },
+            {
+              "id": 48,
+              "condition": "expirationMinutes deve ser um inteiro positivo representando o tempo de expiração do token"
+            }
+          ],
+          "postconditions": [
+            {
+              "id": 49,
+              "condition": "retorna string HTML formatada contendo o corpo do e-mail de recuperação de senha"
+            }
+          ]
+        },
+        {
+          "id": 50,
+          "name": "calculateSessionExpirationTime",
+          "notes": "Utilizado para calcular o tempo de expiração de tokens de sessão durante autenticação bem-sucedida.",
+          "signature": "calculateSessionExpirationTime(sessionDurationMinutes: number): Date",
+          "preconditions": [
+            {
+              "id": 51,
+              "condition": "sessionDurationMinutes deve ser um inteiro positivo representando a duração da sessão em minutos"
+            }
+          ],
+          "postconditions": [
+            {
+              "id": 52,
+              "condition": "retorna objeto Date representando o momento de expiração da sessão (data/hora atual + duração)"
+            }
+          ]
+        },
+        {
+          "id": 53,
+          "name": "isSessionExpired",
+          "notes": "Utilizado para validar se um token de sessão ainda é válido ou se expirou.",
+          "signature": "isSessionExpired(expirationTime: Date, currentTime?: Date): boolean",
+          "preconditions": [
+            {
+              "id": 54,
+              "condition": "expirationTime deve ser uma instância válida de Date"
+            },
+            {
+              "id": 55,
+              "condition": "currentTime, se fornecida, deve ser uma instância válida de Date"
+            }
+          ],
+          "postconditions": [
+            {
+              "id": 56,
+              "condition": "retorna true se a sessão expirou (expirationTime é anterior à data/hora atual), false caso contrário"
+            }
+          ]
+        },
+        {
+          "id": 57,
+          "name": "normalizeHierarchyLevelName",
+          "notes": "Utilizado para normalizar nomes de níveis hierárquicos antes da persistência.",
+          "signature": "normalizeHierarchyLevelName(name: string, maxLength?: number): string",
+          "preconditions": [
+            {
+              "id": 58,
+              "condition": "name deve ser uma string não vazia"
+            },
+            {
+              "id": 59,
+              "condition": "maxLength, se fornecido, deve ser um inteiro positivo (padrão: 100)"
+            }
+          ],
+          "postconditions": [
+            {
+              "id": 60,
+              "condition": "retorna string normalizada com espaços em branco normalizados, truncada ao comprimento máximo"
+            }
+          ]
+        },
+        {
+          "id": 61,
+          "name": "validateTenantSlug",
+          "notes": "Utilizado para validar identificadores únicos de tenants durante provisionamento.",
+          "signature": "validateTenantSlug(slug: string): boolean",
+          "preconditions": [
+            {
+              "id": 62,
+              "condition": "slug deve ser uma string não vazia"
+            }
+          ],
+          "postconditions": [
+            {
+              "id": 63,
+              "condition": "retorna true se slug respeita o formato permitido (letras minúsculas, números e hífens), false caso contrário"
+            }
+          ]
+        },
+        {
+          "id": 64,
+          "name": "generateTenantSlug",
+          "notes": "Utilizado para gerar sugestão de slug único para novo tenant durante provisionamento.",
+          "signature": "generateTenantSlug(organizationName: string): string",
+          "preconditions": [
+            {
+              "id": 65,
+              "condition": "organizationName deve ser uma string não vazia"
+            }
+          ],
+          "postconditions": [
+            {
+              "id": 66,
+              "condition": "retorna string slug gerada a partir do nome da organização, contendo apenas letras minúsculas, números e hífens"
+            }
+          ]
+        },
+        {
+          "id": 67,
+          "name": "calculatePasswordComplexityScore",
+          "notes": "Utilizado para avaliar a força de senhas durante cadastro e redefinição, fornecendo feedback ao usuário.",
+          "signature": "calculatePasswordComplexityScore(password: string): number",
+          "preconditions": [
+            {
+              "id": 68,
+              "condition": "password deve ser uma string não vazia"
+            }
+          ],
+          "postconditions": [
+            {
+              "id": 69,
+              "condition": "retorna número inteiro entre 0 e 100 representando o nível de complexidade da senha"
+            }
+          ]
+        },
+        {
+          "id": 70,
+          "name": "validatePasswordComplexity",
+          "notes": "Utilizado para validar regras de complexidade mínima de senhas durante cadastro e redefinição.",
+          "signature": "validatePasswordComplexity(password: string, minimumScore?: number): boolean",
+          "preconditions": [
+            {
+              "id": 71,
+              "condition": "password deve ser uma string não vazia"
+            },
+            {
+              "id": 72,
+              "condition": "minimumScore, se fornecido, deve ser um inteiro entre 0 e 100 (padrão: 50)"
+            }
+          ],
+          "postconditions": [
+            {
+              "id": 73,
+              "condition": "retorna true se a complexidade da senha atende ao score mínimo, false caso contrário"
+            }
+          ]
+        }
+      ]
+    },
+    "pendencies": [
+      {
+        "id": 151,
+        "section": "definition",
+        "description": "Definição precisa dos valores fixos de prioridade de tarefa (ex: 'Baixa', 'Média', 'Alta', 'Urgente') não foi fornecida nos inputs. O toolkit valida contra esses valores, mas a lista exata deve ser confirmada para garantir consistência com as features de prioridade.",
+        "resolutionOptions": [
+          {
+            "id": 152,
+            "text": "Consultar a feature_definition de 'Definir Prioridade da Tarefa' (artifactId 23611) para extrair a lista exata de valores de prioridade permitidos e incorporá-los como constantes no toolkit."
+          },
+          {
+            "id": 153,
+            "text": "Definir os valores de prioridade como parâmetro configurável no toolkit (ex: params.task_priority_values) em vez de hardcoded, permitindo flexibilidade futura."
+          },
+          {
+            "id": 154,
+            "text": "Criar uma feature_definition separada para 'Catálogo de Valores de Prioridade de Tarefa' que defina centralmente os valores permitidos, referenciada pelo toolkit e pelas features de prioridade."
+          }
+        ],
+        "recommendedOptionId": 152
+      },
+      {
+        "id": 155,
+        "section": "definition",
+        "description": "Definição precisa dos status fixos de tarefa (ex: 'A Fazer', 'Em Andamento', 'Concluído') não foi fornecida nos inputs. O toolkit valida contra esses valores, mas a lista exata deve ser confirmada para garantir consistência com as features de status.",
+        "resolutionOptions": [
+          {
+            "id": 156,
+            "text": "Consultar a feature_definition de 'Atualizar Status da Tarefa' (artifactId 23616) para extrair a lista exata de status fixos permitidos e incorporá-los como constantes no toolkit."
+          },
+          {
+            "id": 157,
+            "text": "Definir os status como parâmetro configurável no toolkit (ex: params.task_status_values) em vez de hardcoded, permitindo flexibilidade futura para colunas Kanban configuráveis."
+          },
+          {
+            "id": 158,
+            "text": "Criar uma feature_definition separada para 'Catálogo de Status de Tarefa' que defina centralmente os valores permitidos, referenciada pelo toolkit e pelas features de status."
+          }
+        ],
+        "recommendedOptionId": 156
+      },
+      {
+        "id": 159,
+        "section": "definition",
+        "description": "Integração com serviço de e-mail transacional para envio de e-mail de recuperação de senha não foi detalhada. A função generatePasswordResetEmail produz conteúdo HTML, mas a integração com o serviço de envio (ASSET-042 Conector de Provedor de E-mail) não está especificada no toolkit.",
+        "resolutionOptions": [
+          {
+            "id": 160,
+            "text": "Adicionar função exportada generatePasswordResetEmailWithDelivery que encapsula generatePasswordResetEmail e invoca o conector de e-mail (ASSET-042) para envio automático."
+          },
+          {
+            "id": 161,
+            "text": "Manter generatePasswordResetEmail como função pura que apenas gera conteúdo HTML, deixando a integração com o conector de e-mail para o handler que invoca o toolkit (separação de responsabilidades)."
+          },
+          {
+            "id": 162,
+            "text": "Documentar explicitamente que generatePasswordResetEmail é uma função de suporte que deve ser invocada pelo handler de recuperação de senha, que é responsável por integrar com o conector de e-mail."
+          }
+        ],
+        "recommendedOptionId": 161
+      },
+      {
+        "id": 163,
+        "section": "definition",
+        "description": "Parâmetros de configuração de argon2id (m, t, p, hash_length) foram definidos com valores específicos, mas não há evidência de que esses valores foram validados contra as melhores práticas de segurança atuais ou contra requisitos de conformidade (ex: OWASP, NIST).",
+        "resolutionOptions": [
+          {
+            "id": 164,
+            "text": "Validar os parâmetros argon2id contra as recomendações atuais do OWASP (https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html) e ajustar se necessário."
+          },
+          {
+            "id": 165,
+            "text": "Documentar a justificativa para os valores de parâmetros escolhidos (m=65536 KiB, t=3, p=4) em comentário de código, incluindo referências a benchmarks de segurança e desempenho."
+          },
+          {
+            "id": 166,
+            "text": "Criar pendency separada para revisão periódica dos parâmetros de argon2id (ex: anualmente) para garantir que continuam alinhados com as melhores práticas de segurança."
+          }
+        ],
+        "recommendedOptionId": 164
+      },
+      {
+        "id": 167,
+        "section": "non_functional_requirements",
+        "description": "Requisito de desempenho para hashPassword foi definido como p99 <= 500ms, mas não há justificativa de como esse valor foi derivado ou se é aceitável para o fluxo de autenticação interativa da plataforma.",
+        "resolutionOptions": [
+          {
+            "id": 168,
+            "text": "Validar o requisito de 500ms contra o tempo total aceitável para fluxo de autenticação (ex: < 1s total) e ajustar se necessário."
+          },
+          {
+            "id": 169,
+            "text": "Documentar a justificativa para o valor de 500ms em comentário de requisito, incluindo referências a benchmarks de UX e segurança."
+          },
+          {
+            "id": 170,
+            "text": "Realizar teste de carga com usuários reais para validar que 500ms é aceitável para a experiência de autenticação esperada."
+          }
+        ],
+        "recommendedOptionId": 168
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 123,
+        "then": "A função retorna true",
+        "type": "unit",
+        "when": "validateEmail é invocado com a string",
+        "given": "Uma string de e-mail em formato válido (ex: 'user@example.com')",
+        "scenario": "Validação de formato de e-mail",
+        "target_section": "definition"
+      },
+      {
+        "id": 124,
+        "then": "A função retorna false",
+        "type": "unit",
+        "when": "validateEmail é invocado com a string",
+        "given": "Uma string de e-mail em formato inválido (ex: 'invalid.email')",
+        "scenario": "Rejeição de e-mail em formato inválido",
+        "target_section": "definition"
+      },
+      {
+        "id": 125,
+        "then": "A função retorna Promise que resolve para hash seguro diferente da senha original",
+        "type": "unit",
+        "when": "hashPassword é invocado com a senha",
+        "given": "Uma senha em texto simples válida (ex: 'SecurePass123!')",
+        "scenario": "Hash de senha com argon2id",
+        "target_section": "definition"
+      },
+      {
+        "id": 126,
+        "then": "A função retorna Promise que resolve para true",
+        "type": "unit",
+        "when": "verifyPassword é invocado com a senha e o hash",
+        "given": "Uma senha em texto simples e seu hash correspondente gerado por hashPassword",
+        "scenario": "Verificação de senha correta",
+        "target_section": "definition"
+      },
+      {
+        "id": 127,
+        "then": "A função retorna Promise que resolve para false",
+        "type": "unit",
+        "when": "verifyPassword é invocado com a senha e o hash",
+        "given": "Uma senha em texto simples e um hash de uma senha diferente",
+        "scenario": "Rejeição de senha incorreta",
+        "target_section": "definition"
+      },
+      {
+        "id": 128,
+        "then": "A função retorna string de token com entropia >= 128 bits, diferente a cada invocação",
+        "type": "unit",
+        "when": "generateSecureToken é invocado",
+        "given": "Nenhuma entrada (ou comprimento padrão de 32 bytes)",
+        "scenario": "Geração de token seguro com entropia suficiente",
+        "target_section": "definition"
+      },
+      {
+        "id": 129,
+        "then": "A função retorna true",
+        "type": "unit",
+        "when": "isDateOverdue é invocado com a data limite",
+        "given": "Uma data limite no passado (ex: 2024-01-01) e data de referência atual",
+        "scenario": "Identificação de tarefa com prazo vencido",
+        "target_section": "definition"
+      },
+      {
+        "id": 130,
+        "then": "A função retorna false",
+        "type": "unit",
+        "when": "isDateOverdue é invocado com a data limite",
+        "given": "Uma data limite no futuro (ex: 2025-12-31) e data de referência atual",
+        "scenario": "Identificação de tarefa com prazo futuro",
+        "target_section": "definition"
+      },
+      {
+        "id": 131,
+        "then": "A função retorna TaskDTO com datas formatadas em português (ex: '15 de janeiro de 2024')",
+        "type": "unit",
+        "when": "transformTaskToDTO é invocado com a tarefa e locale 'pt-BR'",
+        "given": "Um objeto Task com data de criação e prazo em formato Date",
+        "scenario": "Transformação de tarefa para DTO com formatação de data",
+        "target_section": "definition"
+      },
+      {
+        "id": 132,
+        "then": "A função retorna UserDTO sem hash de senha, tokens ou dados sensíveis",
+        "type": "unit",
+        "when": "transformUserToDTO é invocado com o usuário",
+        "given": "Um objeto User com hash de senha e dados pessoais",
+        "scenario": "Transformação de usuário para DTO sem dados sensíveis",
+        "target_section": "definition"
+      },
+      {
+        "id": 133,
+        "then": "A função retorna true",
+        "type": "unit",
+        "when": "validateTaskPriority é invocado com a string",
+        "given": "Uma string de prioridade válida (ex: 'Alta')",
+        "scenario": "Validação de prioridade válida",
+        "target_section": "definition"
+      },
+      {
+        "id": 134,
+        "then": "A função retorna false",
+        "type": "unit",
+        "when": "validateTaskPriority é invocado com a string",
+        "given": "Uma string de prioridade inválida (ex: 'Crítica')",
+        "scenario": "Rejeição de prioridade inválida",
+        "target_section": "definition"
+      },
+      {
+        "id": 135,
+        "then": "A função retorna true",
+        "type": "unit",
+        "when": "validateTaskStatus é invocado com a string",
+        "given": "Uma string de status válida (ex: 'Em Andamento')",
+        "scenario": "Validação de status válido",
+        "target_section": "definition"
+      },
+      {
+        "id": 136,
+        "then": "A função retorna false",
+        "type": "unit",
+        "when": "validateTaskStatus é invocado com a string",
+        "given": "Uma string de status inválida (ex: 'Pausado')",
+        "scenario": "Rejeição de status inválido",
+        "target_section": "definition"
+      },
+      {
+        "id": 137,
+        "then": "A função retorna string truncada a 255 caracteres com espaços normalizados",
+        "type": "unit",
+        "when": "sanitizeTaskTitle é invocado com a string",
+        "given": "Uma string de título com mais de 255 caracteres",
+        "scenario": "Sanitização de título de tarefa muito longo",
+        "target_section": "definition"
+      },
+      {
+        "id": 138,
+        "then": "A função retorna true",
+        "type": "unit",
+        "when": "validateTenantSlug é invocado com a string",
+        "given": "Uma string de slug em formato válido (ex: 'minha-empresa')",
+        "scenario": "Validação de slug de tenant válido",
+        "target_section": "definition"
+      },
+      {
+        "id": 139,
+        "then": "A função retorna false",
+        "type": "unit",
+        "when": "validateTenantSlug é invocado com a string",
+        "given": "Uma string de slug com caracteres especiais ou espaços (ex: 'Minha Empresa!')",
+        "scenario": "Rejeição de slug de tenant inválido",
+        "target_section": "definition"
+      },
+      {
+        "id": 140,
+        "then": "A função retorna Date representando data/hora atual + 480 minutos",
+        "type": "unit",
+        "when": "calculateSessionExpirationTime é invocado com a duração",
+        "given": "Uma duração de sessão de 480 minutos (8 horas)",
+        "scenario": "Cálculo de tempo de expiração de sessão",
+        "target_section": "definition"
+      },
+      {
+        "id": 141,
+        "then": "A função retorna true",
+        "type": "unit",
+        "when": "isSessionExpired é invocado com o tempo de expiração",
+        "given": "Um tempo de expiração no passado (ex: 1 hora atrás)",
+        "scenario": "Verificação de sessão expirada",
+        "target_section": "definition"
+      },
+      {
+        "id": 142,
+        "then": "A função retorna false",
+        "type": "unit",
+        "when": "isSessionExpired é invocado com o tempo de expiração",
+        "given": "Um tempo de expiração no futuro (ex: 1 hora a partir de agora)",
+        "scenario": "Verificação de sessão válida",
+        "target_section": "definition"
+      },
+      {
+        "id": 143,
+        "then": "A função retorna false",
+        "type": "unit",
+        "when": "validatePasswordComplexity é invocado com a senha e score mínimo 50",
+        "given": "Uma senha fraca (ex: '12345678')",
+        "scenario": "Validação de complexidade de senha fraca",
+        "target_section": "definition"
+      },
+      {
+        "id": 144,
+        "then": "A função retorna true",
+        "type": "unit",
+        "when": "validatePasswordComplexity é invocado com a senha e score mínimo 50",
+        "given": "Uma senha forte (ex: 'SecurePass123!@#')",
+        "scenario": "Validação de complexidade de senha forte",
+        "target_section": "definition"
+      },
+      {
+        "id": 145,
+        "then": "O tempo estimado para quebrar o hash é > 10^9 anos, tornando o ataque impraticável",
+        "type": "security",
+        "when": "Um atacante tenta adivinhar a senha testando 10^9 combinações por segundo",
+        "given": "Um hash de senha gerado por hashPassword com argon2id",
+        "scenario": "Resistência a ataques de força bruta em hash de senha",
+        "target_section": "rules"
+      },
+      {
+        "id": 146,
+        "then": "A probabilidade de previsão correta é < 2^-128, tornando o ataque impraticável",
+        "type": "security",
+        "when": "Um atacante tenta prever o próximo token baseado nos anteriores",
+        "given": "Múltiplos tokens gerados por generateSecureToken",
+        "scenario": "Impossibilidade de previsão de token seguro",
+        "target_section": "rules"
+      },
+      {
+        "id": 147,
+        "then": "O tempo total é < 1 segundo (p99 <= 1ms por invocação)",
+        "type": "performance",
+        "when": "validateEmail é invocado 1000 vezes",
+        "given": "Uma string de e-mail válida",
+        "scenario": "Tempo de execução de validação de e-mail",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 148,
+        "then": "O tempo total é < 5 segundos (p99 <= 5ms por invocação)",
+        "type": "performance",
+        "when": "transformTaskToDTO é invocado 1000 vezes",
+        "given": "Um objeto Task com todos os campos preenchidos",
+        "scenario": "Tempo de execução de transformação de tarefa para DTO",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 149,
+        "then": "verifyPassword retorna true e a autenticação é bem-sucedida",
+        "type": "integration",
+        "when": "O usuário faz login fornecendo a senha correta",
+        "given": "Um usuário com senha em texto simples e um hash armazenado no banco de dados",
+        "scenario": "Fluxo completo de autenticação com hash de senha",
+        "target_section": "flow"
+      },
+      {
+        "id": 150,
+        "then": "O token é validado com sucesso e o usuário pode redefinir a senha",
+        "type": "integration",
+        "when": "generateSecureToken gera um token, hashToken o armazena no banco, e o usuário acessa o link com o token",
+        "given": "Um usuário solicita recuperação de senha",
+        "scenario": "Fluxo completo de recuperação de senha com token seguro",
+        "target_section": "flow"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 115,
+        "target": "p99 <= 1ms por invocação",
+        "category": "performance",
+        "requirement": "Toda operação de validação de entrada (email, prioridade, status, slug) deve ser concluída em tempo constante O(1) ou O(n) linear no comprimento da entrada.",
+        "verification": "Testes de performance medem tempo de execução de validateEmail, validateTaskPriority, validateTaskStatus, validateTenantSlug com entradas variadas; benchmarks confirmam complexidade linear."
+      },
+      {
+        "id": 116,
+        "target": "p99 <= 500ms por invocação de hashPassword",
+        "category": "performance",
+        "requirement": "Toda operação de hash de senha (argon2id) deve ser computacionalmente custosa para resistir a ataques de força bruta, mas ainda aceitável para autenticação interativa.",
+        "verification": "Testes de performance medem tempo de execução de hashPassword; benchmarks confirmam que tempo é aceitável para fluxo de autenticação (< 1s total)."
+      },
+      {
+        "id": 117,
+        "target": "p99 <= 5ms por invocação de transformTaskToDTO ou transformUserToDTO",
+        "category": "performance",
+        "requirement": "Toda operação de transformação de entidade para DTO deve ser concluída em tempo linear no tamanho da entidade.",
+        "verification": "Testes de performance medem tempo de execução de transformações com entidades de tamanho variado; benchmarks confirmam complexidade linear."
+      },
+      {
+        "id": 118,
+        "target": "p99 <= 1ms por invocação",
+        "category": "performance",
+        "requirement": "Toda operação de cálculo temporal (isDateOverdue, calculateSessionExpirationTime) deve ser concluída em tempo constante O(1).",
+        "verification": "Testes de performance medem tempo de execução de operações temporais; benchmarks confirmam complexidade constante."
+      },
+      {
+        "id": 119,
+        "target": "Entropia >= 128 bits; impossibilidade de previsão com probabilidade < 2^-128",
+        "category": "security",
+        "requirement": "Toda geração de token seguro deve utilizar gerador criptograficamente seguro com entropia mínima de 128 bits, impossibilitando previsão ou reprodução.",
+        "verification": "Testes de segurança verificam que generateSecureToken utiliza crypto.randomBytes; análise estatística de sequências geradas confirma distribuição uniforme e impossibilidade de previsão."
+      },
+      {
+        "id": 120,
+        "target": "Argon2id com m=65536 KiB, t=3, p=4; tempo de ataque de força bruta > 10^9 anos com hardware padrão",
+        "category": "security",
+        "requirement": "Toda operação de hash de senha deve ser resistente a ataques de força bruta, rainbow tables e GPU acceleration.",
+        "verification": "Testes de segurança verificam que hashPassword utiliza argon2id com parâmetros especificados; análise de resistência confirma que tempo de ataque é proibitivo."
+      },
+      {
+        "id": 121,
+        "target": "Disponibilidade = 100% (sem dependências externas)",
+        "category": "availability",
+        "requirement": "Toda função do toolkit deve estar disponível sem dependências externas (ex: chamadas de rede, I/O de arquivo), garantindo que falhas em outros componentes não afetem o toolkit.",
+        "verification": "Análise de código verifica que nenhuma função do toolkit realiza I/O de rede ou arquivo; testes unitários confirmam que funções executam sem dependências externas."
+      },
+      {
+        "id": 122,
+        "target": "100% das funções testáveis com testes unitários puros",
+        "category": "observability",
+        "requirement": "Toda função do toolkit deve ser testável isoladamente sem necessidade de mocks ou stubs complexos, facilitando testes unitários e depuração.",
+        "verification": "Cobertura de testes unitários >= 95%; testes não utilizam mocks de dependências externas; funções são puras ou com estado controlado."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 9,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-10T23:19:22.254Z",
+  "updatedAt": null
+}

@@ -1,0 +1,928 @@
+{
+  "id": 23984,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 51,
+          "name": "Requisição HTTP POST /api/tasks",
+          "format": "JSON com campos: titulo, descricao, responsavel_id, prioridade, status, data_limite",
+          "origin": "Cliente autenticado (navegador ou aplicação)",
+          "trigger": "Submissão de formulário de criação de tarefa pelo usuário"
+        },
+        {
+          "id": 52,
+          "name": "Requisição HTTP GET /api/tasks",
+          "format": "Query parameters: page, limit, status, responsavel_id, prioridade, data_limite_inicio, data_limite_fim, termo_busca",
+          "origin": "Cliente autenticado",
+          "trigger": "Carregamento de visualização de lista ou Kanban de tarefas"
+        },
+        {
+          "id": 53,
+          "name": "Requisição HTTP GET /api/tasks/:id",
+          "format": "Path parameter: id (uuid da tarefa)",
+          "origin": "Cliente autenticado",
+          "trigger": "Clique em tarefa para visualizar detalhes"
+        },
+        {
+          "id": 54,
+          "name": "Requisição HTTP PUT /api/tasks/:id",
+          "format": "JSON com campos opcionais: titulo, descricao, responsavel_id, prioridade, status, data_limite",
+          "origin": "Cliente autenticado",
+          "trigger": "Submissão de formulário de edição de tarefa"
+        },
+        {
+          "id": 55,
+          "name": "Requisição HTTP PATCH /api/tasks/:id/status",
+          "format": "JSON com campo: status",
+          "origin": "Cliente autenticado",
+          "trigger": "Alteração de status via dropdown ou drag-and-drop no Kanban"
+        },
+        {
+          "id": 56,
+          "name": "Requisição HTTP POST /api/tasks/:id/complete",
+          "format": "Path parameter: id (uuid da tarefa); sem body",
+          "origin": "Cliente autenticado",
+          "trigger": "Clique em botão de conclusão de tarefa"
+        },
+        {
+          "id": 57,
+          "name": "Requisição HTTP POST /api/tasks/:id/reopen",
+          "format": "JSON com campo: status (novo status ativo)",
+          "origin": "Cliente autenticado",
+          "trigger": "Clique em botão de reabertura de tarefa concluída"
+        },
+        {
+          "id": 58,
+          "name": "Token JWT de Autenticação",
+          "format": "Bearer <token_jwt>",
+          "origin": "Header Authorization da requisição HTTP",
+          "trigger": null
+        },
+        {
+          "id": 59,
+          "name": "Contexto de Tenant",
+          "format": "UUID do tenant autenticado",
+          "origin": "JWT claim 'tenant_id' ou header X-Tenant-ID",
+          "trigger": null
+        }
+      ],
+      "outputs": [
+        {
+          "id": 77,
+          "name": "Resposta HTTP 201 Created (Criação de Tarefa)",
+          "format": "JSON com dados da tarefa criada (id, titulo, responsavel_nome, prioridade, status, data_criacao_formatada)",
+          "destination": "Cliente autenticado"
+        },
+        {
+          "id": 78,
+          "name": "Resposta HTTP 200 OK (Leitura/Edição/Conclusão)",
+          "format": "JSON com dados da tarefa (completos para GET detalhado, resumidos para listagem)",
+          "destination": "Cliente autenticado"
+        },
+        {
+          "id": 79,
+          "name": "Resposta HTTP 400 Bad Request (Validação)",
+          "format": "JSON com error, field (opcional), message descrevendo o erro de validação",
+          "destination": "Cliente autenticado"
+        },
+        {
+          "id": 80,
+          "name": "Resposta HTTP 401 Unauthorized (Autenticação)",
+          "format": "JSON com error: 'Unauthorized', message: 'Token inválido ou expirado'",
+          "destination": "Cliente autenticado"
+        },
+        {
+          "id": 81,
+          "name": "Resposta HTTP 403 Forbidden (Autorização)",
+          "format": "JSON com error: 'Forbidden', message descrevendo restrição de acesso",
+          "destination": "Cliente autenticado"
+        },
+        {
+          "id": 82,
+          "name": "Resposta HTTP 404 Not Found (Recurso Não Encontrado)",
+          "format": "JSON com error: 'Not Found', message: 'Tarefa não encontrada'",
+          "destination": "Cliente autenticado"
+        },
+        {
+          "id": 83,
+          "name": "Resposta HTTP 409 Conflict (Violação de Constraint)",
+          "format": "JSON com error: 'Conflict', message descrevendo conflito (ex: responsável inativo, isolamento violado)",
+          "destination": "Cliente autenticado"
+        },
+        {
+          "id": 84,
+          "name": "Resposta HTTP 500 Internal Server Error (Erro de Servidor)",
+          "format": "JSON com error: 'Internal Server Error', message genérica",
+          "destination": "Cliente autenticado"
+        },
+        {
+          "id": 85,
+          "name": "Evento de Auditoria (task_created, task_updated, task_status_changed, task_completed)",
+          "format": "Estrutura de evento com user_id, tenant_id, task_id, tipo de evento, timestamp, ip_address, dados anteriores/novos",
+          "destination": "Trilha de Auditoria (audit_log table)"
+        },
+        {
+          "id": 86,
+          "name": "Invalidação de Cache",
+          "format": "Chaves de cache invalidadas: tasks:{tenant_id}:*, tasks:{tenant_id}:status:{status}, tasks:{tenant_id}:counters",
+          "destination": "Cache em Nível de Aplicação"
+        }
+      ],
+      "processing": [
+        {
+          "id": 60,
+          "step": "Validar Token JWT e Extrair Contexto de Autenticação",
+          "description": "Intercepta requisição, valida assinatura do token JWT, extrai identificação do usuário autenticado, tenant_id e perfil, bloqueando requisição se token inválido ou expirado."
+        },
+        {
+          "id": 61,
+          "step": "Validar Isolamento de Tenant",
+          "description": "Verifica que o tenant_id extraído do token corresponde ao tenant_id do recurso sendo acessado (para operações de leitura/escrita), bloqueando requisição se houver tentativa de acesso cruzado entre tenants."
+        },
+        {
+          "id": 62,
+          "step": "Validar Preenchimento de Campos Obrigatórios",
+          "description": "Para operações de criação e edição, valida que todos os campos obrigatórios (titulo, responsavel_id, prioridade) foram fornecidos e não estão vazios."
+        },
+        {
+          "id": 63,
+          "step": "Validar Formato de Entrada",
+          "description": "Valida formato de cada campo (título <= 255 caracteres, data em formato ISO 8601, UUID válido para responsavel_id, prioridade em enum permitido, status em enum permitido)."
+        },
+        {
+          "id": 64,
+          "step": "Consultar Responsável no Repositório de Usuários",
+          "description": "Busca o registro do usuário responsável selecionado, validando que existe, pertence ao mesmo tenant do criador, e possui status ativo."
+        },
+        {
+          "id": 65,
+          "step": "Invocar Regra de Prioridade e Prazo",
+          "description": "Executa regra de negócio para validar combinação de prioridade e prazo, garantir isolamento multi-tenant, confirmar responsável ativo, e determinar elegibilidade para destaque de criticidade."
+        },
+        {
+          "id": 66,
+          "step": "Invocar Regra de Transição de Status",
+          "description": "Para operações de alteração de status, executa regra de negócio para validar transição permitida entre status fixos e aplicar restrições de negócio."
+        },
+        {
+          "id": 67,
+          "step": "Consultar Cache de Tarefas (Leitura)",
+          "description": "Para operações de listagem e leitura, tenta recuperar dados do cache em memória com TTL configurado; se miss, consulta repositório e atualiza cache."
+        },
+        {
+          "id": 68,
+          "step": "Consultar Repositório de Tarefas",
+          "description": "Invoca repositório para buscar, listar ou validar tarefas, aplicando filtros de tenant, status, responsável, prioridade, prazo e pesquisa textual conforme parâmetros da requisição."
+        },
+        {
+          "id": 69,
+          "step": "Persistir Tarefa no Repositório",
+          "description": "Para operações de criação e edição, invoca repositório para criar novo registro ou atualizar registro existente, gerando UUID único, registrando metadados de auditoria (criador, data criação, editor, data edição)."
+        },
+        {
+          "id": 70,
+          "step": "Invalidar Cache de Tarefas (Escrita)",
+          "description": "Para operações de criação, edição ou alteração de status, invalida entradas relevantes do cache (listagem por tenant, por status, contadores de críticas/atrasadas) para garantir consistência eventual."
+        },
+        {
+          "id": 71,
+          "step": "Registrar Evento de Auditoria",
+          "description": "Registra operação em trilha de auditoria com identificação do usuário executor, tenant, timestamp, tipo de evento (task_created, task_updated, task_status_changed, task_completed), dados principais e resultado."
+        },
+        {
+          "id": 72,
+          "step": "Transformar Entidade para DTO",
+          "description": "Converte entidade de domínio (Task) para Data Transfer Object (TaskDTO), aplicando transformações como formatação de datas conforme localização, enriquecimento com nomes de usuários, cálculo de status de atraso e criticidade."
+        },
+        {
+          "id": 73,
+          "step": "Retornar Resposta de Sucesso",
+          "description": "Retorna resposta HTTP com status code apropriado (201 para criação, 200 para leitura/edição/conclusão) e body contendo dados da tarefa transformados em DTO."
+        },
+        {
+          "id": 74,
+          "step": "Tratar Erro de Validação",
+          "description": "Se validação falha, retorna erro HTTP 400 com mensagem específica do campo inválido, sem persistir dados."
+        },
+        {
+          "id": 75,
+          "step": "Tratar Erro de Autorização",
+          "description": "Se usuário não autenticado ou token inválido, retorna erro HTTP 401; se isolamento de tenant violado, retorna erro HTTP 403."
+        },
+        {
+          "id": 76,
+          "step": "Tratar Erro de Persistência",
+          "description": "Se persistência falha (erro de banco de dados, constraint violation), retorna erro HTTP 500 com mensagem genérica, registra erro em auditoria e logs de sistema."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 87,
+        "category": "authorization",
+        "description": "Apenas usuários autenticados e ativos do tenant podem criar, editar, alterar status ou concluir tarefas. Usuários inativos ou de tenants inativos são bloqueados.",
+        "enforcement": "code",
+        "verification": "Validar status do usuário (ativo) e status do tenant (ativo) antes de permitir operação; retornar erro 403 se bloqueado."
+      },
+      {
+        "id": 88,
+        "category": "validation",
+        "description": "Título de tarefa é obrigatório, não pode estar vazio e não pode exceder 255 caracteres.",
+        "enforcement": "code",
+        "verification": "Validar comprimento de titulo antes de persistir; retornar erro 400 se violado."
+      },
+      {
+        "id": 89,
+        "category": "validation",
+        "description": "Responsável selecionado deve ser um usuário ativo pertencente ao mesmo tenant do criador da tarefa.",
+        "enforcement": "code",
+        "verification": "Consultar repositório de usuários para validar existência, status ativo e tenant_id; retornar erro 409 se violado."
+      },
+      {
+        "id": 90,
+        "category": "validation",
+        "description": "Prioridade de tarefa deve ser um dos valores fixos permitidos: baixa, média, alta, urgente.",
+        "enforcement": "code",
+        "verification": "Validar que prioridade está em enum permitido antes de persistir; retornar erro 400 se violado."
+      },
+      {
+        "id": 91,
+        "category": "validation",
+        "description": "Data limite de tarefa, se fornecida, deve ser uma data válida no calendário e não pode ser retroativa (anterior à data atual).",
+        "enforcement": "code",
+        "verification": "Validar formato ISO 8601 e comparar com data atual; retornar erro 400 se violado."
+      },
+      {
+        "id": 92,
+        "category": "validation",
+        "description": "Status de tarefa deve ser um dos valores fixos definidos pelo sistema (A Fazer, Em Andamento, Concluído).",
+        "enforcement": "code",
+        "verification": "Validar que status está em enum permitido antes de persistir; retornar erro 400 se violado."
+      },
+      {
+        "id": 93,
+        "category": "invariant",
+        "description": "Cada tarefa pertence exclusivamente a um tenant e nunca pode ser acessada, modificada ou visualizada por usuários de outro tenant.",
+        "enforcement": "code",
+        "verification": "Validar tenant_id da tarefa contra tenant_id do usuário autenticado em cada operação; retornar erro 403 se violado."
+      },
+      {
+        "id": 94,
+        "category": "invariant",
+        "description": "Tarefa concluída (status = 'Concluído') não é elegível para destaque de atraso, mesmo que seu prazo tenha sido vencido.",
+        "enforcement": "code",
+        "verification": "Excluir tarefas com status 'Concluído' do cálculo de elegibilidade para destaque de atraso; validar em cada consulta de listagem."
+      },
+      {
+        "id": 95,
+        "category": "idempotency",
+        "description": "Operação de conclusão de tarefa é idempotente: chamar múltiplas vezes com mesma tarefa_id retorna sucesso sem efeito colateral adicional.",
+        "enforcement": "code",
+        "verification": "Validar que tarefa não está já concluída antes de marcar como concluída; retornar erro 409 se já concluída."
+      },
+      {
+        "id": 96,
+        "category": "observability",
+        "description": "Toda operação crítica (criação, edição, alteração de status, conclusão de tarefa) deve ser registrada em trilha de auditoria com identificação do executor, timestamp, tenant, tipo de evento e dados principais.",
+        "enforcement": "code",
+        "verification": "Emitir evento de auditoria após cada operação bem-sucedida; validar que evento foi registrado em audit_log."
+      },
+      {
+        "id": 97,
+        "category": "compliance",
+        "description": "Dados pessoais de usuários (nomes, e-mails) referenciados em tarefas devem ser tratados em conformidade com LGPD, com acesso restrito ao tenant proprietário e rastreabilidade completa.",
+        "enforcement": "code",
+        "verification": "Validar isolamento de tenant em cada consulta; registrar acesso em auditoria; implementar retenção de dados conforme política de governança."
+      },
+      {
+        "id": 98,
+        "category": "rate_limit",
+        "description": "Operações de criação em massa de tarefas são limitadas a 50 tarefas por minuto por usuário para prevenção de abuso.",
+        "enforcement": "code",
+        "verification": "Monitorar taxa de requisições POST /api/tasks por usuário; bloquear com erro 429 se limite excedido; registrar tentativa em auditoria."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "O Handler de Tarefas é um componente de processamento de requisições HTTP que orquestra operações de negócio relacionadas ao gerenciamento completo do ciclo de vida de tarefas na plataforma multi-tenant. Recebe requisições autenticadas via JWT, valida entrada conforme regras de negócio (preenchimento obrigatório, formato de data, validação de responsável ativo), aplica controle de acesso baseado em perfil, coordena persistência no repositório de tarefas, registra auditoria completa de operações críticas, e retorna respostas estruturadas com confirmação ou erro específico. Implementa isolamento rigoroso de dados por tenant em todas as operações (criação, edição, alteração de status, conclusão), garantindo que usuários de uma organização nunca acessem ou modifiquem tarefas de outra. Funciona em ciclo síncrono de requisição-resposta, bloqueando até conclusão da operação antes de retornar ao cliente, com suporte a paginação, filtragem combinada e pesquisa textual em visualizações de lista e Kanban."
+    },
+    "definition": {
+      "endpoints": [
+        {
+          "id": 2,
+          "auth": "bearer",
+          "path": "/api/tasks",
+          "method": "POST",
+          "responses": [
+            {
+              "id": 3,
+              "body": "{ id: uuid, tenant_id: uuid, titulo: string, descricao?: string, responsavel_id: uuid, responsavel_nome: string, criador_id: uuid, prioridade: enum[baixa|media|alta|urgente], status: string, data_limite?: string, data_criacao: string, data_criacao_formatada: string }",
+              "status_code": 201
+            },
+            {
+              "id": 4,
+              "body": "{ error: string, field?: string, message: string }",
+              "status_code": 400
+            },
+            {
+              "id": 5,
+              "body": "{ error: 'Unauthorized', message: 'Token inválido ou expirado' }",
+              "status_code": 401
+            },
+            {
+              "id": 6,
+              "body": "{ error: 'Forbidden', message: 'Acesso negado. Usuário inativo não pode criar tarefas' }",
+              "status_code": 403
+            },
+            {
+              "id": 7,
+              "body": "{ error: 'Conflict', message: 'Responsável não pertence a este tenant' }",
+              "status_code": 409
+            },
+            {
+              "id": 8,
+              "body": "{ error: 'Internal Server Error', message: 'Falha ao persistir tarefa' }",
+              "status_code": 500
+            }
+          ],
+          "description": "Cria uma nova tarefa no tenant do usuário autenticado, validando dados de entrada, verificando responsável ativo no tenant, aplicando regras de negócio, persistindo no repositório e registrando auditoria.",
+          "request_body": "{ titulo: string, descricao?: string, responsavel_id: uuid, prioridade: enum[baixa|media|alta|urgente], status?: string, data_limite?: string }"
+        },
+        {
+          "id": 9,
+          "auth": "bearer",
+          "path": "/api/tasks",
+          "method": "GET",
+          "responses": [
+            {
+              "id": 10,
+              "body": "{ tasks: [{ id: uuid, titulo: string, responsavel_nome: string, prioridade: enum[baixa|media|alta|urgente], status: string, data_limite_formatada?: string, esta_atrasada: boolean, esta_critica: boolean }], total: integer, page: integer, limit: integer }",
+              "status_code": 200
+            },
+            {
+              "id": 11,
+              "body": "{ error: 'Unauthorized', message: 'Token inválido ou expirado' }",
+              "status_code": 401
+            },
+            {
+              "id": 12,
+              "body": "{ error: 'Internal Server Error', message: 'Falha ao listar tarefas' }",
+              "status_code": 500
+            }
+          ],
+          "description": "Lista todas as tarefas do tenant autenticado com suporte a paginação, filtragem por status/responsável/prioridade/prazo, pesquisa textual e ordenação, respeitando isolamento multi-tenant."
+        },
+        {
+          "id": 13,
+          "auth": "bearer",
+          "path": "/api/tasks/:id",
+          "method": "GET",
+          "responses": [
+            {
+              "id": 14,
+              "body": "{ id: uuid, tenant_id: uuid, titulo: string, descricao?: string, responsavel_id: uuid, responsavel_nome: string, criador_id: uuid, criador_nome: string, prioridade: enum[baixa|media|alta|urgente], status: string, data_limite?: string, data_limite_formatada?: string, data_criacao: string, data_criacao_formatada: string, data_ultima_edicao?: string, data_ultima_edicao_formatada?: string, ultimo_editor_id?: uuid, ultimo_editor_nome?: string, data_conclusao?: string, data_conclusao_formatada?: string, esta_atrasada: boolean, esta_critica: boolean }",
+              "status_code": 200
+            },
+            {
+              "id": 15,
+              "body": "{ error: 'Unauthorized', message: 'Token inválido ou expirado' }",
+              "status_code": 401
+            },
+            {
+              "id": 16,
+              "body": "{ error: 'Not Found', message: 'Tarefa não encontrada' }",
+              "status_code": 404
+            },
+            {
+              "id": 17,
+              "body": "{ error: 'Internal Server Error', message: 'Falha ao buscar tarefa' }",
+              "status_code": 500
+            }
+          ],
+          "description": "Recupera os detalhes completos de uma tarefa específica do tenant autenticado, validando que a tarefa pertence ao tenant correto."
+        },
+        {
+          "id": 18,
+          "auth": "bearer",
+          "path": "/api/tasks/:id",
+          "method": "PUT",
+          "responses": [
+            {
+              "id": 19,
+              "body": "{ id: uuid, tenant_id: uuid, titulo: string, descricao?: string, responsavel_id: uuid, responsavel_nome: string, criador_id: uuid, prioridade: enum[baixa|media|alta|urgente], status: string, data_limite?: string, data_ultima_edicao: string, data_ultima_edicao_formatada: string, ultimo_editor_id: uuid, ultimo_editor_nome: string }",
+              "status_code": 200
+            },
+            {
+              "id": 20,
+              "body": "{ error: string, field?: string, message: string }",
+              "status_code": 400
+            },
+            {
+              "id": 21,
+              "body": "{ error: 'Unauthorized', message: 'Token inválido ou expirado' }",
+              "status_code": 401
+            },
+            {
+              "id": 22,
+              "body": "{ error: 'Not Found', message: 'Tarefa não encontrada' }",
+              "status_code": 404
+            },
+            {
+              "id": 23,
+              "body": "{ error: 'Conflict', message: 'Responsável não pertence a este tenant' }",
+              "status_code": 409
+            },
+            {
+              "id": 24,
+              "body": "{ error: 'Internal Server Error', message: 'Falha ao atualizar tarefa' }",
+              "status_code": 500
+            }
+          ],
+          "description": "Edita dados de uma tarefa existente (título, descrição, responsável, prioridade, status, prazo), validando integridade de dados, aplicando regras de negócio, persistindo alterações e registrando auditoria.",
+          "request_body": "{ titulo?: string, descricao?: string, responsavel_id?: uuid, prioridade?: enum[baixa|media|alta|urgente], status?: string, data_limite?: string }"
+        },
+        {
+          "id": 25,
+          "auth": "bearer",
+          "path": "/api/tasks/:id/status",
+          "method": "PATCH",
+          "responses": [
+            {
+              "id": 26,
+              "body": "{ id: uuid, status: string, data_ultima_edicao: string, data_ultima_edicao_formatada: string }",
+              "status_code": 200
+            },
+            {
+              "id": 27,
+              "body": "{ error: string, message: string }",
+              "status_code": 400
+            },
+            {
+              "id": 28,
+              "body": "{ error: 'Unauthorized', message: 'Token inválido ou expirado' }",
+              "status_code": 401
+            },
+            {
+              "id": 29,
+              "body": "{ error: 'Not Found', message: 'Tarefa não encontrada' }",
+              "status_code": 404
+            },
+            {
+              "id": 30,
+              "body": "{ error: 'Internal Server Error', message: 'Falha ao atualizar status da tarefa' }",
+              "status_code": 500
+            }
+          ],
+          "description": "Altera apenas o status de uma tarefa existente, validando que o novo status é um dos valores fixos permitidos, persistindo a transição e registrando auditoria com status anterior e novo.",
+          "request_body": "{ status: string }"
+        },
+        {
+          "id": 31,
+          "auth": "bearer",
+          "path": "/api/tasks/:id/complete",
+          "method": "POST",
+          "responses": [
+            {
+              "id": 32,
+              "body": "{ id: uuid, status: 'Concluído', data_conclusao: string, data_conclusao_formatada: string }",
+              "status_code": 200
+            },
+            {
+              "id": 33,
+              "body": "{ error: 'Unauthorized', message: 'Token inválido ou expirado' }",
+              "status_code": 401
+            },
+            {
+              "id": 34,
+              "body": "{ error: 'Not Found', message: 'Tarefa não encontrada' }",
+              "status_code": 404
+            },
+            {
+              "id": 35,
+              "body": "{ error: 'Conflict', message: 'Tarefa já foi concluída' }",
+              "status_code": 409
+            },
+            {
+              "id": 36,
+              "body": "{ error: 'Internal Server Error', message: 'Falha ao concluir tarefa' }",
+              "status_code": 500
+            }
+          ],
+          "description": "Marca uma tarefa como concluída, alterando seu status para 'Concluído', registrando data e executor da conclusão, e invalidando elegibilidade para destaque de atraso."
+        },
+        {
+          "id": 37,
+          "auth": "bearer",
+          "path": "/api/tasks/:id/reopen",
+          "method": "POST",
+          "responses": [
+            {
+              "id": 38,
+              "body": "{ id: uuid, status: string, data_conclusao: null }",
+              "status_code": 200
+            },
+            {
+              "id": 39,
+              "body": "{ error: string, message: string }",
+              "status_code": 400
+            },
+            {
+              "id": 40,
+              "body": "{ error: 'Unauthorized', message: 'Token inválido ou expirado' }",
+              "status_code": 401
+            },
+            {
+              "id": 41,
+              "body": "{ error: 'Not Found', message: 'Tarefa não encontrada' }",
+              "status_code": 404
+            },
+            {
+              "id": 42,
+              "body": "{ error: 'Internal Server Error', message: 'Falha ao reabrir tarefa' }",
+              "status_code": 500
+            }
+          ],
+          "description": "Reabre uma tarefa previamente concluída, alterando seu status para um status ativo, limpando a data de conclusão e registrando auditoria da reabertura.",
+          "request_body": "{ status: string }"
+        }
+      ],
+      "external_calls": [
+        {
+          "id": 43,
+          "auth": "none",
+          "name": "Consultar Repositório de Tarefas",
+          "endpoint": "internal://repository/tasks",
+          "fallback": "Retornar erro 500 com mensagem genérica ao usuário; registrar erro em auditoria",
+          "timeout_ms": 5000
+        },
+        {
+          "id": 44,
+          "auth": "none",
+          "name": "Consultar Repositório de Usuários e Tenants",
+          "endpoint": "internal://repository/users-tenants",
+          "fallback": "Retornar erro 500 com mensagem genérica ao usuário; registrar erro em auditoria",
+          "timeout_ms": 5000
+        },
+        {
+          "id": 45,
+          "auth": "none",
+          "name": "Invocar Regra de Prioridade e Prazo",
+          "endpoint": "internal://rules/task-priority-deadline",
+          "fallback": "Retornar erro 400 com mensagem de validação ao usuário",
+          "timeout_ms": 2000
+        },
+        {
+          "id": 46,
+          "auth": "none",
+          "name": "Invocar Regra de Transição de Status",
+          "endpoint": "internal://rules/task-status-transition",
+          "fallback": "Retornar erro 400 com mensagem de validação ao usuário",
+          "timeout_ms": 2000
+        },
+        {
+          "id": 47,
+          "auth": "none",
+          "name": "Emitir Evento de Auditoria",
+          "endpoint": "internal://audit/emit-event",
+          "fallback": "Registrar falha em log de erro; continuar processamento (auditoria é best-effort)",
+          "timeout_ms": 2000
+        },
+        {
+          "id": 48,
+          "auth": "none",
+          "name": "Validar Token JWT",
+          "endpoint": "internal://auth/validate-token",
+          "fallback": "Retornar erro 401 Unauthorized ao usuário",
+          "timeout_ms": 1000
+        },
+        {
+          "id": 49,
+          "auth": "none",
+          "name": "Validar Isolamento de Tenant",
+          "endpoint": "internal://auth/validate-tenant-isolation",
+          "fallback": "Retornar erro 403 Forbidden ao usuário",
+          "timeout_ms": 1000
+        },
+        {
+          "id": 50,
+          "auth": "none",
+          "name": "Consultar Cache de Tarefas",
+          "endpoint": "internal://cache/tasks",
+          "fallback": "Ignorar cache e consultar repositório diretamente",
+          "timeout_ms": 500
+        }
+      ]
+    },
+    "pendencies": [
+      {
+        "id": 119,
+        "section": "definition",
+        "description": "Definição de valores fixos para enum de status de tarefa não foi fornecida nos inputs. Atualmente assume-se 'A Fazer', 'Em Andamento', 'Concluído' baseado em project_scope, mas confirmação explícita é necessária para garantir alinhamento com implementação.",
+        "resolutionOptions": [
+          {
+            "id": 120,
+            "text": "Confirmar que status fixos são exatamente: 'A Fazer', 'Em Andamento', 'Concluído' e documentar em asset_definition de Regras de Transição de Status"
+          },
+          {
+            "id": 121,
+            "text": "Fornecer lista completa de status fixos permitidos em documento de especificação de domínio ou regra de negócio"
+          },
+          {
+            "id": 122,
+            "text": "Criar asset_definition separado para 'Catálogo de Status de Tarefa' que centralize definição de valores permitidos"
+          }
+        ],
+        "recommendedOptionId": 120
+      },
+      {
+        "id": 123,
+        "section": "definition",
+        "description": "Endpoint para exclusão de tarefa (DELETE /api/tasks/:id) não foi incluído na especificação, embora project_scope mencione 'Concluir Tarefa' como operação. Clarificação necessária sobre se exclusão é permitida ou se apenas conclusão é suportada.",
+        "resolutionOptions": [
+          {
+            "id": 124,
+            "text": "Confirmar que exclusão de tarefa NÃO é permitida; apenas conclusão (status = 'Concluído') é suportada; remover qualquer referência a DELETE"
+          },
+          {
+            "id": 125,
+            "text": "Adicionar endpoint DELETE /api/tasks/:id com restrições (ex: apenas criador pode excluir, apenas tarefas não concluídas, com auditoria)"
+          },
+          {
+            "id": 126,
+            "text": "Implementar soft delete: marcar tarefa como 'Deletada' sem remover dados, preservando auditoria e histórico"
+          }
+        ],
+        "recommendedOptionId": 124
+      },
+      {
+        "id": 127,
+        "section": "flow",
+        "description": "Mecanismo de paginação para listagem de tarefas foi mencionado em project_scope mas detalhes de implementação (cursor-based vs offset-based, tamanho de página padrão) não foram especificados.",
+        "resolutionOptions": [
+          {
+            "id": 128,
+            "text": "Implementar paginação offset-based com parâmetros page e limit; definir limit padrão = 20, máximo = 100"
+          },
+          {
+            "id": 129,
+            "text": "Implementar paginação cursor-based para melhor performance em grandes datasets; usar cursor opaco baseado em ID da tarefa"
+          },
+          {
+            "id": 130,
+            "text": "Implementar carregamento incremental (infinite scroll) com cursor-based pagination e limite de 50 itens por requisição"
+          }
+        ],
+        "recommendedOptionId": 128
+      },
+      {
+        "id": 131,
+        "section": "rules",
+        "description": "Regra de Prioridade e Prazo de Tarefas (asset_definition de project_asset 33) não foi fornecida nos inputs. Sua especificação é necessária para validar comportamento esperado do Handler de Tarefas.",
+        "resolutionOptions": [
+          {
+            "id": 132,
+            "text": "Fornecer asset_definition completo de Regras de Prioridade e Prazo de Tarefas com casos de teste e lógica de validação"
+          },
+          {
+            "id": 133,
+            "text": "Criar asset_definition de Regras de Prioridade e Prazo baseado em padrões de negócio comuns (ex: tarefas urgentes sem prazo são inválidas)"
+          }
+        ],
+        "recommendedOptionId": 132
+      },
+      {
+        "id": 134,
+        "section": "rules",
+        "description": "Regra de Transição de Status de Tarefa (asset_definition de project_asset 34) não foi fornecida nos inputs. Sua especificação é necessária para validar quais transições de status são permitidas.",
+        "resolutionOptions": [
+          {
+            "id": 135,
+            "text": "Fornecer asset_definition completo de Regras de Transição de Status com diagrama de estado e transições permitidas"
+          },
+          {
+            "id": 136,
+            "text": "Assumir que todas as transições entre status fixos são permitidas (A Fazer ↔ Em Andamento ↔ Concluído) sem restrições"
+          }
+        ],
+        "recommendedOptionId": 135
+      },
+      {
+        "id": 137,
+        "section": "non_functional_requirements",
+        "description": "Limites de taxa (rate limiting) para operações de criação em massa de tarefas foram mencionados em project_discriminator (best_practice 18) mas valores específicos não foram definidos.",
+        "resolutionOptions": [
+          {
+            "id": 138,
+            "text": "Definir limite de 50 tarefas por minuto por usuário; implementar bloqueio com erro 429 se limite excedido"
+          },
+          {
+            "id": 139,
+            "text": "Definir limite de 100 tarefas por hora por usuário; implementar bloqueio progressivo (throttling) ao aproximar do limite"
+          },
+          {
+            "id": 140,
+            "text": "Implementar rate limiting adaptativo baseado em padrão histórico de uso do usuário"
+          }
+        ],
+        "recommendedOptionId": 138
+      },
+      {
+        "id": 141,
+        "section": "non_functional_requirements",
+        "description": "Configuração de TTL (Time To Live) para cache de tarefas foi mencionada em project_asset 56 mas valores específicos por tipo de cache não foram definidos.",
+        "resolutionOptions": [
+          {
+            "id": 142,
+            "text": "Definir TTL = 5 minutos para cache de listagem de tarefas; TTL = 1 minuto para cache de contadores; TTL = 2 minutos para cache de filtros"
+          },
+          {
+            "id": 143,
+            "text": "Implementar TTL adaptativo baseado em frequência de atualização de tarefas no tenant"
+          },
+          {
+            "id": 144,
+            "text": "Usar invalidação síncrona em todas as operações de escrita; desabilitar TTL para garantir consistência forte"
+          }
+        ],
+        "recommendedOptionId": 142
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 108,
+        "then": "Handler retorna erro HTTP 400 com mensagem 'Título é obrigatório' sem persistir tarefa",
+        "type": "unit",
+        "when": "Requisição POST /api/tasks é enviada com titulo = ''",
+        "given": "Usuário autenticado e ativo do tenant A tenta criar tarefa com titulo vazio",
+        "scenario": "Validação de criação de tarefa com título vazio",
+        "target_section": "definition"
+      },
+      {
+        "id": 109,
+        "then": "Handler retorna erro HTTP 409 com mensagem 'Responsável inativo não pode ser atribuído' sem persistir tarefa",
+        "type": "unit",
+        "when": "Requisição POST /api/tasks é enviada com responsavel_id de usuário com status = 'inativo'",
+        "given": "Usuário autenticado tenta criar tarefa atribuindo a usuário inativo do mesmo tenant",
+        "scenario": "Validação de criação de tarefa com responsável inativo",
+        "target_section": "definition"
+      },
+      {
+        "id": 110,
+        "then": "Handler retorna erro HTTP 400 com mensagem 'Data limite não pode ser anterior à data atual' sem persistir tarefa",
+        "type": "unit",
+        "when": "Requisição POST /api/tasks é enviada com data_limite = '2020-01-01'",
+        "given": "Usuário autenticado tenta criar tarefa com prazo anterior à data atual",
+        "scenario": "Validação de criação de tarefa com data limite retroativa",
+        "target_section": "definition"
+      },
+      {
+        "id": 111,
+        "then": "Handler retorna HTTP 201 com dados da tarefa criada; tarefa é persistida no repositório com tenant_id correto; evento de auditoria task_created é registrado",
+        "type": "integration",
+        "when": "Requisição POST /api/tasks é enviada com titulo, responsavel_id ativo, prioridade e data_limite válidos",
+        "given": "Usuário autenticado e ativo do tenant A com dados válidos de tarefa",
+        "scenario": "Criação bem-sucedida de tarefa com persistência e auditoria",
+        "target_section": "flow"
+      },
+      {
+        "id": 112,
+        "then": "Handler retorna apenas as 5 tarefas do tenant A; nenhuma tarefa do tenant B é retornada",
+        "type": "integration",
+        "when": "Requisição GET /api/tasks é enviada pelo usuário do tenant A",
+        "given": "Dois tenants (A e B) cada um com 5 tarefas; usuário autenticado no tenant A",
+        "scenario": "Listagem de tarefas com isolamento de tenant",
+        "target_section": "flow"
+      },
+      {
+        "id": 113,
+        "then": "Handler retorna HTTP 200 com novo status; tarefa é atualizada no repositório; evento task_status_changed é registrado em auditoria com status anterior e novo",
+        "type": "integration",
+        "when": "Requisição PATCH /api/tasks/:id/status é enviada com status = 'Em Andamento'",
+        "given": "Tarefa existente com status = 'A Fazer'; usuário autenticado no tenant proprietário",
+        "scenario": "Alteração de status de tarefa via PATCH com auditoria",
+        "target_section": "flow"
+      },
+      {
+        "id": 114,
+        "then": "Handler retorna erro HTTP 401 'Unauthorized' sem processar requisição",
+        "type": "security",
+        "when": "Requisição POST /api/tasks é enviada sem token JWT",
+        "given": "Requisição para criar tarefa sem header Authorization",
+        "scenario": "Bloqueio de requisição sem token JWT",
+        "target_section": "rules"
+      },
+      {
+        "id": 115,
+        "then": "Handler retorna erro HTTP 404 'Not Found' (sem revelar que tarefa existe em outro tenant) ou HTTP 403 'Forbidden'",
+        "type": "security",
+        "when": "Requisição GET /api/tasks/:id é enviada com id de tarefa pertencente ao tenant B",
+        "given": "Usuário autenticado no tenant A tenta acessar tarefa do tenant B",
+        "scenario": "Bloqueio de acesso cruzado entre tenants",
+        "target_section": "rules"
+      },
+      {
+        "id": 116,
+        "then": "Handler retorna dados do cache em tempo <= 50ms (p99); nenhuma consulta ao banco de dados é executada",
+        "type": "performance",
+        "when": "Segunda requisição GET /api/tasks idêntica é enviada dentro do TTL do cache",
+        "given": "Requisição GET /api/tasks foi executada recentemente; dados estão em cache com TTL válido",
+        "scenario": "Listagem de tarefas com cache hit",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 117,
+        "then": "Body contém campos obrigatórios: id (uuid), tenant_id (uuid), titulo (string), responsavel_id (uuid), responsavel_nome (string), prioridade (enum), status (string), data_criacao (string formatada)",
+        "type": "contract",
+        "when": "Resposta HTTP 201 é retornada",
+        "given": "Tarefa criada com sucesso",
+        "scenario": "Contrato de resposta de criação de tarefa",
+        "target_section": "definition"
+      },
+      {
+        "id": 118,
+        "then": "Cada operação retorna sucesso; tarefa é persistida com dados corretos em cada etapa; eventos de auditoria são registrados para cada operação; visualização de lista reflete mudanças em tempo real",
+        "type": "e2e",
+        "when": "Usuário cria tarefa com titulo 'Implementar Feature X', edita para adicionar descrição, altera status para 'Em Andamento', depois marca como 'Concluído'",
+        "given": "Usuário autenticado no tenant A",
+        "scenario": "Fluxo completo de criação, edição e conclusão de tarefa",
+        "target_section": "flow"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 99,
+        "target": "p99 <= 500ms mesmo sob carga de 5.000 usuários ativos e 10.000 tarefas por tenant",
+        "category": "performance",
+        "requirement": "Operação de criação de tarefa deve ser concluída e retornada ao usuário em tempo adequado.",
+        "verification": "Medir latência de requisição POST /api/tasks em ambiente de teste com carga simulada; validar que p99 não excede 500ms."
+      },
+      {
+        "id": 100,
+        "target": "p99 <= 300ms para listagem de até 100 tarefas com filtros combinados",
+        "category": "performance",
+        "requirement": "Operação de listagem de tarefas com filtros e paginação deve ser concluída em tempo adequado.",
+        "verification": "Medir latência de requisição GET /api/tasks com filtros em ambiente de teste; validar que p99 não excede 300ms."
+      },
+      {
+        "id": 101,
+        "target": "p99 <= 200ms para PATCH /api/tasks/:id/status",
+        "category": "performance",
+        "requirement": "Operação de alteração de status via drag-and-drop no Kanban deve ser concluída e refletida na interface em tempo adequado.",
+        "verification": "Medir latência de requisição PATCH em ambiente de teste; validar que p99 não excede 200ms."
+      },
+      {
+        "id": 102,
+        "target": "Suportar até 500 requisições simultâneas com p99 <= 500ms",
+        "category": "scalability",
+        "requirement": "Handler deve suportar processamento de múltiplas requisições simultâneas sem degradação de desempenho.",
+        "verification": "Executar teste de carga com 500 requisições simultâneas; validar que p99 de latência não excede 500ms e taxa de erro é < 0,1%."
+      },
+      {
+        "id": 103,
+        "target": "100% das requisições sem token válido retornam erro 401; 100% das requisições com isolamento violado retornam erro 403",
+        "category": "security",
+        "requirement": "Todas as requisições devem ser autenticadas via JWT e validadas contra isolamento de tenant.",
+        "verification": "Testar requisições sem token, com token inválido, com token expirado, e com tenant_id manipulado; validar que todas retornam erro apropriado."
+      },
+      {
+        "id": 104,
+        "target": "0% de exposição de dados sensíveis em respostas de API",
+        "category": "security",
+        "requirement": "Dados sensíveis (hashes de senha, tokens de recuperação) nunca devem ser expostos em respostas de API.",
+        "verification": "Revisar todas as respostas de API para garantir que campos sensíveis não estão presentes; executar teste de segurança automatizado."
+      },
+      {
+        "id": 105,
+        "target": "Uptime >= 99,9% em período de 30 dias",
+        "category": "availability",
+        "requirement": "Handler deve estar disponível para processar requisições com alta disponibilidade.",
+        "verification": "Monitorar disponibilidade do handler em produção; registrar tempo de inatividade; validar que uptime não cai abaixo de 99,9%."
+      },
+      {
+        "id": 106,
+        "target": "100% das operações de criação, edição, alteração de status e conclusão de tarefa registradas em audit_log",
+        "category": "observability",
+        "requirement": "Todas as operações críticas devem ser registradas em trilha de auditoria com metadados completos.",
+        "verification": "Consultar audit_log após cada operação; validar que evento foi registrado com todos os campos obrigatórios (user_id, tenant_id, task_id, event_type, timestamp)."
+      },
+      {
+        "id": 107,
+        "target": "Hit ratio de cache >= 80% para listagem de tarefas; redução de 70% em consultas ao banco de dados para leitura",
+        "category": "cost",
+        "requirement": "Operações de leitura devem ser otimizadas para reduzir carga no banco de dados através de cache.",
+        "verification": "Monitorar hit ratio do cache em produção; validar que >= 80% das requisições GET são servidas do cache; medir redução de consultas ao banco."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 36,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T17:09:33.400Z",
+  "updatedAt": null
+}

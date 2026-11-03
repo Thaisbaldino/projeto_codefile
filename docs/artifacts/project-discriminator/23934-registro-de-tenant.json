@@ -1,0 +1,218 @@
+{
+  "id": 23934,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 29,
+        "name": "Duplicação e Baixo Reúso",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "O segundo tenant tenta ser persistido com o mesmo slug, e a regra já existe, criando duplicação de código e dificultando a manutenção global.",
+        "confidence": 0.7387,
+        "context_element_id": 2840
+      },
+      {
+        "id": 31,
+        "name": "Retenção e Políticas",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem definição, a retenção é indefinida, o que torna a exclusão após período longo uma tarefa manual e difícil de cumprir.",
+        "confidence": 0.8412,
+        "context_element_id": 2849
+      },
+      {
+        "id": 32,
+        "name": "Dependência de Fornecedor (Vendor Lock-in) e Portabilidade",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Apenas um tenant usa o banco de dados em um momento, então qualquer falha de um só cliente não afeta o restante.",
+        "confidence": 0.7447,
+        "context_element_id": 2850
+      }
+    ],
+    "attributes": [
+      {
+        "id": 21,
+        "name": "Tipo específico de evento ou mensagem que está sendo comunicado",
+        "value": [
+          "TenantProvisionado"
+        ],
+        "method": "internal-inference",
+        "reasoning": "O evento é chamado de TenantProvisionado.",
+        "confidence": 0.704,
+        "context_element_id": 2755
+      },
+      {
+        "id": 23,
+        "name": "Tipo principal de falha ou degradação que o padrão deve mitigar",
+        "value": [
+          "service-unavailability",
+          "invalidação de sessões (assíncrona) ou apenas atualização de status"
+        ],
+        "method": "user-input",
+        "reasoning": "A disponibilidade mínima exigida para as consultas de tenant é de 99,9%, o que é um tipo de falha de serviço.\nA performance requisita é de <= 500ms, mas a falta de clareza sobre se inclui invalidação de sessões (assíncrona) ou apenas atualização de status torna a decisão sobre o requisito de performance difícil de entender.",
+        "confidence": 0.7084,
+        "context_element_id": 2771
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 35,
+        "name": "Estabelecer um sistema de rastreabilidade abrangente com logs detalhados de todas as ações de usuários e mudanças do sistema",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem rastreabilidade, auditoria e investigação ficam presas a um registro que não existe, e a responsabilidade é passada para quem não tem prova.",
+        "confidence": 0.7279,
+        "context_element_id": 2925
+      },
+      {
+        "id": 36,
+        "name": "Implementar identificação única de atores com sistemas de identidade centralizados e gerenciamento unificado de credenciais",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem identificador único, cada chamada ao sistema seria confundida com outra, e a identificação de quem fez o pedido seria perdida.",
+        "confidence": 0.8656,
+        "context_element_id": 2928
+      },
+      {
+        "id": 38,
+        "name": "Implementar validação rigorosa de entradas com sanitização, whitelists de caracteres permitidos e prevenção contra ataques de injeção",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Um número ou caractere fora do padrão é aceito, e a integridade do registro é comprometida sem que o usuário saiba.",
+        "confidence": 0.9407,
+        "context_element_id": 2936
+      },
+      {
+        "id": 39,
+        "name": "Configurar revogação automática de acesso para contas comprometidas com invalidação imediata de tokens e sessões ativas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Uma sessão ativa de um usuário desativado é revogada imediatamente, sem que o usuário possa recuperá-la depois.",
+        "confidence": 0.9848,
+        "context_element_id": 2946
+      },
+      {
+        "id": 41,
+        "name": "Implemente event sourcing com um log de eventos imutável para dados críticos de auditoria e reconstrução de estado",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem registro de auditoria e integração, a auditoria e a integração com terceiros ficam presas a memória local, sem trilha reconstrutível.",
+        "confidence": 0.8014,
+        "context_element_id": 2966
+      },
+      {
+        "id": 44,
+        "name": "Implemente Event Sourcing para conformidade, armazenando todos os eventos de mudança de estado como uma sequência imutável com versionamento e capacidade de replay",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Event Sourcing registra cada etapa do processo, incluindo quem executou o ato, tornando a auditoria imparcial e reconstrutível.",
+        "confidence": 0.7133,
+        "context_element_id": 3017
+      },
+      {
+        "id": 45,
+        "name": "Implemente restrições operacionais que limitem as ações do sistema com base em critérios de segurança predefinidos, incluindo rate limits, limites de operação e políticas de acesso restritivas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Apenas a aplicação define o que é compartilhado, sem que o sistema fique exposto a mudanças externas.",
+        "confidence": 0.7329,
+        "context_element_id": 3062
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 1,
+        "name": "Estratégia de Particionamento",
+        "value": "baseado em tenant",
+        "method": "user-input",
+        "reasoning": "O schema PostgreSQL é separado por tenant (schema_tenant_<id>) com isolamento máximo, caracterizando uma estratégia de estrutura baseada em tenant.",
+        "confidence": 0.8897,
+        "context_element_id": 1324
+      },
+      {
+        "id": 2,
+        "name": "Nível de Estruturação",
+        "value": "semiestruturado",
+        "method": "user-input",
+        "reasoning": "A estrutura isolada de dados é criada no momento do provisionamento, envolvendo criação de schema separado, particionamento ou apenas filtros de aplicação, caracterizando um nível semi-ordenado de estrutura.",
+        "confidence": 0.7209,
+        "context_element_id": 1325
+      },
+      {
+        "id": 3,
+        "name": "Processamento Temporal",
+        "value": "streaming",
+        "method": "user-input",
+        "reasoning": "A latência p99 das consultas de tenant é medida em tempo real, com latência de até 50ms.",
+        "confidence": 0.7608,
+        "context_element_id": 1398
+      },
+      {
+        "id": 10,
+        "name": "Escopo de Acesso ao Registro",
+        "value": "em toda a organização",
+        "method": "internal-inference",
+        "reasoning": "O Registro de Tenant serve como raiz de isolamento de dados, garantindo que cada tenant possua seu próprio espaço segregado de usuários, tarefas, níveis hierárquicos e históricos, com escopo organizacional.",
+        "confidence": 0.8293,
+        "context_element_id": 1512
+      },
+      {
+        "id": 12,
+        "name": "Padrão de Comunicação",
+        "value": "publish-subscribe",
+        "method": "internal-inference",
+        "reasoning": "O evento é entregue a subscribers de auditoria e observabilidade, um padrão de comunicação de publicação-subscrição.",
+        "confidence": 0.8894,
+        "context_element_id": 1982
+      },
+      {
+        "id": 14,
+        "name": "Padrão Temporal",
+        "value": "síncrono",
+        "method": "user-input",
+        "reasoning": "A operação é síncrona, completando ativação/desativação e invalidação de sessões em <= 500ms antes de retornar ao cliente.",
+        "confidence": 0.8151,
+        "context_element_id": 2021
+      },
+      {
+        "id": 53,
+        "name": "Prioridade de Otimização",
+        "value": "focado em latência",
+        "method": "user-input",
+        "reasoning": "O SLA de disponibilidade de 99,9% é focado em latência p99 das consultas de tenant.",
+        "confidence": 0.864,
+        "context_element_id": 4495
+      },
+      {
+        "id": 56,
+        "name": "Escopo de Validação",
+        "value": "validação completa",
+        "method": "user-input",
+        "reasoning": "O campo nome, slug, status, data_criacao e administrador_criador_id são validados como obrigatório em toda a validação.",
+        "confidence": 0.7314,
+        "context_element_id": 4625
+      },
+      {
+        "id": 59,
+        "name": "Modelo de Tenancy",
+        "value": "multi-tenant compartilhado",
+        "method": "user-input",
+        "reasoning": "A configuração é compartilhada entre múltiplos tenentes, caracterizando um modelo de tenancy multi-tenant-shared.",
+        "confidence": 0.8695,
+        "context_element_id": 5055
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 8,
+  "active": true,
+  "sourceId": 23662,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T14:58:49.768Z",
+  "updatedAt": null
+}

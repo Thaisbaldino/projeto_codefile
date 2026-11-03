@@ -1,0 +1,604 @@
+{
+  "id": 23689,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 22,
+          "name": "Critérios de Consulta de Usuário",
+          "format": "{ usuário_id?: uuid, email?: string, tenant_id: uuid, status?: enum[ativo|inativo], nivel_hierarquico_id?: uuid, offset?: integer, limit?: integer }",
+          "origin": "Camada de Aplicação (Handlers, Serviços de Domínio)",
+          "trigger": "Requisição de listagem, busca ou validação de usuários"
+        },
+        {
+          "id": 23,
+          "name": "Entidade Usuário para Persistência",
+          "format": "{ id: uuid, tenant_id: uuid, nome_completo: string, email: string, senha_hash: string, nivel_hierarquico_id: uuid, status: enum[ativo|inativo], data_criacao: timestamp, criador_id: uuid, data_ultima_edicao?: timestamp, ultimo_editor_id?: uuid }",
+          "origin": "Camada de Domínio (Agregados de Usuário)",
+          "trigger": "Operação de criação ou atualização de usuário"
+        },
+        {
+          "id": 24,
+          "name": "Critérios de Consulta de Tenant",
+          "format": "{ tenant_id?: uuid, slug?: string, status?: enum[ativo|inativo], offset?: integer, limit?: integer }",
+          "origin": "Camada de Aplicação (Handlers Administrativos)",
+          "trigger": "Requisição de listagem ou busca de tenants"
+        },
+        {
+          "id": 25,
+          "name": "Entidade Tenant para Persistência",
+          "format": "{ id: uuid, nome: string, slug: string, status: enum[ativo|inativo], data_criacao: timestamp, administrador_criador_id: uuid, data_ultima_ativacao?: timestamp, data_ultima_desativacao?: timestamp }",
+          "origin": "Camada de Domínio (Agregados de Tenant)",
+          "trigger": "Operação de provisionamento ou atualização de tenant"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 34,
+          "name": "Entidades de Usuário Recuperadas",
+          "format": "Usuário[] | Usuário | null — lista de usuários ou usuário único, conforme a operação",
+          "destination": "Camada de Aplicação (Handlers, Serviços de Domínio)"
+        },
+        {
+          "id": 35,
+          "name": "Entidades de Tenant Recuperadas",
+          "format": "Tenant[] | Tenant | null — lista de tenants ou tenant único, conforme a operação",
+          "destination": "Camada de Aplicação (Handlers Administrativos)"
+        },
+        {
+          "id": 36,
+          "name": "Resultado de Validação de Unicidade",
+          "format": "boolean — true se o valor (email, slug) é único, false caso contrário",
+          "destination": "Camada de Aplicação (Validadores)"
+        },
+        {
+          "id": 37,
+          "name": "Entidade Persistida com Metadados",
+          "format": "Usuário | Tenant — entidade retornada do banco de dados com ID gerado e metadados de auditoria preenchidos",
+          "destination": "Camada de Domínio (Agregados)"
+        },
+        {
+          "id": 38,
+          "name": "Notificações de Mudança",
+          "format": "{ operação: string, entidade: string, tenant_id: uuid, usuario_id?: uuid, timestamp: timestamp, executor_id: uuid, campos_alterados?: object }",
+          "destination": "Camada de Observabilidade (Logs de Auditoria, Event Bus)"
+        }
+      ],
+      "processing": [
+        {
+          "id": 26,
+          "step": "Validar Escopo de Tenant",
+          "description": "Verificar que o tenant_id fornecido na consulta corresponde ao tenant do usuário autenticado, garantindo isolamento de dados e prevenindo acesso cruzado."
+        },
+        {
+          "id": 27,
+          "step": "Traduzir Critérios para SQL",
+          "description": "Converter critérios de consulta de domínio (filtros, ordenações, paginação) em cláusulas SQL WHERE, ORDER BY e LIMIT/OFFSET."
+        },
+        {
+          "id": 28,
+          "step": "Executar Consulta no Banco de Dados",
+          "description": "Submeter a consulta SQL ao motor relacional, gerenciando conexão, timeout e tratamento de erros de banco de dados."
+        },
+        {
+          "id": 29,
+          "step": "Mapear Linhas para Entidades de Domínio",
+          "description": "Converter cada linha retornada do banco de dados em uma entidade de domínio (Usuário ou Tenant), aplicando transformações de tipo e validações estruturais."
+        },
+        {
+          "id": 30,
+          "step": "Aplicar Caching em Nível de Repositório",
+          "description": "Armazenar em cache local (in-memory ou distribuído) resultados de consultas frequentes (busca por ID, por email) com TTL configurável, invalidando ao detectar mutações."
+        },
+        {
+          "id": 31,
+          "step": "Persistir Entidade no Banco de Dados",
+          "description": "Executar INSERT ou UPDATE com validação de constraints de banco de dados (unicidade, foreign keys, checks), capturando erros de violação de integridade."
+        },
+        {
+          "id": 32,
+          "step": "Registrar Metadados de Auditoria",
+          "description": "Atualizar automaticamente campos de auditoria (data_criacao, criador_id, data_ultima_edicao, ultimo_editor_id) no momento da persistência."
+        },
+        {
+          "id": 33,
+          "step": "Invalidar Cache Relacionado",
+          "description": "Limpar entradas de cache afetadas pela mutação (listagens por tenant, buscas por email, por status) para garantir consistência."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 39,
+        "category": "authorization",
+        "description": "Toda consulta de usuários ou tenants deve ser validada no repositório para garantir que o tenant_id fornecido corresponde ao tenant do usuário autenticado, impedindo acesso cruzado entre organizações.",
+        "enforcement": "code",
+        "verification": "Verificar que cada método de consulta (buscarUsuárioPorId, listarUsuáriosPorTenant, etc.) valida tenant_id antes de executar a query SQL; testes de integração confirmam que consultas com tenant_id inválido retornam null ou lista vazia."
+      },
+      {
+        "id": 40,
+        "category": "invariant",
+        "description": "O endereço de e-mail de um usuário deve ser único dentro de seu tenant; não é permitido registrar dois usuários com o mesmo e-mail na mesma organização.",
+        "enforcement": "db_constraint",
+        "verification": "Índice único composto (tenant_id, email) na tabela usuarios; tentativa de INSERT/UPDATE com e-mail duplicado resulta em erro de constraint violation; validação prévia via verificarUnicidadeEmailPorTenant retorna false."
+      },
+      {
+        "id": 41,
+        "category": "invariant",
+        "description": "O identificador textual (slug) de um tenant deve ser único na plataforma; não é permitido provisionar dois tenants com o mesmo slug.",
+        "enforcement": "db_constraint",
+        "verification": "Índice único sobre slug na tabela tenants; tentativa de INSERT com slug duplicado resulta em erro de constraint violation; validação prévia via verificarUnicidadeSlugTenant retorna false."
+      },
+      {
+        "id": 42,
+        "category": "invariant",
+        "description": "Um usuário não pode ser atribuído a um nível hierárquico que não existe ou não pertence ao seu tenant; a referência a nivel_hierarquico_id deve ser válida e escopada ao tenant.",
+        "enforcement": "db_constraint",
+        "verification": "Foreign key constraint (nivel_hierarquico_id) na tabela usuarios; tentativa de INSERT/UPDATE com nivel_hierarquico_id inválido resulta em erro de constraint violation; validação de escopo de tenant é responsabilidade da camada de aplicação antes de chamar o repositório."
+      },
+      {
+        "id": 43,
+        "category": "invariant",
+        "description": "Um usuário não pode ser criado sem um tenant válido; a referência a tenant_id deve existir na tabela tenants.",
+        "enforcement": "db_constraint",
+        "verification": "Foreign key constraint (tenant_id) na tabela usuarios; tentativa de INSERT com tenant_id inválido resulta em erro de constraint violation."
+      },
+      {
+        "id": 44,
+        "category": "invariant",
+        "description": "O campo status de um usuário ou tenant deve ser um dos valores permitidos (ativo ou inativo); nenhum outro valor é aceito.",
+        "enforcement": "db_constraint",
+        "verification": "Check constraint (status IN ('ativo', 'inativo')) em ambas as tabelas; tentativa de INSERT/UPDATE com status inválido resulta em erro de constraint violation; enums de aplicação garantem que apenas valores válidos são passados ao repositório."
+      },
+      {
+        "id": 45,
+        "category": "invariant",
+        "description": "O campo email de um usuário deve estar em formato válido de endereço de correio eletrônico; validação de formato é aplicada no banco de dados.",
+        "enforcement": "db_constraint",
+        "verification": "Check constraint com regex na tabela usuarios validando formato de e-mail; tentativa de INSERT/UPDATE com e-mail em formato inválido resulta em erro de constraint violation; validação prévia na camada de aplicação rejeita entradas malformadas antes de chamar o repositório."
+      },
+      {
+        "id": 46,
+        "category": "invariant",
+        "description": "O slug de um tenant deve conter apenas letras minúsculas, números e hífens, sem espaços ou caracteres especiais; validação de formato é aplicada no banco de dados.",
+        "enforcement": "db_constraint",
+        "verification": "Check constraint com regex na tabela tenants validando formato de slug; tentativa de INSERT com slug em formato inválido resulta em erro de constraint violation; validação prévia na camada de aplicação rejeita entradas malformadas."
+      },
+      {
+        "id": 47,
+        "category": "invariant",
+        "description": "Campos obrigatórios (nome_completo, email, status, data_criacao, criador_id, tenant_id, nivel_hierarquico_id para usuários; nome, slug, status, data_criacao, administrador_criador_id para tenants) não podem ser nulos.",
+        "enforcement": "db_constraint",
+        "verification": "Constraints NOT NULL na tabela; tentativa de INSERT/UPDATE com campo obrigatório nulo resulta em erro de constraint violation; validação prévia na camada de aplicação garante que todos os campos obrigatórios são fornecidos."
+      },
+      {
+        "id": 48,
+        "category": "idempotency",
+        "description": "Operações de busca (SELECT) no repositório são idempotentes; múltiplas execuções da mesma consulta com os mesmos parâmetros retornam o mesmo resultado sem efeitos colaterais.",
+        "enforcement": "code",
+        "verification": "Testes de integração confirmam que executar a mesma consulta múltiplas vezes retorna resultados idênticos; nenhuma mutação de estado ocorre durante leitura."
+      },
+      {
+        "id": 49,
+        "category": "observability",
+        "description": "Toda operação de mutação (INSERT, UPDATE) no repositório deve registrar metadados de auditoria (data_criacao, criador_id, data_ultima_edicao, ultimo_editor_id) para rastreabilidade completa de ações.",
+        "enforcement": "code",
+        "verification": "Métodos criarUsuário, atualizarUsuário, desativarUsuário, ativarUsuário, criarTenant, desativarTenant, ativarTenant preenchem automaticamente campos de auditoria; testes confirmam que cada mutação registra executor e timestamp."
+      },
+      {
+        "id": 50,
+        "category": "compliance",
+        "description": "Dados pessoais de usuários (nome completo, e-mail) armazenados no repositório devem estar em conformidade com LGPD; o repositório não deve expor ou transmitir esses dados sem autorização, e deve suportar operações de exclusão lógica (desativação) para respeitar direito ao esquecimento.",
+        "enforcement": "code",
+        "verification": "Repositório não retorna senhas em nenhuma operação de leitura; desativação de usuário marca status como inativo sem excluir dados (exclusão lógica); operações de listagem e busca respeitam escopo de tenant; documentação de conformidade LGPD cita este repositório como ponto de controle de dados pessoais."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "O Repositório de Usuários e Tenants é um padrão de acesso a dados que fornece uma camada de abstração entre a lógica de domínio e o armazenamento relacional, isolando a aplicação dos detalhes de persistência específicos do banco de dados. Encapsula operações de mapeamento entidade-para-linha (entity-to-row mapping) e linha-para-entidade (row-to-entity mapping) para os registros de Usuário e Tenant, traduzindo entre o modelo conceitual de domínio e o modelo físico relacional. Centraliza estratégias de consulta, filtragem, caching e coordenação transacional, permitindo que a lógica de negócio trabalhe com conceitos de domínio (usuários ativos, tenants provisionados, isolamento por tenant) em vez de estruturas SQL brutas. Fornece operações de leitura (buscar por ID, listar por tenant, filtrar por status/email), escrita (criar, atualizar, desativar) e validação de integridade referencial, respeitando o isolamento multi-tenant em todas as consultas."
+    },
+    "definition": {
+      "mapping": [
+        {
+          "id": 2,
+          "entity_name": "Usuário",
+          "entity_to_row": "{ id: uuid, tenant_id: uuid, nome_completo: string, email: string, senha_hash: string, nivel_hierarquico_id: uuid, status: enum[ativo|inativo], data_criacao: timestamp, criador_id: uuid, data_ultima_edicao: timestamp | null, ultimo_editor_id: uuid | null, data_ultima_ativacao: timestamp | null, data_ultima_desativacao: timestamp | null } → usuarios(id, tenant_id, nome_completo, email, senha_hash, nivel_hierarquico_id, status, data_criacao, criador_id, data_ultima_edicao, ultimo_editor_id, data_ultima_ativacao, data_ultima_desativacao)",
+          "row_to_entity": "usuarios(id, tenant_id, nome_completo, email, senha_hash, nivel_hierarquico_id, status, data_criacao, criador_id, data_ultima_edicao, ultimo_editor_id, data_ultima_ativacao, data_ultima_desativacao) → { id: uuid, tenant_id: uuid, nome_completo: string, email: string, senha_hash: string, nivel_hierarquico_id: uuid, status: enum[ativo|inativo], data_criacao: timestamp, criador_id: uuid, data_ultima_edicao: timestamp | null, ultimo_editor_id: uuid | null, data_ultima_ativacao: timestamp | null, data_ultima_desativacao: timestamp | null }"
+        },
+        {
+          "id": 3,
+          "entity_name": "Tenant",
+          "entity_to_row": "{ id: uuid, nome: string, slug: string, status: enum[ativo|inativo], data_criacao: timestamp, administrador_criador_id: uuid, data_ultima_ativacao: timestamp | null, data_ultima_desativacao: timestamp | null } → tenants(id, nome, slug, status, data_criacao, administrador_criador_id, data_ultima_ativacao, data_ultima_desativacao)",
+          "row_to_entity": "tenants(id, nome, slug, status, data_criacao, administrador_criador_id, data_ultima_ativacao, data_ultima_desativacao) → { id: uuid, nome: string, slug: string, status: enum[ativo|inativo], data_criacao: timestamp, administrador_criador_id: uuid, data_ultima_ativacao: timestamp | null, data_ultima_desativacao: timestamp | null }"
+        }
+      ],
+      "repository": {
+        "id": 4,
+        "queries": [
+          {
+            "id": 5,
+            "sql": "SELECT * FROM usuarios WHERE id = $1 AND tenant_id = $2 LIMIT 1",
+            "name": "buscarUsuárioPorId",
+            "signature": "buscarUsuárioPorId(usuário_id: uuid, tenant_id: uuid): Usuário | null",
+            "description": "Busca um usuário específico pelo seu ID, validando que pertence ao tenant fornecido para garantir isolamento de dados."
+          },
+          {
+            "id": 6,
+            "sql": "SELECT * FROM usuarios WHERE email = $1 AND tenant_id = $2 LIMIT 1",
+            "name": "buscarUsuárioPorEmail",
+            "signature": "buscarUsuárioPorEmail(email: string, tenant_id: uuid): Usuário | null",
+            "description": "Busca um usuário pelo endereço de e-mail dentro de um tenant específico, utilizado durante autenticação e validação de unicidade."
+          },
+          {
+            "id": 7,
+            "sql": "SELECT * FROM usuarios WHERE tenant_id = $1 AND (status = $2 OR $2 IS NULL) ORDER BY data_criacao DESC OFFSET $3 LIMIT $4",
+            "name": "listarUsuáriosPorTenant",
+            "signature": "listarUsuáriosPorTenant(tenant_id: uuid, status?: enum[ativo|inativo], offset?: integer, limit?: integer): Usuário[]",
+            "description": "Lista todos os usuários de um tenant com suporte a filtragem por status e paginação, utilizado em listagens administrativas."
+          },
+          {
+            "id": 8,
+            "sql": "SELECT * FROM usuarios WHERE tenant_id = $1 AND nivel_hierarquico_id = $2 AND status = 'ativo' ORDER BY nome_completo ASC",
+            "name": "listarUsuáriosPorNívelHierárquico",
+            "signature": "listarUsuáriosPorNívelHierárquico(tenant_id: uuid, nivel_hierarquico_id: uuid): Usuário[]",
+            "description": "Lista usuários ativos de um tenant filtrados por nível hierárquico, utilizado em seleção de responsáveis e visualizações organizacionais."
+          },
+          {
+            "id": 9,
+            "sql": "INSERT INTO usuarios (id, tenant_id, nome_completo, email, senha_hash, nivel_hierarquico_id, status, data_criacao, criador_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *",
+            "name": "criarUsuário",
+            "signature": "criarUsuário(usuário: Usuário): Usuário",
+            "description": "Persiste um novo usuário no banco de dados, gerando ID automaticamente e registrando metadados de auditoria."
+          },
+          {
+            "id": 10,
+            "sql": "UPDATE usuarios SET nome_completo = COALESCE($3, nome_completo), email = COALESCE($4, email), nivel_hierarquico_id = COALESCE($5, nivel_hierarquico_id), status = COALESCE($6, status), data_ultima_edicao = NOW(), ultimo_editor_id = $7 WHERE id = $1 AND tenant_id = $2 RETURNING *",
+            "name": "atualizarUsuário",
+            "signature": "atualizarUsuário(usuário_id: uuid, tenant_id: uuid, atualizações: { nome_completo?: string, email?: string, nivel_hierarquico_id?: uuid, status?: enum[ativo|inativo] }): Usuário",
+            "description": "Atualiza dados cadastrais de um usuário existente, registrando data e executor da edição para auditoria."
+          },
+          {
+            "id": 11,
+            "sql": "UPDATE usuarios SET senha_hash = $3, data_ultima_edicao = NOW() WHERE id = $1 AND tenant_id = $2 RETURNING *",
+            "name": "atualizarSenhaUsuário",
+            "signature": "atualizarSenhaUsuário(usuário_id: uuid, tenant_id: uuid, nova_senha_hash: string): Usuário",
+            "description": "Atualiza o hash de senha de um usuário, utilizado em fluxos de redefinição de senha."
+          },
+          {
+            "id": 12,
+            "sql": "UPDATE usuarios SET status = 'inativo', data_ultima_desativacao = NOW() WHERE id = $1 AND tenant_id = $2 RETURNING *",
+            "name": "desativarUsuário",
+            "signature": "desativarUsuário(usuário_id: uuid, tenant_id: uuid): Usuário",
+            "description": "Marca um usuário como inativo, bloqueando seu acesso à plataforma sem excluir seus dados históricos."
+          },
+          {
+            "id": 13,
+            "sql": "UPDATE usuarios SET status = 'ativo', data_ultima_ativacao = NOW() WHERE id = $1 AND tenant_id = $2 RETURNING *",
+            "name": "ativarUsuário",
+            "signature": "ativarUsuário(usuário_id: uuid, tenant_id: uuid): Usuário",
+            "description": "Marca um usuário como ativo, restaurando seu acesso à plataforma."
+          },
+          {
+            "id": 14,
+            "sql": "SELECT * FROM tenants WHERE id = $1 LIMIT 1",
+            "name": "buscarTenantPorId",
+            "signature": "buscarTenantPorId(tenant_id: uuid): Tenant | null",
+            "description": "Busca um tenant específico pelo seu ID, utilizado em validações de isolamento e carregamento de configurações."
+          },
+          {
+            "id": 15,
+            "sql": "SELECT * FROM tenants WHERE slug = $1 LIMIT 1",
+            "name": "buscarTenantPorSlug",
+            "signature": "buscarTenantPorSlug(slug: string): Tenant | null",
+            "description": "Busca um tenant pelo seu identificador textual (slug), utilizado em URLs e referências internas."
+          },
+          {
+            "id": 16,
+            "sql": "SELECT * FROM tenants WHERE (status = $1 OR $1 IS NULL) ORDER BY data_criacao DESC OFFSET $2 LIMIT $3",
+            "name": "listarTenants",
+            "signature": "listarTenants(status?: enum[ativo|inativo], offset?: integer, limit?: integer): Tenant[]",
+            "description": "Lista todos os tenants da plataforma com suporte a filtragem por status e paginação, utilizado em painel administrativo interno."
+          },
+          {
+            "id": 17,
+            "sql": "INSERT INTO tenants (id, nome, slug, status, data_criacao, administrador_criador_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+            "name": "criarTenant",
+            "signature": "criarTenant(tenant: Tenant): Tenant",
+            "description": "Persiste um novo tenant no banco de dados, gerando ID automaticamente e registrando metadados de provisionamento."
+          },
+          {
+            "id": 18,
+            "sql": "UPDATE tenants SET status = 'inativo', data_ultima_desativacao = NOW() WHERE id = $1 RETURNING *",
+            "name": "desativarTenant",
+            "signature": "desativarTenant(tenant_id: uuid): Tenant",
+            "description": "Marca um tenant como inativo, bloqueando acesso de todos os seus usuários sem excluir dados."
+          },
+          {
+            "id": 19,
+            "sql": "UPDATE tenants SET status = 'ativo', data_ultima_ativacao = NOW() WHERE id = $1 RETURNING *",
+            "name": "ativarTenant",
+            "signature": "ativarTenant(tenant_id: uuid): Tenant",
+            "description": "Marca um tenant como ativo, restaurando acesso de seus usuários."
+          },
+          {
+            "id": 20,
+            "sql": "SELECT COUNT(*) = 0 FROM usuarios WHERE email = $1 AND tenant_id = $2 AND (id != $3 OR $3 IS NULL)",
+            "name": "verificarUnicidadeEmailPorTenant",
+            "signature": "verificarUnicidadeEmailPorTenant(email: string, tenant_id: uuid, excluir_usuario_id?: uuid): boolean",
+            "description": "Valida se um endereço de e-mail é único dentro de um tenant, com suporte a exclusão de um usuário específico (para edição)."
+          },
+          {
+            "id": 21,
+            "sql": "SELECT COUNT(*) = 0 FROM tenants WHERE slug = $1 AND (id != $2 OR $2 IS NULL)",
+            "name": "verificarUnicidadeSlugTenant",
+            "signature": "verificarUnicidadeSlugTenant(slug: string, excluir_tenant_id?: uuid): boolean",
+            "description": "Valida se um slug de tenant é único na plataforma, com suporte a exclusão de um tenant específico."
+          }
+        ],
+        "signature": "RepositórioUsuáriosTenants"
+      }
+    },
+    "pendencies": [
+      {
+        "id": 71,
+        "section": "definition",
+        "description": "Estratégia de caching em nível de repositório não está completamente especificada. É necessário definir: (1) quais consultas devem ser cacheadas (buscarUsuárioPorId, buscarUsuárioPorEmail, buscarTenantPorSlug são candidatos); (2) TTL do cache (sugestão: 5 minutos para dados de usuário, 15 minutos para dados de tenant); (3) mecanismo de invalidação (invalidar ao detectar mutações relacionadas); (4) backend de cache (in-memory com LRU, Redis distribuído, ou ambos em camadas).",
+        "resolutionOptions": [
+          {
+            "id": 72,
+            "text": "Implementar cache in-memory com LRU (Least Recently Used) na aplicação, com TTL configurável por tipo de consulta; invalidar ao detectar INSERT/UPDATE/DELETE relacionado."
+          },
+          {
+            "id": 73,
+            "text": "Utilizar Redis como cache distribuído, permitindo compartilhamento entre múltiplas instâncias da aplicação; implementar invalidação via pub/sub."
+          },
+          {
+            "id": 74,
+            "text": "Implementar cache em duas camadas: in-memory para acesso rápido local, com fallback para Redis para consistência distribuída; invalidação coordenada entre camadas."
+          },
+          {
+            "id": 75,
+            "text": "Não implementar caching no repositório nesta versão; delegar caching para camada de aplicação ou ORM; revisitar em versão futura se testes de carga indicarem necessidade."
+          }
+        ],
+        "recommendedOptionId": 72
+      },
+      {
+        "id": 76,
+        "section": "definition",
+        "description": "Tratamento de erros de banco de dados não está completamente especificado. É necessário definir: (1) quais erros de constraint violation devem ser capturados e traduzidos em exceções de domínio (ex: UsuárioJáExisteException para email duplicado); (2) como erros de conexão ou timeout devem ser tratados (retry com backoff exponencial, circuit breaker); (3) logging e alertas para erros críticos.",
+        "resolutionOptions": [
+          {
+            "id": 77,
+            "text": "Implementar mapeamento explícito de erros de banco de dados para exceções de domínio; capturar constraint violations e traduzir em EmailDuplicadoException, SlugDuplicadoException, etc."
+          },
+          {
+            "id": 78,
+            "text": "Implementar retry automático com backoff exponencial para erros transientes (timeout, deadlock); circuit breaker para falhas persistentes; alertas para taxa de erro elevada."
+          },
+          {
+            "id": 79,
+            "text": "Delegar tratamento de erros para middleware de aplicação; repositório apenas propaga exceções de banco de dados; camada de aplicação decide se retry ou falha."
+          }
+        ],
+        "recommendedOptionId": 77
+      },
+      {
+        "id": 80,
+        "section": "definition",
+        "description": "Suporte a transações multi-operação não está especificado. É necessário definir: (1) se operações como 'criar usuário + registrar em auditoria' devem ser atômicas; (2) nível de isolamento de transação (READ COMMITTED, REPEATABLE READ, SERIALIZABLE); (3) como lidar com deadlocks ou rollbacks.",
+        "resolutionOptions": [
+          {
+            "id": 81,
+            "text": "Cada operação do repositório é uma transação independente; atomicidade é garantida por constraints de banco de dados; operações multi-passo são responsabilidade da camada de aplicação."
+          },
+          {
+            "id": 82,
+            "text": "Implementar suporte a transações explícitas no repositório; permitir que a camada de aplicação inicie transação, execute múltiplas operações, e commit/rollback atomicamente."
+          },
+          {
+            "id": 83,
+            "text": "Utilizar padrão Unit of Work; acumular mudanças em memória, executar todas em uma transação única ao chamar SaveChanges()."
+          }
+        ],
+        "recommendedOptionId": 81
+      },
+      {
+        "id": 84,
+        "section": "definition",
+        "description": "Suporte a soft delete (exclusão lógica) vs hard delete (exclusão física) não está completamente definido. Atualmente, o repositório implementa soft delete (desativação de usuários/tenants sem excluir dados). É necessário confirmar: (1) se hard delete será suportado no futuro (ex: para conformidade com LGPD direito ao esquecimento); (2) como distinguir entre soft delete e hard delete; (3) se dados soft-deleted devem ser visíveis em consultas (atualmente não são, pois filtram por status='ativo').",
+        "resolutionOptions": [
+          {
+            "id": 85,
+            "text": "Manter apenas soft delete (desativação) nesta versão; hard delete não é suportado; direito ao esquecimento LGPD é implementado via anonimização de dados pessoais, não exclusão física."
+          },
+          {
+            "id": 86,
+            "text": "Implementar soft delete com flag booleano is_deleted; hard delete é operação separada, restrita a administradores internos, com auditoria completa."
+          },
+          {
+            "id": 87,
+            "text": "Implementar soft delete com timestamp deleted_at; hard delete é agendado (ex: 90 dias após soft delete) para permitir recuperação; conformidade LGPD via anonimização antes de hard delete."
+          }
+        ],
+        "recommendedOptionId": 85
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 60,
+        "then": "A operação falha com erro de constraint violation; verificarUnicidadeEmailPorTenant retorna false",
+        "type": "unit",
+        "when": "Tentar criar um novo usuário com email user1@example.com no mesmo tenant",
+        "given": "Um tenant com dois usuários existentes: user1@example.com e user2@example.com",
+        "scenario": "Validação de unicidade de email dentro de um tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 61,
+        "then": "A consulta retorna lista vazia ou null; nenhum usuário do tenant A é retornado",
+        "type": "unit",
+        "when": "Buscar usuários do tenant A com tenant_id do tenant B",
+        "given": "Dois tenants (A e B) cada um com usuários cadastrados",
+        "scenario": "Isolamento de dados por tenant em busca de usuários",
+        "target_section": "rules"
+      },
+      {
+        "id": 62,
+        "then": "Usuário é persistido com ID gerado, data_criacao preenchida, criador_id registrado; campos de edição estão null",
+        "type": "integration",
+        "when": "Criar um novo usuário via criarUsuário com nome, email, nível hierárquico",
+        "given": "Um tenant ativo e um administrador autenticado",
+        "scenario": "Criação de usuário com metadados de auditoria",
+        "target_section": "definition"
+      },
+      {
+        "id": 63,
+        "then": "Usuário é atualizado; data_ultima_edicao é preenchida com timestamp atual; ultimo_editor_id registra o executor",
+        "type": "integration",
+        "when": "Atualizar nome completo do usuário via atualizarUsuário",
+        "given": "Um usuário existente no banco de dados",
+        "scenario": "Atualização de usuário registra executor e timestamp",
+        "target_section": "definition"
+      },
+      {
+        "id": 64,
+        "then": "Status muda para 'inativo'; data_ultima_desativacao é preenchida; buscarUsuárioPorEmail retorna usuário com status inativo (camada de autenticação rejeita login)",
+        "type": "integration",
+        "when": "Desativar o usuário via desativarUsuário",
+        "given": "Um usuário ativo no banco de dados",
+        "scenario": "Desativação de usuário bloqueia login",
+        "target_section": "definition"
+      },
+      {
+        "id": 65,
+        "then": "Tenant é criado com ID gerado, status ativo, data_criacao preenchida; verificarUnicidadeSlugTenant retorna false para 'empresa-a'",
+        "type": "integration",
+        "when": "Provisionar novo tenant com slug 'empresa-a' via criarTenant",
+        "given": "Nenhum tenant com slug 'empresa-a' existe na plataforma",
+        "scenario": "Provisionar tenant com slug único",
+        "target_section": "definition"
+      },
+      {
+        "id": 66,
+        "then": "Retorna 50 usuários; chamada subsequente com offset=50, limit=50 retorna próximos 50 usuários sem duplicação",
+        "type": "integration",
+        "when": "Chamar listarUsuáriosPorTenant com offset=0, limit=50",
+        "given": "Um tenant com 150 usuários cadastrados",
+        "scenario": "Listar usuários com paginação",
+        "target_section": "flow"
+      },
+      {
+        "id": 67,
+        "then": "Cada busca completa em <= 50ms (p99); query execution plan utiliza índice, não full table scan",
+        "type": "performance",
+        "when": "Executar buscarUsuárioPorEmail 100 vezes com emails diferentes",
+        "given": "Um tenant com 5.000 usuários; índice (tenant_id, email) existe",
+        "scenario": "Busca por email com índice otimizado",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 68,
+        "then": "Consulta retorna null; nenhum usuário é exposto; logs registram tentativa suspeita",
+        "type": "security",
+        "when": "Tentar buscar usuário do tenant A usando tenant_id do tenant B",
+        "given": "Dois tenants (A e B) com usuários diferentes",
+        "scenario": "Tentativa de acesso cruzado entre tenants",
+        "target_section": "rules"
+      },
+      {
+        "id": 69,
+        "then": "Operação falha com erro de constraint violation (check constraint); usuário não é criado",
+        "type": "security",
+        "when": "Chamar criarUsuário com email 'invalid-email'",
+        "given": "Tentativa de criar usuário com email em formato inválido",
+        "scenario": "Validação de formato de email",
+        "target_section": "rules"
+      },
+      {
+        "id": 70,
+        "then": "Retorna objeto Usuário com todos os campos preenchidos (id, tenant_id, nome_completo, email, nivel_hierarquico_id, status, data_criacao, criador_id); senha_hash não é retornada",
+        "type": "contract",
+        "when": "Chamar buscarUsuárioPorId com ID e tenant_id válidos",
+        "given": "Um usuário existente no banco de dados",
+        "scenario": "Contrato de retorno de buscarUsuárioPorId",
+        "target_section": "definition"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 51,
+        "target": "p99 <= 50ms para buscarUsuárioPorId e buscarUsuárioPorEmail",
+        "category": "performance",
+        "requirement": "Operações de busca por ID ou email devem ser executadas com latência mínima, mesmo em tenants com até 5.000 usuários ativos.",
+        "verification": "Testes de carga com 5.000 usuários por tenant; índices (idx_usuarios_tenant_email, idx_usuarios_tenant_status) garantem acesso O(log n); monitoramento de query execution time em produção."
+      },
+      {
+        "id": 52,
+        "target": "p99 <= 200ms para listarUsuáriosPorTenant com limit=50",
+        "category": "performance",
+        "requirement": "Operações de listagem com paginação devem retornar resultados em tempo adequado, mesmo em tenants com até 10.000 tarefas e 5.000 usuários.",
+        "verification": "Testes de carga com paginação; índices compostos (tenant_id, status) otimizam filtros; monitoramento de query execution time."
+      },
+      {
+        "id": 53,
+        "target": "p99 <= 100ms para criarUsuário e atualizarUsuário sob carga de 100 requisições/segundo",
+        "category": "performance",
+        "requirement": "Operações de criação e atualização de usuários devem ser concluídas rapidamente, suportando múltiplas requisições simultâneas.",
+        "verification": "Testes de carga com múltiplas threads; pool de conexões dimensionado adequadamente; monitoramento de latência de INSERT/UPDATE."
+      },
+      {
+        "id": 54,
+        "target": "Suportar até 50 tenants, 5.000 usuários por tenant (total 250.000 usuários) no primeiro ano de operação",
+        "category": "scalability",
+        "requirement": "O repositório deve suportar crescimento progressivo de usuários e tenants sem degradação significativa de desempenho.",
+        "verification": "Testes de carga progressivos; índices estratégicos garantem escalabilidade; plano de sharding ou particionamento documentado para crescimento futuro."
+      },
+      {
+        "id": 55,
+        "target": "Algoritmo argon2id com parâmetros m=64MiB, t=3, p=4 (ou bcrypt com cost=12 como alternativa)",
+        "category": "security",
+        "requirement": "Senhas de usuários devem ser armazenadas em formato de hash criptográfico seguro, resistente a ataques de força bruta.",
+        "verification": "Código de criação/atualização de usuário nunca armazena senha em texto simples; testes confirmam que hash é diferente a cada execução (salt aleatório); documentação de segurança cita algoritmo e parâmetros."
+      },
+      {
+        "id": 56,
+        "target": "100% das consultas incluem filtro tenant_id; testes de segurança confirmam que manipulação de parâmetros não permite acesso cruzado",
+        "category": "security",
+        "requirement": "Isolamento de dados por tenant deve ser garantido em todas as operações do repositório; nenhuma consulta deve retornar dados de tenants diferentes.",
+        "verification": "Testes de integração com múltiplos tenants; tentativas de buscar usuários de outro tenant retornam null; auditoria de código confirma que todas as queries incluem WHERE tenant_id = ?"
+      },
+      {
+        "id": 57,
+        "target": "99.9% uptime (máximo 43 minutos de downtime por mês)",
+        "category": "availability",
+        "requirement": "O repositório deve estar disponível com alta disponibilidade, dado que sua indisponibilidade bloqueia autenticação e acesso à plataforma.",
+        "verification": "Monitoramento de health checks; alertas para latência elevada ou taxa de erro; plano de failover para banco de dados; testes de recuperação de falhas."
+      },
+      {
+        "id": 58,
+        "target": "Cada operação registra: operação, tenant_id, usuario_id (quando aplicável), timestamp, executor_id, resultado (sucesso/erro), tempo de execução",
+        "category": "observability",
+        "requirement": "Todas as operações do repositório devem ser rastreáveis através de logs estruturados, permitindo auditoria e debugging.",
+        "verification": "Logs estruturados em formato JSON; testes confirmam que cada método registra informações de auditoria; dashboard de logs permite filtrar por tenant, usuário, operação."
+      },
+      {
+        "id": 59,
+        "target": "Índices estratégicos reduzem full table scans; queries utilizam prepared statements; caching reduz requisições repetidas em 80%",
+        "category": "cost",
+        "requirement": "Operações de banco de dados devem ser otimizadas para minimizar consumo de recursos (CPU, I/O, memória).",
+        "verification": "Análise de query execution plans; monitoramento de I/O e CPU; testes de carga confirmam que caching reduz requisições ao banco de dados."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 48,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T01:11:59.009Z",
+  "updatedAt": null
+}

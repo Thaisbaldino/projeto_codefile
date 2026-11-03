@@ -1,0 +1,137 @@
+{
+  "id": 23922,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 4,
+        "name": "Domínio funcional ou principal área de responsabilidade coberta pelo módulo",
+        "value": [
+          "workflow"
+        ],
+        "method": "internal-inference",
+        "reasoning": "O campo de descrição da tarefa é obrigatório ou opcional no momento da criação, pertencendo ao domínio funcional de workflow.",
+        "confidence": 0.806,
+        "context_element_id": 2673
+      },
+      {
+        "id": 6,
+        "name": "Profundidade esperada da estrutura hierárquica",
+        "value": [
+          "4 levels",
+          "3 levels",
+          "variable-depth"
+        ],
+        "method": "user-input",
+        "reasoning": "Os níveis de hierarquia são fixos em quatro níveis: Baixa, Média, Alta e Urgente.\nOs níveis de hierarquia são fixos em três níveis: Baixa, Média e Alta.\nO nível de exigência é fixado em cinco níveis crescentes, com cada nível definido por uma classificação, caracterizando uma estrutura hierárquica de profundidade variável.",
+        "confidence": 0.7802,
+        "context_element_id": 2712
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 8,
+        "name": "Configurar o escalonamento de recursos com políticas FIFO, de prioridade ou baseadas em deadline conforme a criticidade das operações",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A data limite de conclusão de tarefas é definida no momento da criação, com prazo obrigatório, caracterizando um policy de compliance customizada.\nPrioridade é um fator crítico que determina quem entra em fila e quem sai, e a ordem exata precisa ser definida.",
+        "confidence": 0.7261,
+        "context_element_id": 2870
+      },
+      {
+        "id": 9,
+        "name": "Implementar reinício escalonado começando pelos componentes menos críticos e progredindo gradualmente",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Priorizar com base em prioridades fixas evita que a equipe se concentre em um nível específico e deixa a decisão de cada caso.",
+        "confidence": 0.7783,
+        "context_element_id": 2904
+      },
+      {
+        "id": 11,
+        "name": "Implementar validação rigorosa de entradas com sanitização, whitelists de caracteres permitidos e prevenção contra ataques de injeção",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Caracteres excessivos em uma única entrada podem causar atraso na leitura e tornar a comunicação difícil de entender.",
+        "confidence": 0.7786,
+        "context_element_id": 2936
+      },
+      {
+        "id": 15,
+        "name": "Implemente operações em lote para permitir que os usuários executem múltiplas ações semelhantes simultaneamente com uma única confirmação",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Repetição de confirmação em cada usuário atinge o sistema, e a resposta precisa chegar em tempo adequado mesmo sob carga elevada.",
+        "confidence": 0.8282,
+        "context_element_id": 3044
+      },
+      {
+        "id": 16,
+        "name": "Mantenha um modelo de tarefas do usuário com rastreamento do contexto atual, histórico de ações e sugestões de próximos passos com base no fluxo de trabalho",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem a visualização detalhada, o usuário perde a conexão com o contexto original e a reação correta fica dependente de memória.",
+        "confidence": 0.7864,
+        "context_element_id": 3045
+      },
+      {
+        "id": 17,
+        "name": "Implemente restrições operacionais que limitem as ações do sistema com base em critérios de segurança predefinidos, incluindo rate limits, limites de operação e políticas de acesso restritivas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O limite de 10.000 tarefas é definido no brief, e o sistema deve bloquear ou alertar o usuário quando esse limite é alcançado.",
+        "confidence": 0.9857,
+        "context_element_id": 3062
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 2,
+        "name": "Natureza Temporal",
+        "value": "estado atual",
+        "method": "internal-inference",
+        "reasoning": "Os status fixos disponíveis para seleção como status inicial da tarefa na criação são atualizados em tempo real, caracterizando um estado atual.",
+        "confidence": 0.7291,
+        "context_element_id": 1475
+      },
+      {
+        "id": 3,
+        "name": "Propósito do Registro",
+        "value": "instância de dados",
+        "method": "internal-inference",
+        "reasoning": "O formulário exibido para registro de tarefa é um registro de instância operacional.",
+        "confidence": 0.7074,
+        "context_element_id": 1511
+      },
+      {
+        "id": 23,
+        "name": "Nível de Autonomia",
+        "value": "totalmente autônomo",
+        "method": "user-input",
+        "reasoning": "O criador da tarefa se atribui como responsável pela própria tarefa, sem restrição de nível hierárquico, caracterizando autonomia total.",
+        "confidence": 0.7837,
+        "context_element_id": 4668
+      },
+      {
+        "id": 25,
+        "name": "Controle de Acesso",
+        "value": "baseado em papel",
+        "method": "user-input",
+        "reasoning": "A funcionalidade de criação de tarefas é acessível a qualquer usuário autenticado e ativo do tenant, independentemente do nível hierárquico, com base em permissões de nível hierárquico.",
+        "confidence": 0.9269,
+        "context_element_id": 4950
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 4,
+  "active": true,
+  "sourceId": 23606,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T14:58:49.768Z",
+  "updatedAt": null
+}

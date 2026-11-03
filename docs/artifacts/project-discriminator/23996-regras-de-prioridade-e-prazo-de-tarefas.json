@@ -1,0 +1,89 @@
+{
+  "id": 23996,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 4,
+        "name": "Domínio de dados ao qual a regra de governança se aplica",
+        "value": [
+          "medical-records"
+        ],
+        "method": "user-input",
+        "reasoning": "A consulta de política de conformidade LGPD para determinar quais campos são considerados dados pessoais e como devem ser tratados envolve o domínio de registros médicos.",
+        "confidence": 0.7909,
+        "context_element_id": 2698
+      },
+      {
+        "id": 8,
+        "name": "Perfil primário dos usuários que utilizarão a interface",
+        "value": [
+          "system-admin, manager, supervisor"
+        ],
+        "method": "internal-inference",
+        "reasoning": "Os usuários autenticados que criam, editam ou consultam a tarefa são administradores, gestores e supervisores.",
+        "confidence": 0.759,
+        "context_element_id": 2723
+      }
+    ],
+    "best_practices": [],
+    "discriminators": [
+      {
+        "id": 1,
+        "name": "Gerenciamento de Ciclo de Vida",
+        "value": "orientado a regras",
+        "method": "user-input",
+        "reasoning": "A data atual do servidor é gerada automaticamente em cada avaliação de regra, caracterizando um ciclo de vida controlado por regras.",
+        "confidence": 0.8657,
+        "context_element_id": 1477
+      },
+      {
+        "id": 3,
+        "name": "Tipo de Estrutura",
+        "value": "híbrido",
+        "method": "internal-inference",
+        "reasoning": "A estrutura combina nomes categoriais sem ordem numérica com a ordenação por data de criação ou outro critério, caracterizando um modelo híbrido.",
+        "confidence": 0.7101,
+        "context_element_id": 1542
+      },
+      {
+        "id": 29,
+        "name": "Pipeline de Validação",
+        "value": "pipeline complexo",
+        "method": "internal-inference",
+        "reasoning": "A validação de prioridade com valor inválido é uma etapa complexa do pipeline de validação.",
+        "confidence": 0.7418,
+        "context_element_id": 4204
+      },
+      {
+        "id": 31,
+        "name": "Modo de Diagnóstico",
+        "value": "monitoramento proativo",
+        "method": "internal-inference",
+        "reasoning": "A classificação de critério de prioridade é uma estratégia de monitoramento proativo, não reativo.",
+        "confidence": 0.7227,
+        "context_element_id": 4463
+      },
+      {
+        "id": 36,
+        "name": "Tipo de Processamento",
+        "value": "classificação",
+        "method": "user-input",
+        "reasoning": "A classificação de tarefa crítica com prioridade alta é uma regra de classificação de criticidade.",
+        "confidence": 0.7366,
+        "context_element_id": 4746
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 6,
+  "active": true,
+  "sourceId": 23744,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}

@@ -1,0 +1,139 @@
+{
+  "id": 23920,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [],
+    "best_practices": [
+      {
+        "id": 14,
+        "name": "Estabelecer um sistema de rastreabilidade abrangente com logs detalhados de todas as ações de usuários e mudanças do sistema",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem rastreabilidade completa, a responsabilidade por cada etapa do ciclo de vida da atividade desaparece quando a tarefa é alterada.",
+        "confidence": 0.7866,
+        "context_element_id": 2925
+      },
+      {
+        "id": 19,
+        "name": "Faça mudanças frequentes, pequenas e reversíveis para reduzir o impacto e facilitar o rollback",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O drag and drop é uma alteração de status, e a alteração via formulário de edição já é suficiente para o MVP, sem impacto significativo.",
+        "confidence": 0.7596,
+        "context_element_id": 3008
+      },
+      {
+        "id": 21,
+        "name": "Mantenha um modelo de tarefas do usuário com rastreamento do contexto atual, histórico de ações e sugestões de próximos passos com base no fluxo de trabalho",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Exibir o histórico de status em tela é a única maneira de o usuário ver como a tarefa evoluiu, enquanto registro interno só serve para auditoria e rastreabilidade.",
+        "confidence": 0.7263,
+        "context_element_id": 3045
+      },
+      {
+        "id": 22,
+        "name": "Mantenha um modelo de sistema com indicadores de progresso, status das operações e informações de estado visíveis para transparência operacional",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O status fixo é apresentado em ordem lógica de progressão do ciclo de vida da tarefa, facilitando a compreensão do fluxo de trabalho.",
+        "confidence": 0.8053,
+        "context_element_id": 3047
+      },
+      {
+        "id": 23,
+        "name": "Garanta o engajamento do usuário implementando feedback imediato, notificações contextuais e responsividade em todas as interações",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "A barra de progresso é exibida antes da ação ser confirmada, o que torna a barreira de confirmação mais visível e menos confusa.",
+        "confidence": 0.773,
+        "context_element_id": 3052
+      },
+      {
+        "id": 24,
+        "name": "Use padrões e componentes consistentes por meio de design systems e bibliotecas compartilhadas para garantir a uniformidade da experiência",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Uma experiência uniforme é o que a equipe espera do Kanban, e isso se reflete em cada movimento visual.",
+        "confidence": 0.7844,
+        "context_element_id": 3056
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 1,
+        "name": "Mutabilidade do Conceito de Domínio",
+        "value": "true",
+        "method": "user-input",
+        "reasoning": "A adição de status configuráveis por tenant é uma mutação do conceito de domínio, que não pode ser alterada após a criação.",
+        "confidence": 0.8325,
+        "context_element_id": 1471
+      },
+      {
+        "id": 6,
+        "name": "Relacionamento de Registro",
+        "value": "independente",
+        "method": "internal-inference",
+        "reasoning": "O status da tarefa é armazenado como referência a uma entidade de status independente, não como valor textual fixo embutido diretamente no registro da tarefa.",
+        "confidence": 0.7052,
+        "context_element_id": 1509
+      },
+      {
+        "id": 27,
+        "name": "Modo de Aplicação de Políticas",
+        "value": "aplicação bloqueante",
+        "method": "user-input",
+        "reasoning": "A transição de status é restrita ou proibida pelo sistema, caracterizando uma política de execução bloqueante.",
+        "confidence": 0.8042,
+        "context_element_id": 4168
+      },
+      {
+        "id": 30,
+        "name": "Modelo de Estado",
+        "value": "com estado",
+        "method": "internal-inference",
+        "reasoning": "O status Concluído é um estado fixo, caracterizando um modelo de estado persistente.",
+        "confidence": 0.8748,
+        "context_element_id": 4367
+      },
+      {
+        "id": 32,
+        "name": "Reranking Habilitado",
+        "value": "true",
+        "method": "internal-inference",
+        "reasoning": "A atualização da posição da tarefa na visualização Kanban é feita imediatamente após a alteração de status, sem necessidade de recarregar a página manualmente.",
+        "confidence": 0.7215,
+        "context_element_id": 4711
+      },
+      {
+        "id": 34,
+        "name": "Modelo de Feedback",
+        "value": "tempo real",
+        "method": "user-input",
+        "reasoning": "O feedback visual imediato é exibido antes da ação ser confirmada, indicando a coluna de destino válida.",
+        "confidence": 0.8022,
+        "context_element_id": 4948
+      },
+      {
+        "id": 36,
+        "name": "Modelo de Sincronização de Estado",
+        "value": "sincronização orientada a eventos",
+        "method": "user-input",
+        "reasoning": "A atualização em tempo real é propagaída via WebSocket ou Server-Sent Events (SSE), um modelo de sincronização event-driven.",
+        "confidence": 0.7855,
+        "context_element_id": 4952
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 7,
+  "active": true,
+  "sourceId": 23616,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T14:58:49.768Z",
+  "updatedAt": null
+}

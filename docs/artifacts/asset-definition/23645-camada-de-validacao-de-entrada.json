@@ -1,0 +1,885 @@
+{
+  "id": 23645,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 62,
+          "name": "Requisição HTTP com Payload",
+          "format": "JSON, form-data, multipart/form-data",
+          "origin": "Cliente (navegador ou aplicação externa)",
+          "trigger": "Ação do usuário (envio de formulário, clique em botão)"
+        },
+        {
+          "id": 63,
+          "name": "Token de Autenticação",
+          "format": "JWT no header Authorization",
+          "origin": "Sessão do usuário autenticado",
+          "trigger": "Requisição autenticada"
+        },
+        {
+          "id": 64,
+          "name": "Regras de Validação",
+          "format": "Padrões regex, limites numéricos, listas de valores permitidos",
+          "origin": "Configuração da camada de segurança",
+          "trigger": null
+        },
+        {
+          "id": 65,
+          "name": "Chaves de Criptografia",
+          "format": "Chaves RSA privada/pública, chaves simétricas",
+          "origin": "Gerenciador de segredos (environment variables ou vault)",
+          "trigger": null
+        }
+      ],
+      "outputs": [
+        {
+          "id": 76,
+          "name": "Requisição Sanitizada e Validada",
+          "format": "Payload JSON com campos validados e sanitizados",
+          "destination": "Lógica de negócio (handlers, serviços de aplicação)"
+        },
+        {
+          "id": 77,
+          "name": "Resposta de Erro de Validação",
+          "format": "HTTP 400 Bad Request com mensagens de erro específicas por campo",
+          "destination": "Cliente (navegador ou aplicação externa)"
+        },
+        {
+          "id": 78,
+          "name": "Resposta de Erro de Autenticação",
+          "format": "HTTP 401 Unauthorized com mensagem genérica (sem revelar detalhes internos)",
+          "destination": "Cliente (navegador ou aplicação externa)"
+        },
+        {
+          "id": 79,
+          "name": "Resposta de Bloqueio por Rate Limit",
+          "format": "HTTP 429 Too Many Requests com tempo de espera até próxima tentativa",
+          "destination": "Cliente (navegador ou aplicação externa)"
+        },
+        {
+          "id": 80,
+          "name": "Evento de Violação de Segurança",
+          "format": "Evento estruturado com tipo de violação, usuário, tenant, timestamp, detalhes da requisição",
+          "destination": "Sistema de Auditoria (Trilha de Auditoria de Ações)"
+        },
+        {
+          "id": 81,
+          "name": "Alerta de Fraude",
+          "format": "Evento de alerta com padrão detectado, usuário/IP, tenant, ação recomendada",
+          "destination": "Sistema de Monitoramento e Alertas"
+        }
+      ],
+      "processing": [
+        {
+          "id": 66,
+          "step": "Extração de Contexto de Tenant",
+          "description": "Identifica o tenant ao qual a requisição pertence a partir do JWT claim 'tenant_id' ou header X-Tenant-ID, estabelecendo o escopo de isolamento para validações subsequentes."
+        },
+        {
+          "id": 67,
+          "step": "Validação de Formato de Entrada",
+          "description": "Valida o formato geral da requisição (Content-Type, estrutura JSON, campos obrigatórios) antes de processar o conteúdo específico."
+        },
+        {
+          "id": 68,
+          "step": "Sanitização de Strings",
+          "description": "Remove ou escapa caracteres especiais e potencialmente perigosos de campos de texto (título, descrição, nome) para prevenir injeção de código."
+        },
+        {
+          "id": 69,
+          "step": "Validação de Regras de Negócio",
+          "description": "Aplica regras específicas de validação (unicidade de e-mail, formato de slug de tenant, comprimento de título) conforme declarado nas defesas."
+        },
+        {
+          "id": 70,
+          "step": "Verificação de Assinatura de Token",
+          "description": "Valida a assinatura do JWT usando a chave pública RSA, verificando autenticidade e integridade do token de sessão."
+        },
+        {
+          "id": 71,
+          "step": "Validação de Expiração de Token",
+          "description": "Verifica se o token JWT não expirou; se expirado, rejeita a requisição com erro 401 Unauthorized."
+        },
+        {
+          "id": 72,
+          "step": "Verificação de Rate Limit",
+          "description": "Consulta o contador de requisições por IP/usuário para endpoints sensíveis (login, recuperação de senha); bloqueia se limite foi excedido."
+        },
+        {
+          "id": 73,
+          "step": "Detecção de Padrão de Fraude",
+          "description": "Analisa padrões de comportamento (múltiplas tentativas falhadas, criação em massa) e registra alertas quando limiares são atingidos."
+        },
+        {
+          "id": 74,
+          "step": "Validação de Isolamento de Tenant",
+          "description": "Garante que o tenant extraído da requisição corresponde ao tenant do usuário autenticado; rejeita requisições com tenant_id inconsistente."
+        },
+        {
+          "id": 75,
+          "step": "Emissão de Evento de Violação (se aplicável)",
+          "description": "Quando uma validação falha, emite evento de violação de segurança contendo detalhes da falha, usuário, tenant e timestamp para auditoria."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 82,
+        "category": "validation",
+        "description": "Toda requisição POST/PUT/DELETE deve conter token JWT válido e não expirado no header Authorization, com assinatura verificada usando chave pública RSA.",
+        "enforcement": "code",
+        "verification": "Middleware de autenticação valida token em cada requisição; testes de integração verificam rejeição de tokens inválidos, expirados ou ausentes."
+      },
+      {
+        "id": 83,
+        "category": "validation",
+        "description": "Campos de e-mail devem corresponder ao padrão regex ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$ antes de serem persistidos.",
+        "enforcement": "code",
+        "verification": "Validador de e-mail rejeita formatos inválidos; testes unitários cobrem casos válidos e inválidos."
+      },
+      {
+        "id": 84,
+        "category": "validation",
+        "description": "Senhas de usuários devem ter comprimento mínimo de 8 caracteres e ser armazenadas exclusivamente em formato de hash argon2id com parâmetros m=64MiB, t=3, p=4.",
+        "enforcement": "code",
+        "verification": "Serviço de hash de senha aplica argon2id; testes verificam que senhas em texto simples nunca são persistidas; auditoria de banco de dados confirma formato de hash."
+      },
+      {
+        "id": 85,
+        "category": "validation",
+        "description": "Identificadores de tenant (slug) devem corresponder ao padrão ^[a-z0-9-]{3,50}$ e ser únicos dentro da plataforma.",
+        "enforcement": "code",
+        "verification": "Validador de slug rejeita formatos inválidos; constraint UNIQUE no banco de dados previne duplicatas; testes cobrem casos válidos e inválidos."
+      },
+      {
+        "id": 86,
+        "category": "validation",
+        "description": "Títulos de tarefas não podem exceder 255 caracteres; descrições não podem exceder 2000 caracteres.",
+        "enforcement": "code",
+        "verification": "Validador de comprimento rejeita entradas que excedem limites; testes unitários cobrem casos limítrofes."
+      },
+      {
+        "id": 87,
+        "category": "authorization",
+        "description": "Toda requisição autenticada deve incluir tenant_id extraído do JWT claim ou header X-Tenant-ID; este tenant_id deve corresponder ao tenant do usuário autenticado.",
+        "enforcement": "code",
+        "verification": "Middleware de isolamento de tenant valida correspondência em cada requisição; testes de integração verificam rejeição de requisições com tenant_id inconsistente."
+      },
+      {
+        "id": 88,
+        "category": "authorization",
+        "description": "Usuários não autenticados ou com status inativo não podem acessar endpoints protegidos; requisições sem token válido retornam HTTP 401.",
+        "enforcement": "code",
+        "verification": "Middleware de autenticação bloqueia requisições sem token; testes verificam rejeição de usuários inativos."
+      },
+      {
+        "id": 89,
+        "category": "rate_limit",
+        "description": "Máximo de 5 tentativas de login falhadas consecutivas por combinação de e-mail e tenant; após atingir o limite, bloquear por 900 segundos (15 minutos).",
+        "enforcement": "code",
+        "verification": "Serviço de rate limiting rastreia tentativas falhadas; testes verificam bloqueio após 5 tentativas e desbloqueio após 15 minutos."
+      },
+      {
+        "id": 90,
+        "category": "rate_limit",
+        "description": "Máximo de 3 solicitações de recuperação de senha por endereço de e-mail por hora; requisições adicionais são rejeitadas com HTTP 429.",
+        "enforcement": "code",
+        "verification": "Serviço de rate limiting rastreia solicitações por e-mail; testes verificam bloqueio após 3 solicitações em 1 hora."
+      },
+      {
+        "id": 91,
+        "category": "idempotency",
+        "description": "Requisições POST de criação de tarefa devem ser idempotentes; se a mesma requisição for enviada duas vezes com o mesmo idempotency-key, a segunda deve retornar o resultado da primeira sem criar duplicata.",
+        "enforcement": "code",
+        "verification": "Serviço de idempotência armazena resultado de requisições com chave de idempotência; testes verificam que requisições duplicadas retornam mesmo resultado."
+      },
+      {
+        "id": 92,
+        "category": "compliance",
+        "description": "Todas as operações de criação, edição, exclusão e autenticação devem ser registradas em log de auditoria com identificação do usuário, tenant, timestamp, operação e dados alterados, em conformidade com requisitos de rastreabilidade LGPD.",
+        "enforcement": "code",
+        "verification": "Middleware de auditoria registra todas as operações; testes verificam que logs contêm campos obrigatórios; auditoria de banco de dados confirma registros de auditoria."
+      },
+      {
+        "id": 93,
+        "category": "compliance",
+        "description": "Dados pessoais de usuários (nome, e-mail) devem ser tratados em conformidade com LGPD, aplicando princípios de minimização de dados e proteção de informações pessoais; acesso deve ser restrito ao tenant proprietário.",
+        "enforcement": "code",
+        "verification": "Middleware de isolamento de tenant garante que dados pessoais não são acessíveis por outros tenants; política de retenção de dados define período de armazenamento; testes verificam isolamento."
+      },
+      {
+        "id": 94,
+        "category": "observability",
+        "description": "Eventos de violação de segurança (validação falhada, autenticação falhada, rate limit excedido, padrão de fraude detectado) devem ser emitidos com tipo, usuário, tenant, timestamp e detalhes para monitoramento.",
+        "enforcement": "code",
+        "verification": "Serviço de eventos emite eventos estruturados; testes verificam que eventos contêm campos obrigatórios; monitoramento confirma recebimento de eventos."
+      },
+      {
+        "id": 95,
+        "category": "invariant",
+        "description": "Todas as comunicações entre cliente e servidor devem usar HTTPS com TLS 1.2 ou superior; certificados devem ser validados.",
+        "enforcement": "infra",
+        "verification": "Configuração de servidor web (nginx/Apache) força HTTPS; testes de segurança verificam que HTTP é redirecionado para HTTPS; auditoria de certificado confirma TLS 1.2+."
+      },
+      {
+        "id": 96,
+        "category": "invariant",
+        "description": "Tokens JWT devem ser assinados com algoritmo RS256 (RSA com SHA-256); chave privada deve ser armazenada de forma segura em gerenciador de segredos.",
+        "enforcement": "code",
+        "verification": "Serviço de JWT usa RS256; testes verificam que tokens são assinados corretamente; auditoria de segredos confirma que chave privada não está em código-fonte."
+      },
+      {
+        "id": 97,
+        "category": "invariant",
+        "description": "Cookies de sessão devem ter atributo SameSite=Strict para prevenir CSRF; atributo Secure deve estar ativo para HTTPS.",
+        "enforcement": "code",
+        "verification": "Middleware de sessão define atributos de cookie; testes verificam headers Set-Cookie contêm SameSite=Strict e Secure."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "Camada de validação e proteção de entrada que intercepta, sanitiza e valida todas as requisições HTTP, payloads de API e uploads de arquivo antes de chegarem à lógica de negócio. Implementa múltiplas defesas contra ataques comuns (injeção SQL, XSS, CSRF), controle de taxa de requisições, verificação de assinatura de tokens, criptografia de dados em trânsito e detecção de padrões de fraude e comportamento de bot. Opera como barreira de segurança em tempo de execução, bloqueando requisições malformadas ou suspeitas e emitindo eventos de violação de segurança para auditoria."
+    },
+    "definition": {
+      "defenses": [
+        {
+          "id": 2,
+          "kind": "input_sanitization",
+          "name": "Validação de Entrada de Formulário",
+          "scope": "Todos os formulários de cadastro, edição e autenticação (usuários, tarefas, tenants)",
+          "settings": [
+            {
+              "id": 3,
+              "name": "max_field_length_title",
+              "value": "255"
+            },
+            {
+              "id": 4,
+              "name": "max_field_length_description",
+              "value": "2000"
+            },
+            {
+              "id": 5,
+              "name": "email_format_pattern",
+              "value": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+            },
+            {
+              "id": 6,
+              "name": "password_min_length",
+              "value": "8"
+            },
+            {
+              "id": 7,
+              "name": "tenant_slug_pattern",
+              "value": "^[a-z0-9-]{3,50}$"
+            }
+          ],
+          "applies_to": [
+            {
+              "id": 8,
+              "target": "POST /api/users (cadastro de usuário)"
+            },
+            {
+              "id": 9,
+              "target": "PUT /api/users/:id (edição de usuário)"
+            },
+            {
+              "id": 10,
+              "target": "POST /api/tasks (criação de tarefa)"
+            },
+            {
+              "id": 11,
+              "target": "PUT /api/tasks/:id (edição de tarefa)"
+            },
+            {
+              "id": 12,
+              "target": "POST /api/auth/login (autenticação)"
+            },
+            {
+              "id": 13,
+              "target": "POST /api/tenants (provisionamento de tenant)"
+            }
+          ]
+        },
+        {
+          "id": 14,
+          "kind": "sql_injection_protection",
+          "name": "Proteção contra Injeção SQL",
+          "scope": "Todas as consultas ao banco de dados relacional",
+          "settings": [
+            {
+              "id": 15,
+              "name": "parameterized_queries_enforced",
+              "value": "true"
+            },
+            {
+              "id": 16,
+              "name": "orm_framework",
+              "value": "TypeORM com prepared statements"
+            }
+          ],
+          "applies_to": [
+            {
+              "id": 17,
+              "target": "Repositório de Tarefas"
+            },
+            {
+              "id": 18,
+              "target": "Repositório de Usuários e Tenants"
+            }
+          ]
+        },
+        {
+          "id": 19,
+          "kind": "xss_protection",
+          "name": "Proteção contra XSS (Cross-Site Scripting)",
+          "scope": "Renderização de conteúdo dinâmico no frontend (títulos, descrições, nomes de usuários)",
+          "settings": [
+            {
+              "id": 20,
+              "name": "html_escaping_enabled",
+              "value": "true"
+            },
+            {
+              "id": 21,
+              "name": "content_security_policy_header",
+              "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+            }
+          ],
+          "applies_to": [
+            {
+              "id": 22,
+              "target": "Página de Tarefas (exibição de título e descrição)"
+            },
+            {
+              "id": 23,
+              "target": "Página de Gerenciamento de Usuários (exibição de nomes)"
+            },
+            {
+              "id": 24,
+              "target": "Painel Kanban de Tarefas (renderização de cartões)"
+            }
+          ]
+        },
+        {
+          "id": 25,
+          "kind": "csrf_protection",
+          "name": "Proteção contra CSRF (Cross-Site Request Forgery)",
+          "scope": "Requisições POST, PUT, DELETE que modificam estado",
+          "settings": [
+            {
+              "id": 26,
+              "name": "csrf_token_validation",
+              "value": "true"
+            },
+            {
+              "id": 27,
+              "name": "same_site_cookie_policy",
+              "value": "Strict"
+            }
+          ],
+          "applies_to": [
+            {
+              "id": 28,
+              "target": "POST /api/users (cadastro de usuário)"
+            },
+            {
+              "id": 29,
+              "target": "PUT /api/tasks/:id (edição de tarefa)"
+            },
+            {
+              "id": 30,
+              "target": "DELETE /api/tasks/:id (exclusão de tarefa)"
+            }
+          ]
+        },
+        {
+          "id": 31,
+          "kind": "authentication",
+          "name": "Validação de Assinatura de Token JWT",
+          "scope": "Todas as requisições autenticadas que carregam token de sessão",
+          "settings": [
+            {
+              "id": 32,
+              "name": "algorithm",
+              "value": "RS256"
+            },
+            {
+              "id": 33,
+              "name": "token_expiration_seconds",
+              "value": "3600"
+            },
+            {
+              "id": 34,
+              "name": "refresh_token_expiration_days",
+              "value": "7"
+            }
+          ],
+          "applies_to": [
+            {
+              "id": 35,
+              "target": "Middleware de Autenticação (todas as rotas protegidas)"
+            }
+          ]
+        },
+        {
+          "id": 36,
+          "kind": "encryption_in_transit",
+          "name": "Criptografia de Dados em Trânsito",
+          "scope": "Todas as comunicações HTTP entre cliente e servidor",
+          "settings": [
+            {
+              "id": 37,
+              "name": "protocol",
+              "value": "HTTPS com TLS 1.2 ou superior"
+            },
+            {
+              "id": 38,
+              "name": "certificate_validation",
+              "value": "true"
+            }
+          ],
+          "applies_to": [
+            {
+              "id": 39,
+              "target": "API Interna da Plataforma (todos os endpoints)"
+            }
+          ]
+        },
+        {
+          "id": 40,
+          "kind": "encryption_at_rest",
+          "name": "Criptografia de Senhas em Repouso",
+          "scope": "Armazenamento de senhas de usuários no banco de dados",
+          "settings": [
+            {
+              "id": 41,
+              "name": "algorithm",
+              "value": "argon2id"
+            },
+            {
+              "id": 42,
+              "name": "memory_cost_mib",
+              "value": "64"
+            },
+            {
+              "id": 43,
+              "name": "time_cost_iterations",
+              "value": "3"
+            },
+            {
+              "id": 44,
+              "name": "parallelism_factor",
+              "value": "4"
+            }
+          ],
+          "applies_to": [
+            {
+              "id": 45,
+              "target": "Tabela de Usuários (coluna password_hash)"
+            }
+          ]
+        },
+        {
+          "id": 46,
+          "kind": "rate_limit",
+          "name": "Rate Limiting por Endereço IP",
+          "scope": "Endpoints de autenticação e recuperação de senha (prevenção de força bruta)",
+          "settings": [
+            {
+              "id": 47,
+              "name": "max_login_attempts",
+              "value": "5"
+            },
+            {
+              "id": 48,
+              "name": "lockout_duration_seconds",
+              "value": "900"
+            },
+            {
+              "id": 49,
+              "name": "password_recovery_requests_per_hour",
+              "value": "3"
+            }
+          ],
+          "applies_to": [
+            {
+              "id": 50,
+              "target": "POST /api/auth/login"
+            },
+            {
+              "id": 51,
+              "target": "POST /api/auth/password-recovery"
+            }
+          ]
+        },
+        {
+          "id": 52,
+          "kind": "fraud_detection",
+          "name": "Detecção de Padrão de Fraude",
+          "scope": "Monitoramento de comportamento suspeito em operações críticas",
+          "settings": [
+            {
+              "id": 53,
+              "name": "suspicious_login_threshold",
+              "value": "3 tentativas falhadas em 5 minutos"
+            },
+            {
+              "id": 54,
+              "name": "bulk_task_creation_threshold",
+              "value": "50 tarefas em 1 minuto"
+            },
+            {
+              "id": 55,
+              "name": "alert_action",
+              "value": "log e bloqueio temporário"
+            }
+          ],
+          "applies_to": [
+            {
+              "id": 56,
+              "target": "POST /api/auth/login (detecção de força bruta)"
+            },
+            {
+              "id": 57,
+              "target": "POST /api/tasks (detecção de criação em massa)"
+            }
+          ]
+        },
+        {
+          "id": 58,
+          "kind": "authorization",
+          "name": "Validação de Isolamento de Tenant",
+          "scope": "Todas as operações de leitura e escrita de dados",
+          "settings": [
+            {
+              "id": 59,
+              "name": "tenant_context_extraction",
+              "value": "JWT claim 'tenant_id' ou header X-Tenant-ID"
+            },
+            {
+              "id": 60,
+              "name": "tenant_scope_enforcement",
+              "value": "Validação obrigatória em cada requisição"
+            }
+          ],
+          "applies_to": [
+            {
+              "id": 61,
+              "target": "Middleware de Isolamento de Tenant (todas as rotas protegidas)"
+            }
+          ]
+        }
+      ]
+    },
+    "pendencies": [
+      {
+        "id": 120,
+        "section": "definition",
+        "description": "Definir lista completa de níveis de prioridade de tarefa (ex: Baixa, Média, Alta, Urgente) que serão usados como valores válidos na validação de prioridade.",
+        "resolutionOptions": [
+          {
+            "id": 121,
+            "text": "Usar 4 níveis: Baixa, Média, Alta, Urgente (recomendado para simplicidade inicial)"
+          },
+          {
+            "id": 122,
+            "text": "Usar 5 níveis: Muito Baixa, Baixa, Média, Alta, Muito Alta (mais granular)"
+          },
+          {
+            "id": 123,
+            "text": "Usar sistema numérico: 1-5 (mais flexível para futuras extensões)"
+          }
+        ],
+        "recommendedOptionId": 121
+      },
+      {
+        "id": 124,
+        "section": "definition",
+        "description": "Definir lista completa de status fixos de tarefa (ex: A Fazer, Em Andamento, Concluído) que serão usados como valores válidos na validação de status.",
+        "resolutionOptions": [
+          {
+            "id": 125,
+            "text": "Usar 3 status: A Fazer, Em Andamento, Concluído (recomendado para MVP)"
+          },
+          {
+            "id": 126,
+            "text": "Usar 4 status: A Fazer, Em Andamento, Em Revisão, Concluído (mais detalhado)"
+          },
+          {
+            "id": 127,
+            "text": "Usar 5 status: Backlog, A Fazer, Em Andamento, Em Revisão, Concluído (mais completo)"
+          }
+        ],
+        "recommendedOptionId": 125
+      },
+      {
+        "id": 128,
+        "section": "definition",
+        "description": "Definir se a validação de entrada deve ser executada no cliente (frontend) e/ou no servidor (backend), e qual é a estratégia de sincronização entre as duas.",
+        "resolutionOptions": [
+          {
+            "id": 129,
+            "text": "Validação apenas no servidor (mais seguro, recomendado)"
+          },
+          {
+            "id": 130,
+            "text": "Validação no cliente para UX + validação no servidor para segurança (recomendado para melhor experiência)"
+          },
+          {
+            "id": 131,
+            "text": "Validação apenas no cliente (menos seguro, não recomendado)"
+          }
+        ],
+        "recommendedOptionId": 130
+      },
+      {
+        "id": 132,
+        "section": "definition",
+        "description": "Definir se a detecção de fraude deve usar apenas regras estáticas (limiares fixos) ou incluir machine learning para detecção de anomalias.",
+        "resolutionOptions": [
+          {
+            "id": 133,
+            "text": "Usar apenas regras estáticas (simples, recomendado para MVP)"
+          },
+          {
+            "id": 134,
+            "text": "Usar regras estáticas + análise de anomalias com ML (mais sofisticado, requer mais dados)"
+          }
+        ],
+        "recommendedOptionId": 133
+      },
+      {
+        "id": 135,
+        "section": "rules",
+        "description": "Definir se a validação de isolamento de tenant deve ser feita em nível de aplicação (código) ou também em nível de banco de dados (row-level security).",
+        "resolutionOptions": [
+          {
+            "id": 136,
+            "text": "Apenas em nível de aplicação (mais simples, recomendado para MVP)"
+          },
+          {
+            "id": 137,
+            "text": "Em nível de aplicação + row-level security no banco de dados (mais seguro, recomendado para produção)"
+          }
+        ],
+        "recommendedOptionId": 137
+      },
+      {
+        "id": 138,
+        "section": "non_functional_requirements",
+        "description": "Definir se o armazenamento de contadores de rate limit deve usar memória local, Redis distribuído ou banco de dados.",
+        "resolutionOptions": [
+          {
+            "id": 139,
+            "text": "Memória local (simples, mas não funciona em múltiplas instâncias)"
+          },
+          {
+            "id": 140,
+            "text": "Redis distribuído (recomendado para escalabilidade)"
+          },
+          {
+            "id": 141,
+            "text": "Banco de dados relacional (mais lento, não recomendado para rate limiting)"
+          }
+        ],
+        "recommendedOptionId": 140
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 107,
+        "then": "O validador retorna sucesso e o valor é aceito",
+        "type": "unit",
+        "when": "O validador de e-mail processa o valor",
+        "given": "Um campo de e-mail com valor 'usuario@exemplo.com'",
+        "scenario": "Validação de formato de e-mail",
+        "target_section": "definition"
+      },
+      {
+        "id": 108,
+        "then": "O validador retorna erro e o valor é rejeitado com mensagem específica",
+        "type": "unit",
+        "when": "O validador de e-mail processa o valor",
+        "given": "Um campo de e-mail com valor 'usuario_invalido'",
+        "scenario": "Rejeição de e-mail inválido",
+        "target_section": "definition"
+      },
+      {
+        "id": 109,
+        "then": "A senha é convertida em hash seguro e o tempo de hash é >= 100ms",
+        "type": "unit",
+        "when": "O serviço de hash aplica argon2id com m=64MiB, t=3, p=4",
+        "given": "Uma senha em texto simples 'SenhaSegura123!'",
+        "scenario": "Hash de senha com argon2id",
+        "target_section": "definition"
+      },
+      {
+        "id": 110,
+        "then": "Caracteres perigosos são escapados e o valor resultante é seguro para renderização",
+        "type": "unit",
+        "when": "O sanitizador processa o valor",
+        "given": "Um campo de título com valor '<script>alert(\"XSS\")</script>'",
+        "scenario": "Sanitização de string com caracteres especiais",
+        "target_section": "definition"
+      },
+      {
+        "id": 111,
+        "then": "A assinatura é verificada com sucesso e a requisição é permitida",
+        "type": "integration",
+        "when": "O middleware de autenticação processa a requisição",
+        "given": "Uma requisição com token JWT válido e não expirado no header Authorization",
+        "scenario": "Validação de token JWT válido",
+        "target_section": "flow"
+      },
+      {
+        "id": 112,
+        "then": "A requisição é rejeitada com HTTP 401 Unauthorized",
+        "type": "integration",
+        "when": "O middleware de autenticação processa a requisição",
+        "given": "Uma requisição com token JWT expirado no header Authorization",
+        "scenario": "Rejeição de token JWT expirado",
+        "target_section": "flow"
+      },
+      {
+        "id": 113,
+        "then": "A requisição é rejeitada com HTTP 429 Too Many Requests e tempo de espera de 900 segundos",
+        "type": "integration",
+        "when": "O usuário tenta fazer login novamente",
+        "given": "Um usuário que realizou 5 tentativas de login falhadas consecutivas",
+        "scenario": "Bloqueio por rate limit após 5 tentativas de login falhadas",
+        "target_section": "flow"
+      },
+      {
+        "id": 114,
+        "then": "A requisição é rejeitada com HTTP 403 Forbidden",
+        "type": "integration",
+        "when": "O middleware de isolamento de tenant processa a requisição",
+        "given": "Uma requisição autenticada com tenant_id=1 tentando acessar dados de tenant_id=2",
+        "scenario": "Validação de isolamento de tenant",
+        "target_section": "flow"
+      },
+      {
+        "id": 115,
+        "then": "O valor é tratado como string literal e nenhuma tabela é deletada",
+        "type": "security",
+        "when": "A consulta ao banco de dados é executada com prepared statements",
+        "given": "Um campo de pesquisa com valor \"'; DROP TABLE users; --\"",
+        "scenario": "Prevenção de injeção SQL",
+        "target_section": "definition"
+      },
+      {
+        "id": 116,
+        "then": "O conteúdo é escapado e nenhum script é executado",
+        "type": "security",
+        "when": "O título é renderizado na página de tarefas",
+        "given": "Uma tarefa com título '<img src=x onerror=\"alert(1)\">'",
+        "scenario": "Prevenção de XSS em renderização de título de tarefa",
+        "target_section": "definition"
+      },
+      {
+        "id": 117,
+        "then": "A requisição é rejeitada com HTTP 403 Forbidden",
+        "type": "security",
+        "when": "O middleware de CSRF processa a requisição",
+        "given": "Uma requisição POST sem token CSRF válido",
+        "scenario": "Proteção contra CSRF em requisição POST",
+        "target_section": "flow"
+      },
+      {
+        "id": 118,
+        "then": "p99 de latência é <= 100ms e taxa de erro é < 0.1%",
+        "type": "performance",
+        "when": "O sistema processa as requisições",
+        "given": "500 requisições por segundo com validação de entrada",
+        "scenario": "Validação de entrada sob carga de 500 RPS",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 119,
+        "then": "A resposta HTTP 400 contém mensagem de erro específica para o campo 'email'",
+        "type": "contract",
+        "when": "O validador rejeita a requisição",
+        "given": "Uma requisição POST com campo de e-mail inválido",
+        "scenario": "Resposta de erro de validação contém campo específico",
+        "target_section": "flow"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 98,
+        "target": "p99 <= 50ms para validação de entrada em requisições típicas",
+        "category": "performance",
+        "requirement": "Validação de entrada e sanitização devem ser concluídas sem impacto perceptível no tempo de resposta da requisição.",
+        "verification": "Testes de carga medem tempo de validação; benchmarks comparam com e sem validação."
+      },
+      {
+        "id": 99,
+        "target": "p99 <= 10ms para verificação de assinatura RS256",
+        "category": "performance",
+        "requirement": "Verificação de assinatura de token JWT deve ser rápida e não criar gargalo em requisições autenticadas.",
+        "verification": "Testes de carga medem tempo de verificação; benchmarks comparam diferentes algoritmos."
+      },
+      {
+        "id": 100,
+        "target": "p99 <= 5ms para consulta de contador de rate limit",
+        "category": "performance",
+        "requirement": "Rate limiting deve ser verificado sem impacto significativo no tempo de resposta.",
+        "verification": "Testes de carga medem tempo de consulta; benchmarks comparam diferentes estratégias de armazenamento (memória, Redis)."
+      },
+      {
+        "id": 101,
+        "target": "p99 <= 100ms para validação sob carga de 500 RPS",
+        "category": "scalability",
+        "requirement": "Camada de validação deve suportar até 500 requisições por segundo (RPS) mantendo performance adequada.",
+        "verification": "Testes de carga com 500 RPS medem latência e taxa de erro; monitoramento em produção confirma desempenho."
+      },
+      {
+        "id": 102,
+        "target": "argon2id com m=64MiB, t=3, p=4; tempo de hash >= 100ms por senha",
+        "category": "security",
+        "requirement": "Algoritmo de hash de senha deve ser resistente a ataques de força bruta e rainbow tables.",
+        "verification": "Testes verificam que tempo de hash é >= 100ms; auditoria de segurança confirma parâmetros de argon2id."
+      },
+      {
+        "id": 103,
+        "target": "Tokens com >= 256 bits de entropia; algoritmo RS256 com chave RSA >= 2048 bits",
+        "category": "security",
+        "requirement": "Tokens JWT devem ter entropia suficiente para resistir a ataques de adivinhação.",
+        "verification": "Análise de código verifica tamanho de chave RSA; testes verificam que tokens não são previsíveis."
+      },
+      {
+        "id": 104,
+        "target": "Mensagens de erro genéricas para falhas de autenticação; detalhes específicos apenas em logs internos",
+        "category": "security",
+        "requirement": "Mensagens de erro não devem revelar detalhes internos do sistema que possam ser explorados por atacantes.",
+        "verification": "Testes verificam que mensagens de erro não contêm informações sensíveis; auditoria de logs confirma que detalhes estão em logs internos."
+      },
+      {
+        "id": 105,
+        "target": "Disponibilidade >= 99.9% (SLA de 43.2 minutos de downtime por mês)",
+        "category": "availability",
+        "requirement": "Camada de validação deve estar disponível com alta disponibilidade, pois sua indisponibilidade bloqueia todas as requisições.",
+        "verification": "Monitoramento contínuo mede disponibilidade; alertas disparam se disponibilidade cai abaixo de 99.9%."
+      },
+      {
+        "id": 106,
+        "target": "100% de eventos de violação registrados; latência de registro <= 100ms",
+        "category": "observability",
+        "requirement": "Eventos de violação de segurança devem ser registrados e disponíveis para análise e auditoria.",
+        "verification": "Testes verificam que todos os eventos são registrados; monitoramento confirma latência de registro."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 51,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-10T23:44:23.817Z",
+  "updatedAt": null
+}

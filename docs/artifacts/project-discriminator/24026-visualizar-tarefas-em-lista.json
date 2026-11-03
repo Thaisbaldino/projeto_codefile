@@ -1,0 +1,112 @@
+{
+  "id": 24026,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [],
+    "best_practices": [
+      {
+        "id": 8,
+        "name": "Implemente funcionalidade de pausar e retomar para operações longas, preservando o estado da sessão e permitindo a continuação após interrupções",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem a restauração automática, o usuário precisaria reaplicar manualmente cada filtro e ordem, o que distrairia o trabalho de pesquisa.",
+        "confidence": 0.9469,
+        "context_element_id": 3043
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 14,
+        "name": "Tipo de Gatilho",
+        "value": "disparado por requisição",
+        "method": "user-input",
+        "reasoning": "A pesquisa é executada apenas após o usuário pressionar Enter ou clicar em botão de busca explícito, sem atualização automática durante a digitação.",
+        "confidence": 0.7322,
+        "context_element_id": 4364
+      },
+      {
+        "id": 15,
+        "name": "Modo de Execução",
+        "value": "assíncrono",
+        "method": "user-input",
+        "reasoning": "A carregamento incremental da lista de tarefas é feito de forma assíncrona, evitando a espera de múltiplas requisições.",
+        "confidence": 0.7085,
+        "context_element_id": 4365
+      },
+      {
+        "id": 19,
+        "name": "Estratégia de Carregamento",
+        "value": "carregamento progressivo",
+        "method": "user-input",
+        "reasoning": "A lista de tarefas é carregada incrementalmente, evitando o carregamento simultâneo de todas as tarefas do tenant em uma única requisição.",
+        "confidence": 0.829,
+        "context_element_id": 4497
+      },
+      {
+        "id": 20,
+        "name": "Paginação de Dados",
+        "value": "rolagem infinita",
+        "method": "user-input",
+        "reasoning": "O scroll infinito é o mecanismo de carregamento incremental de 20 tarefas por lote ao rolar a página.",
+        "confidence": 0.9735,
+        "context_element_id": 4499
+      },
+      {
+        "id": 21,
+        "name": "Temporalidade dos Dados",
+        "value": "misto",
+        "method": "user-input",
+        "reasoning": "Ambas as abordagens, condições predefinidas e seleção de intervalo de datas personalizado, caracterizam uma temporalidade mista.",
+        "confidence": 0.7723,
+        "context_element_id": 4580
+      },
+      {
+        "id": 22,
+        "name": "Tipo de Regra",
+        "value": "regra de decisão",
+        "method": "user-input",
+        "reasoning": "A regra de decisão é definida explicitamente para cada condição de prazo, como atrasadas, vencidas hoje, vencidas esta semana e sem prazo definido.",
+        "confidence": 0.8889,
+        "context_element_id": 4603
+      },
+      {
+        "id": 23,
+        "name": "Estratégia de Busca",
+        "value": "busca híbrida",
+        "method": "internal-inference",
+        "reasoning": "A pesquisa textual combina pesquisa de texto completo com os filtros ativos, caracterizando um estratégia de busca híbrida.",
+        "confidence": 0.7206,
+        "context_element_id": 4709
+      },
+      {
+        "id": 30,
+        "name": "Controle de Acesso",
+        "value": "autorização dinâmica",
+        "method": "internal-inference",
+        "reasoning": "A visualização das tarefas é feita por padrão apenas para as tarefas atribuídas ao usuário autenticado, com a possibilidade de remover o filtro para visualizar todas as tarefas do tenant.",
+        "confidence": 0.7157,
+        "context_element_id": 4950
+      },
+      {
+        "id": 34,
+        "name": "Escopo de Persistência",
+        "value": "escopo de sessão",
+        "method": "user-input",
+        "reasoning": "Os filtros e a ordenação selecionados pelo usuário são preservados ao navegar para outra tela e retornar à lista, caracterizando uma persistência de estado de sessão.",
+        "confidence": 0.8991,
+        "context_element_id": 5097
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 7,
+  "active": true,
+  "sourceId": 23625,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:23:01.555Z",
+  "updatedAt": null
+}

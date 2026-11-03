@@ -1,0 +1,52 @@
+{
+  "id": 23906,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 24,
+        "name": "Validação de Entrada e Injeção",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "O campo de e-mail é o único que aceita dados maliciosos, e a execução de SQL malicioso é a única consequência de falha.",
+        "confidence": 0.8159,
+        "context_element_id": 2825
+      }
+    ],
+    "attributes": [
+      {
+        "id": 15,
+        "name": "Domínio de negócio ao qual o registro pertence",
+        "value": [
+          "customer-management"
+        ],
+        "method": "user-input",
+        "reasoning": "O formulário de cadastro exibe campos obrigatórios (nome completo, e-mail, nível hierárquico) e opcionais (descrição), pertencendo ao domínio funcional de gestão de clientes.",
+        "confidence": 0.8051,
+        "context_element_id": 2704
+      }
+    ],
+    "best_practices": [],
+    "discriminators": [
+      {
+        "id": 2,
+        "name": "Privacidade e Proteção de Dados",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A regra não exige transformação de dados pessoais em anonimizado ou pseudônimo antes de armazená-los.",
+        "confidence": 0.7784,
+        "context_element_id": 1435
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 3,
+  "active": true,
+  "sourceId": 23866,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T14:19:49.708Z",
+  "updatedAt": null
+}

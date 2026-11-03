@@ -1,0 +1,931 @@
+{
+  "id": 23778,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 46,
+          "name": "Requisição HTTP Autenticada",
+          "format": "application/json com header Authorization: Bearer <jwt_token>",
+          "origin": "Cliente (navegador web, aplicação móvel, sistema externo)",
+          "trigger": "http"
+        },
+        {
+          "id": 47,
+          "name": "Evento de Agendamento de Processamento de E-mail",
+          "format": "Sinal de ativação periódica (a cada 5 segundos)",
+          "origin": "Scheduler interno da plataforma",
+          "trigger": "schedule"
+        },
+        {
+          "id": 48,
+          "name": "Operação Manual de Administrador",
+          "format": "Comando estruturado com contexto de administrador",
+          "origin": "Interface administrativa interna",
+          "trigger": "manual"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 57,
+          "name": "Resposta HTTP com Dados de Sucesso",
+          "format": "application/json com envelope StandardSuccessEnvelope contendo dados da operação, metadados e código HTTP 200/201",
+          "destination": "Cliente (navegador web, aplicação móvel, sistema externo)"
+        },
+        {
+          "id": 58,
+          "name": "Resposta HTTP com Erro",
+          "format": "application/json com envelope StandardErrorEnvelope contendo código de erro, mensagem e detalhes, código HTTP 400/401/403/404/409/429/500",
+          "destination": "Cliente (navegador web, aplicação móvel, sistema externo)"
+        },
+        {
+          "id": 59,
+          "name": "Evento de Auditoria",
+          "format": "Evento estruturado com user_id, tenant_id, timestamp, operação, dados alterados, resultado",
+          "destination": "Sistema de Observabilidade e Trilha de Auditoria"
+        },
+        {
+          "id": 60,
+          "name": "Mensagem de E-mail Enfileirada",
+          "format": "Mensagem estruturada com destinatário, tipo de e-mail, token de recuperação, link de redefinição",
+          "destination": "Fila de Processamento de E-mail (Worker de Envio de E-mail)"
+        },
+        {
+          "id": 61,
+          "name": "Dados Persistidos no Banco de Dados",
+          "format": "Registros em tabelas de usuários, tarefas, tenants, histórico de status, sessões",
+          "destination": "Banco de Dados Relacional"
+        }
+      ],
+      "processing": [
+        {
+          "id": 49,
+          "step": "Validar Autenticação e Autorização",
+          "description": "Extrai token JWT do header Authorization, valida assinatura e expiração, resolve contexto de autenticação (user_id, tenant_id, perfil, permissões), verifica se usuário está ativo e tenant está ativo, retorna erro 401 ou 403 se falhar"
+        },
+        {
+          "id": 50,
+          "step": "Validar Entrada e Sanitizar Payload",
+          "description": "Valida estrutura e tipos de dados do corpo da requisição, aplica regras de validação específicas (formato de e-mail, comprimento de título, valores de enum), sanitiza strings removendo caracteres de controle, retorna erro 400 com detalhes específicos por campo se falhar"
+        },
+        {
+          "id": 51,
+          "step": "Resolver Contexto de Negócio",
+          "description": "Identifica operação solicitada (criar usuário, editar tarefa, etc.), carrega dados necessários do banco (usuário, tenant, tarefa, nível hierárquico), valida isolamento de tenant (dados solicitados pertencem ao tenant autenticado), retorna erro 404 ou 403 se dados não encontrados ou acesso negado"
+        },
+        {
+          "id": 52,
+          "step": "Executar Lógica de Negócio",
+          "description": "Invoca regras de negócio (validação de unicidade de e-mail, verificação de colaboradores vinculados a nível hierárquico, cálculo de elegibilidade para destaque de tarefas), invoca utilitários técnicos (hash de senha, geração de token, transformação de DTO), coordena múltiplas operações de banco de dados em transação quando necessário"
+        },
+        {
+          "id": 53,
+          "step": "Persistir Dados e Registrar Transições",
+          "description": "Executa operações de INSERT/UPDATE/DELETE no banco de dados relacional dentro de transação, registra transições de status no histórico de tarefas, registra data/hora de criação ou modificação, registra identificação do usuário executor, retorna erro 409 se conflito de estado (ex: e-mail duplicado)"
+        },
+        {
+          "id": 54,
+          "step": "Emitir Eventos para Observabilidade e Auditoria",
+          "description": "Emite eventos estruturados (user_created, task_updated, authentication_failed, etc.) para sistema de observabilidade, registra em log de auditoria com identificação do usuário, tenant, timestamp, operação e dados alterados, garante entrega at_least_once de eventos críticos"
+        },
+        {
+          "id": 55,
+          "step": "Enfileirar Operações Assíncronas",
+          "description": "Para operações que requerem processamento assíncrono (envio de e-mail de recuperação de senha), enfileira mensagem em fila de processamento com retry automático, retorna resposta imediata ao cliente sem aguardar conclusão"
+        },
+        {
+          "id": 56,
+          "step": "Construir e Retornar Resposta Estruturada",
+          "description": "Transforma resultado da operação em envelope de resposta padronizado (StandardSuccessEnvelope ou StandardErrorEnvelope), inclui metadados (timestamp, request_id, versão), serializa para JSON, retorna com código HTTP apropriado (200, 201, 400, 401, 403, 404, 409, 429, 500)"
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 62,
+        "category": "authorization",
+        "description": "Apenas usuários com perfil de administrador do tenant podem criar, editar ou excluir usuários e níveis hierárquicos do tenant. Apenas usuários com perfil de administrador da plataforma podem provisionar, ativar ou desativar tenants.",
+        "enforcement": "code",
+        "verification": "Validação de perfil no contexto de autenticação antes de executar operação; retorno de erro 403 se perfil insuficiente"
+      },
+      {
+        "id": 63,
+        "category": "authorization",
+        "description": "Usuários não autenticados ou pertencentes a tenants inativos não podem acessar nenhuma funcionalidade da plataforma. Usuários desativados não podem realizar login.",
+        "enforcement": "code",
+        "verification": "Validação de token JWT e status de usuário/tenant em cada requisição; retorno de erro 401 ou 403 se falhar"
+      },
+      {
+        "id": 64,
+        "category": "invariant",
+        "description": "Isolamento de dados por tenant: dados de um tenant nunca são acessíveis, visíveis ou modificáveis por usuários de outro tenant. Todas as consultas ao banco de dados incluem filtro de tenant_id.",
+        "enforcement": "code",
+        "verification": "Auditoria de consultas SQL para verificar presença de filtro tenant_id; testes de segurança tentando acessar dados de outro tenant"
+      },
+      {
+        "id": 65,
+        "category": "validation",
+        "description": "Endereços de e-mail devem ser únicos dentro de cada tenant. Não é permitido cadastrar dois usuários com o mesmo e-mail na mesma organização.",
+        "enforcement": "db_constraint",
+        "verification": "Constraint UNIQUE (email, tenant_id) na tabela de usuários; retorno de erro 409 CONFLICT se violado"
+      },
+      {
+        "id": 66,
+        "category": "validation",
+        "description": "Identificadores de tenants (slug) devem ser únicos na plataforma e respeitar formato permitido (letras minúsculas, números e hífens).",
+        "enforcement": "db_constraint",
+        "verification": "Constraint UNIQUE (slug) na tabela de tenants; validação de formato em código antes de persistência"
+      },
+      {
+        "id": 67,
+        "category": "validation",
+        "description": "Nomes de níveis hierárquicos devem ser únicos dentro de cada tenant e não podem estar em branco.",
+        "enforcement": "db_constraint",
+        "verification": "Constraint UNIQUE (name, tenant_id) e NOT NULL na tabela de níveis hierárquicos; validação em código"
+      },
+      {
+        "id": 68,
+        "category": "validation",
+        "description": "Títulos de tarefas são obrigatórios, não podem estar em branco e não podem exceder 255 caracteres.",
+        "enforcement": "code",
+        "verification": "Validação em código antes de persistência; retorno de erro 400 se violado"
+      },
+      {
+        "id": 69,
+        "category": "validation",
+        "description": "Responsáveis de tarefas devem ser colaboradores ativos pertencentes ao mesmo tenant da tarefa.",
+        "enforcement": "code",
+        "verification": "Validação em código consultando status e tenant_id do usuário; retorno de erro 400 se usuário inativo ou de outro tenant"
+      },
+      {
+        "id": 70,
+        "category": "validation",
+        "description": "Prioridades de tarefas devem corresponder a um dos valores fixos definidos pelo sistema (ex: Baixa, Média, Alta, Urgente).",
+        "enforcement": "code",
+        "verification": "Validação em código contra enum de prioridades; retorno de erro 400 se valor inválido"
+      },
+      {
+        "id": 71,
+        "category": "validation",
+        "description": "Status de tarefas devem corresponder a um dos status fixos definidos pelo sistema (ex: A Fazer, Em Andamento, Concluído).",
+        "enforcement": "code",
+        "verification": "Validação em código contra enum de status; retorno de erro 400 se valor inválido"
+      },
+      {
+        "id": 72,
+        "category": "validation",
+        "description": "Datas limite de tarefas, quando informadas, devem ser datas válidas no calendário e não podem ser anteriores à data atual no momento da criação.",
+        "enforcement": "code",
+        "verification": "Validação de formato de data e comparação com data/hora atual do servidor; retorno de erro 400 se violado"
+      },
+      {
+        "id": 73,
+        "category": "idempotency",
+        "description": "Operações de criação de usuário, tarefa e tenant devem ser idempotentes: múltiplas requisições idênticas com mesmo request_id retornam mesmo resultado sem duplicação de dados.",
+        "enforcement": "code",
+        "verification": "Implementação de deduplicação baseada em request_id; verificação de logs de auditoria para confirmar ausência de duplicatas"
+      },
+      {
+        "id": 74,
+        "category": "rate_limit",
+        "description": "Tentativas de login são limitadas a 5 tentativas falhadas em 15 minutos por combinação de e-mail e IP. Após atingir limite, novas tentativas são bloqueadas temporariamente.",
+        "enforcement": "code",
+        "verification": "Contador de tentativas falhadas em cache ou banco de dados; retorno de erro 429 com header Retry-After se limite excedido"
+      },
+      {
+        "id": 75,
+        "category": "rate_limit",
+        "description": "Solicitações de recuperação de senha são limitadas a 3 requisições por hora por endereço de e-mail, prevenindo abuso e enumeração de usuários.",
+        "enforcement": "code",
+        "verification": "Contador de requisições em cache ou banco de dados; retorno de erro 429 com header Retry-After se limite excedido"
+      },
+      {
+        "id": 76,
+        "category": "compliance",
+        "description": "Senhas de usuários devem ser armazenadas exclusivamente em formato de hash seguro utilizando algoritmo argon2id com parâmetros: m=64MiB, t=3, p=4. Nunca armazenar em texto simples ou formato reversível.",
+        "enforcement": "code",
+        "verification": "Auditoria de código para verificar uso de hashPassword() em todas as operações de senha; testes de segurança verificando impossibilidade de recuperar senha em texto simples"
+      },
+      {
+        "id": 77,
+        "category": "compliance",
+        "description": "Todas as comunicações de autenticação e recuperação de senha devem ser transmitidas exclusivamente por protocolo HTTPS (TLS 1.2 ou superior).",
+        "enforcement": "infra",
+        "verification": "Configuração de servidor web para rejeitar requisições HTTP não-HTTPS; testes de segurança tentando acessar endpoints de autenticação via HTTP"
+      },
+      {
+        "id": 78,
+        "category": "compliance",
+        "description": "Tokens de recuperação de senha devem ser armazenados em formato de hash seguro (SHA-256) no banco de dados, nunca em texto simples.",
+        "enforcement": "code",
+        "verification": "Auditoria de código para verificar uso de hashToken() antes de persistência; inspeção do banco de dados confirmando ausência de tokens em texto simples"
+      },
+      {
+        "id": 79,
+        "category": "compliance",
+        "description": "Todas as operações críticas (criação/edição/desativação de usuários, provisionamento/ativação/desativação de tenants, criação/edição/conclusão de tarefas, login bem-sucedido/falhado, recuperação de senha) devem ser registradas em log de auditoria com identificação do usuário, tenant, timestamp, operação e dados alterados, em conformidade com requisitos de rastreabilidade da plataforma e LGPD.",
+        "enforcement": "code",
+        "verification": "Verificação de logs de auditoria para presença de entradas para cada operação crítica; testes de conformidade LGPD"
+      },
+      {
+        "id": 80,
+        "category": "compliance",
+        "description": "Dados pessoais de usuários (nome completo, e-mail) devem ser tratados em conformidade com LGPD, aplicando princípios de minimização de dados (coletar apenas o necessário), proteção de informações pessoais (criptografia em trânsito e repouso), e direito ao esquecimento (capacidade de anonimizar ou deletar dados).",
+        "enforcement": "code",
+        "verification": "Auditoria de código para verificar criptografia de dados em trânsito (HTTPS) e repouso (colunas sensíveis criptografadas); testes de conformidade LGPD"
+      },
+      {
+        "id": 81,
+        "category": "observability",
+        "description": "Todas as requisições HTTP devem ser rastreadas com request_id único, incluído em logs, eventos e respostas de erro, permitindo rastreamento end-to-end de operações.",
+        "enforcement": "code",
+        "verification": "Verificação de logs e respostas de erro para presença de request_id; testes de rastreamento end-to-end"
+      },
+      {
+        "id": 82,
+        "category": "invariant",
+        "description": "Um administrador de tenant não pode desativar sua própria conta, evitando que o tenant fique sem nenhum administrador ativo.",
+        "enforcement": "code",
+        "verification": "Validação em código comparando user_id do executor com user_id sendo desativado; retorno de erro 400 se tentativa de auto-desativação"
+      },
+      {
+        "id": 83,
+        "category": "invariant",
+        "description": "Níveis hierárquicos com colaboradores vinculados não podem ser deletados.",
+        "enforcement": "code",
+        "verification": "Validação em código consultando tabela de usuários para verificar presença de colaboradores com esse nível; retorno de erro 409 se encontrados"
+      },
+      {
+        "id": 84,
+        "category": "invariant",
+        "description": "Desativação de um tenant invalida imediatamente todas as sessões ativas de seus usuários, revogando acesso à plataforma.",
+        "enforcement": "code",
+        "verification": "Consulta à tabela de sessões para identificar sessões do tenant; atualização de data_revogacao para todas; testes verificando impossibilidade de usar token após desativação"
+      },
+      {
+        "id": 85,
+        "category": "invariant",
+        "description": "Desativação de um usuário invalida imediatamente todas as suas sessões ativas, revogando acesso à plataforma.",
+        "enforcement": "code",
+        "verification": "Consulta à tabela de sessões para identificar sessões do usuário; atualização de data_revogacao para todas; testes verificando impossibilidade de usar token após desativação"
+      },
+      {
+        "id": 86,
+        "category": "invariant",
+        "description": "Redefinição de senha invalida todas as sessões ativas do usuário, forçando novo login com nova credencial.",
+        "enforcement": "code",
+        "verification": "Consulta à tabela de sessões para identificar sessões do usuário; atualização de data_revogacao para todas; testes verificando impossibilidade de usar token antigo após redefinição"
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "A Unidade de Processamento Backend é o componente de execução responsável por processar requisições HTTP de usuários autenticados, coordenar operações de negócio (criação, atualização e conclusão de tarefas; cadastro e gerenciamento de usuários; provisionamento de tenants), invocar utilitários técnicos reutilizáveis, persistir dados no banco relacional, emitir eventos para observabilidade e auditoria, e retornar respostas estruturadas conforme contrato da API Interna. Organiza-se em handlers temáticos (Handler de Usuários e Organizações, Handler de Tarefas) e workers assíncronos (Worker de Envio de E-mail), cada um implementando validação de entrada, autenticação via JWT, isolamento de dados por tenant, tratamento de erros padronizado, conformidade com LGPD e rastreabilidade completa de ações críticas. Serve como orquestrador central entre a camada de API, a lógica de negócio, a persistência de dados e os sistemas externos."
+    },
+    "definition": {
+      "params": [
+        {
+          "id": 2,
+          "name": "request_timeout_seconds",
+          "value": "30"
+        },
+        {
+          "id": 3,
+          "name": "max_request_body_size_mb",
+          "value": "10"
+        },
+        {
+          "id": 4,
+          "name": "max_concurrent_handlers",
+          "value": "500"
+        },
+        {
+          "id": 5,
+          "name": "circuit_breaker_failure_threshold",
+          "value": "5"
+        },
+        {
+          "id": 6,
+          "name": "circuit_breaker_timeout_seconds",
+          "value": "60"
+        },
+        {
+          "id": 7,
+          "name": "retry_max_attempts",
+          "value": "3"
+        },
+        {
+          "id": 8,
+          "name": "retry_backoff_initial_ms",
+          "value": "100"
+        },
+        {
+          "id": 9,
+          "name": "retry_backoff_max_ms",
+          "value": "5000"
+        },
+        {
+          "id": 10,
+          "name": "database_connection_pool_size",
+          "value": "20"
+        },
+        {
+          "id": 11,
+          "name": "database_query_timeout_seconds",
+          "value": "10"
+        },
+        {
+          "id": 12,
+          "name": "email_queue_batch_size",
+          "value": "100"
+        },
+        {
+          "id": 13,
+          "name": "email_queue_processing_interval_seconds",
+          "value": "5"
+        }
+      ],
+      "executor": {
+        "id": 14,
+        "triggers": [
+          {
+            "id": 15,
+            "kind": "http",
+            "name": "http_request"
+          },
+          {
+            "id": 16,
+            "kind": "schedule",
+            "name": "scheduled_email_processing"
+          },
+          {
+            "id": 17,
+            "kind": "manual",
+            "name": "manual_admin_operation"
+          }
+        ],
+        "signature": "async function executeRequest(request: HttpRequest, context: AuthContext): Promise<HttpResponse>",
+        "idempotency": "at_least_once"
+      }
+    },
+    "pendencies": [
+      {
+        "id": 141,
+        "section": "definition",
+        "description": "Definição de mecanismo de circuit breaker para falhas de serviço externo de e-mail. Necessário especificar: limiar de falhas consecutivas antes de abrir circuito, tempo de timeout antes de tentar recuperação, e estratégia de fallback (retry com backoff exponencial vs. fila persistente).",
+        "resolutionOptions": [
+          {
+            "id": 142,
+            "text": "Implementar circuit breaker com limiar de 5 falhas consecutivas, timeout de 60 segundos, e retry com backoff exponencial (100ms inicial, 5000ms máximo, 3 tentativas)"
+          },
+          {
+            "id": 143,
+            "text": "Implementar circuit breaker com fila persistente de e-mails: falhas são enfileiradas em banco de dados e reprocessadas por job de manutenção a cada 5 minutos"
+          },
+          {
+            "id": 144,
+            "text": "Implementar ambos: circuit breaker com retry em memória para falhas transitórias, e fila persistente para falhas prolongadas"
+          }
+        ],
+        "recommendedOptionId": 144
+      },
+      {
+        "id": 145,
+        "section": "definition",
+        "description": "Definição de estratégia de cache em nível de aplicação para otimizar desempenho de operações frequentes (ex: listagem de níveis hierárquicos, listagem de usuários ativos). Necessário especificar: dados a cachear, TTL do cache, estratégia de invalidação (time-based vs. event-based), e limite de tamanho do cache.",
+        "resolutionOptions": [
+          {
+            "id": 146,
+            "text": "Cache em memória com TTL de 5 minutos para: níveis hierárquicos (por tenant), usuários ativos (por tenant), status fixos de tarefas. Invalidação por evento quando dados são alterados."
+          },
+          {
+            "id": 147,
+            "text": "Cache distribuído (Redis) com TTL de 10 minutos para mesmos dados. Permite compartilhamento entre múltiplas instâncias de handler."
+          },
+          {
+            "id": 148,
+            "text": "Sem cache em nível de aplicação; otimizar queries ao banco de dados com índices e prepared statements"
+          }
+        ],
+        "recommendedOptionId": 147
+      },
+      {
+        "id": 149,
+        "section": "rules",
+        "description": "Definição de regra de retenção de dados de auditoria. Necessário especificar: período de retenção de logs de auditoria, política de arquivamento (ex: mover para cold storage após 30 dias), e direito ao esquecimento (LGPD) para dados pessoais.",
+        "resolutionOptions": [
+          {
+            "id": 150,
+            "text": "Retenção de 30 dias em banco de dados ativo; arquivamento em cold storage após 30 dias; anonimização de dados pessoais após 90 dias"
+          },
+          {
+            "id": 151,
+            "text": "Retenção de 90 dias em banco de dados ativo; sem arquivamento; anonimização após 90 dias"
+          },
+          {
+            "id": 152,
+            "text": "Retenção de 1 ano em banco de dados ativo; arquivamento em cold storage após 1 ano; anonimização após 2 anos"
+          }
+        ],
+        "recommendedOptionId": 150
+      },
+      {
+        "id": 153,
+        "section": "non_functional_requirements",
+        "description": "Definição de SLA (Service Level Agreement) para disponibilidade de cada handler. Necessário especificar: percentual de disponibilidade esperado (ex: 99.9%), RTO (Recovery Time Objective), RPO (Recovery Point Objective), e estratégia de redundância.",
+        "resolutionOptions": [
+          {
+            "id": 154,
+            "text": "SLA de 99.9% de disponibilidade; RTO de 5 minutos; RPO de 1 minuto; redundância ativa-ativa com load balancer"
+          },
+          {
+            "id": 155,
+            "text": "SLA de 99.5% de disponibilidade; RTO de 15 minutos; RPO de 5 minutos; redundância ativa-passiva com failover automático"
+          },
+          {
+            "id": 156,
+            "text": "SLA de 99% de disponibilidade; RTO de 30 minutos; RPO de 10 minutos; instância única com backup diário"
+          }
+        ],
+        "recommendedOptionId": 154
+      },
+      {
+        "id": 157,
+        "section": "definition",
+        "description": "Definição de mecanismo de deduplicação de requisições para garantir idempotência. Necessário especificar: como identificar requisições duplicadas (request_id, hash de payload), onde armazenar estado de deduplicação (cache em memória, banco de dados), e TTL de retenção de estado.",
+        "resolutionOptions": [
+          {
+            "id": 158,
+            "text": "Deduplicação baseada em request_id; armazenamento em cache em memória com TTL de 1 hora; retorno de resposta cacheada para requisições duplicadas"
+          },
+          {
+            "id": 159,
+            "text": "Deduplicação baseada em request_id; armazenamento em banco de dados com TTL de 24 horas; permite compartilhamento entre múltiplas instâncias"
+          },
+          {
+            "id": 160,
+            "text": "Deduplicação baseada em hash de payload (user_id + operação + dados); armazenamento em cache distribuído (Redis) com TTL de 1 hora"
+          }
+        ],
+        "recommendedOptionId": 159
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 108,
+        "then": "O handler retorna resposta 200 com access_token, refresh_token, dados do usuário e tenant; evento 'user_authenticated' é emitido para auditoria",
+        "type": "integration",
+        "when": "O usuário submete requisição POST /api/auth/login com e-mail e senha corretos",
+        "given": "Um usuário cadastrado e ativo no tenant com e-mail 'usuario@example.com' e senha válida",
+        "scenario": "Fluxo completo de autenticação de usuário",
+        "target_section": "flow"
+      },
+      {
+        "id": 109,
+        "then": "O handler retorna resposta 401 com mensagem genérica 'Credenciais inválidas'; evento 'authentication_failed' é emitido; contador de tentativas falhadas é incrementado",
+        "type": "security",
+        "when": "O usuário submete requisição POST /api/auth/login com e-mail correto mas senha incorreta",
+        "given": "Um usuário cadastrado no tenant com e-mail 'usuario@example.com'",
+        "scenario": "Tentativa de login com credenciais inválidas",
+        "target_section": "rules"
+      },
+      {
+        "id": 110,
+        "then": "O handler retorna resposta 429 com header Retry-After indicando tempo de espera; evento 'rate_limit_exceeded' é emitido",
+        "type": "security",
+        "when": "O usuário submete 6ª requisição POST /api/auth/login",
+        "given": "Um usuário com 5 tentativas de login falhadas nos últimos 15 minutos do mesmo IP",
+        "scenario": "Rate limiting em tentativas de login",
+        "target_section": "rules"
+      },
+      {
+        "id": 111,
+        "then": "O handler valida entrada, verifica isolamento de tenant, persiste novo usuário, emite evento 'user_created', retorna resposta 201 com dados do usuário criado",
+        "type": "integration",
+        "when": "O administrador submete requisição POST /api/users com dados de novo colaborador (nome, e-mail, nível hierárquico)",
+        "given": "Um administrador de tenant autenticado com token JWT válido",
+        "scenario": "Criação de novo usuário por administrador de tenant",
+        "target_section": "flow"
+      },
+      {
+        "id": 112,
+        "then": "O handler retorna resposta 409 CONFLICT com mensagem 'E-mail já cadastrado neste tenant'",
+        "type": "integration",
+        "when": "Um administrador tenta criar novo usuário com mesmo e-mail 'usuario@example.com'",
+        "given": "Um tenant com usuário existente com e-mail 'usuario@example.com'",
+        "scenario": "Validação de unicidade de e-mail dentro de tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 113,
+        "then": "O handler valida isolamento de tenant, retorna resposta 403 FORBIDDEN ou 404 NOT FOUND",
+        "type": "security",
+        "when": "O usuário tenta acessar dados de usuário pertencente ao Tenant B via GET /api/users/:user_id_from_tenant_b",
+        "given": "Um usuário do Tenant A autenticado com token JWT válido",
+        "scenario": "Isolamento de dados por tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 114,
+        "then": "O handler valida entrada, verifica que responsável é colaborador ativo do mesmo tenant, persiste tarefa, emite evento 'task_created', retorna resposta 201 com dados da tarefa",
+        "type": "integration",
+        "when": "O usuário submete requisição POST /api/tasks com título, descrição, responsável='João', prioridade='Alta', status='A Fazer'",
+        "given": "Um usuário autenticado no Tenant A com colaborador ativo 'João' cadastrado",
+        "scenario": "Criação de nova tarefa com validação de responsável",
+        "target_section": "flow"
+      },
+      {
+        "id": 115,
+        "then": "O handler retorna resposta 400 BAD REQUEST com mensagem 'Responsável deve ser um colaborador ativo'",
+        "type": "integration",
+        "when": "O usuário tenta criar tarefa com responsável='João'",
+        "given": "Um usuário autenticado no Tenant A com colaborador 'João' desativado",
+        "scenario": "Validação de responsável inativo",
+        "target_section": "rules"
+      },
+      {
+        "id": 116,
+        "then": "O handler valida novo status, persiste alteração, registra transição no histórico, emite evento 'task_status_changed', retorna resposta 200 com dados atualizados",
+        "type": "integration",
+        "when": "Um usuário submete requisição PATCH /api/tasks/:task_id/status com novo status 'Em Andamento'",
+        "given": "Uma tarefa com status 'A Fazer' no Tenant A",
+        "scenario": "Atualização de status de tarefa via drag-and-drop no Kanban",
+        "target_section": "flow"
+      },
+      {
+        "id": 117,
+        "then": "O handler altera status para 'Concluído', registra data/hora de conclusão, registra transição no histórico, emite evento 'task_completed', retorna resposta 200",
+        "type": "integration",
+        "when": "Um usuário submete requisição PATCH /api/tasks/:task_id/complete",
+        "given": "Uma tarefa com status 'Em Andamento' no Tenant A",
+        "scenario": "Conclusão de tarefa",
+        "target_section": "flow"
+      },
+      {
+        "id": 118,
+        "then": "O handler filtra tarefas por status, retorna resposta 200 com lista paginada contendo apenas tarefas com status 'Em Andamento'",
+        "type": "integration",
+        "when": "Um usuário submete requisição GET /api/tasks?status=Em%20Andamento",
+        "given": "Um tenant com 50 tarefas em diferentes status",
+        "scenario": "Listagem de tarefas com filtragem por status",
+        "target_section": "flow"
+      },
+      {
+        "id": 119,
+        "then": "O handler retorna resposta 200 em tempo <= 500ms (p99) com primeira página de tarefas",
+        "type": "performance",
+        "when": "Um usuário submete requisição GET /api/tasks com paginação (limit=20)",
+        "given": "Um tenant com 10.000 tarefas no banco de dados",
+        "scenario": "Desempenho de listagem de tarefas com 10.000 tarefas",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 120,
+        "then": "O handler retorna resposta 401 UNAUTHORIZED com mensagem 'Token ausente ou inválido'",
+        "type": "security",
+        "when": "O cliente submete requisição GET /api/tasks",
+        "given": "Uma requisição HTTP para endpoint protegido sem header Authorization",
+        "scenario": "Tentativa de acesso sem token JWT",
+        "target_section": "rules"
+      },
+      {
+        "id": 121,
+        "then": "O handler retorna resposta 401 UNAUTHORIZED; cliente deve usar refresh token para renovar acesso",
+        "type": "security",
+        "when": "O usuário submete requisição GET /api/tasks com token expirado",
+        "given": "Um usuário com token JWT expirado (exp < data/hora atual)",
+        "scenario": "Tentativa de acesso com token JWT expirado",
+        "target_section": "rules"
+      },
+      {
+        "id": 122,
+        "then": "O handler valida refresh token, emite novo par de access_token e refresh_token, retorna resposta 200",
+        "type": "integration",
+        "when": "O usuário submete requisição POST /api/auth/refresh com refresh token",
+        "given": "Um usuário com refresh token válido",
+        "scenario": "Renovação de token de acesso com refresh token",
+        "target_section": "flow"
+      },
+      {
+        "id": 123,
+        "then": "O handler gera token de recuperação, enfileira e-mail transacional, retorna resposta 200 com mensagem genérica; Worker de E-mail processa fila e envia e-mail com link de redefinição",
+        "type": "integration",
+        "when": "O usuário submete requisição POST /api/auth/password-recovery com e-mail",
+        "given": "Um usuário cadastrado com e-mail 'usuario@example.com'",
+        "scenario": "Fluxo de recuperação de senha",
+        "target_section": "flow"
+      },
+      {
+        "id": 124,
+        "then": "O handler valida token, valida complexidade de senha, persiste novo hash de senha, invalida todas as sessões ativas, retorna resposta 200",
+        "type": "integration",
+        "when": "O usuário submete requisição POST /api/auth/password-recovery/reset com token e nova senha",
+        "given": "Um usuário com token de recuperação válido e não expirado",
+        "scenario": "Redefinição de senha com token válido",
+        "target_section": "flow"
+      },
+      {
+        "id": 125,
+        "then": "O handler retorna resposta 400 BAD REQUEST com mensagem 'Senha não atende aos critérios de complexidade mínima'",
+        "type": "integration",
+        "when": "O usuário submete nova senha 'abc' (muito curta, sem maiúscula, sem número)",
+        "given": "Um usuário tentando redefinir senha",
+        "scenario": "Validação de complexidade de senha",
+        "target_section": "rules"
+      },
+      {
+        "id": 126,
+        "then": "O handler valida entrada, verifica unicidade de slug, provisiona novo tenant com isolamento de dados, retorna resposta 201 com dados do tenant criado",
+        "type": "integration",
+        "when": "O administrador submete requisição POST /api/tenants com nome da organização e slug",
+        "given": "Um administrador da plataforma autenticado com token JWT válido",
+        "scenario": "Provisionamento de novo tenant",
+        "target_section": "flow"
+      },
+      {
+        "id": 127,
+        "then": "O handler valida perfil, retorna resposta 403 FORBIDDEN com mensagem 'Permissão insuficiente'",
+        "type": "security",
+        "when": "O usuário tenta submeter requisição POST /api/tenants",
+        "given": "Um usuário colaborador autenticado (não administrador da plataforma)",
+        "scenario": "Tentativa de provisionamento de tenant por usuário não administrador",
+        "target_section": "rules"
+      },
+      {
+        "id": 128,
+        "then": "O handler desativa tenant, invalida todas as 10 sessões ativas, emite evento 'tenant_deactivated', retorna resposta 200; usuários não conseguem mais fazer requisições com tokens antigos",
+        "type": "integration",
+        "when": "Um administrador da plataforma submete requisição PATCH /api/tenants/:tenant_id/deactivate",
+        "given": "Um tenant ativo com 10 usuários com sessões ativas",
+        "scenario": "Desativação de tenant e revogação de sessões",
+        "target_section": "flow"
+      },
+      {
+        "id": 129,
+        "then": "O handler desativa usuário, invalida ambas as 2 sessões, emite evento 'user_deactivated', retorna resposta 200; usuário não consegue mais fazer requisições com tokens antigos",
+        "type": "integration",
+        "when": "Um administrador de tenant submete requisição PATCH /api/users/:user_id/deactivate",
+        "given": "Um usuário ativo com 2 sessões ativas (login em 2 dispositivos)",
+        "scenario": "Desativação de usuário e revogação de sessões",
+        "target_section": "flow"
+      },
+      {
+        "id": 130,
+        "then": "Retorna true (e-mail válido)",
+        "type": "unit",
+        "when": "Chamado com e-mail 'usuario@example.com'",
+        "given": "Utilitário validateEmail() do Toolkit",
+        "scenario": "Validação de formato de e-mail",
+        "target_section": "definition"
+      },
+      {
+        "id": 131,
+        "then": "Retorna false (e-mail inválido)",
+        "type": "unit",
+        "when": "Chamado com e-mail 'usuario_sem_arroba.com'",
+        "given": "Utilitário validateEmail() do Toolkit",
+        "scenario": "Validação de e-mail inválido",
+        "target_section": "definition"
+      },
+      {
+        "id": 132,
+        "then": "Retorna Promise que resolve para hash seguro com argon2id; hash é diferente a cada chamada (salt aleatório)",
+        "type": "unit",
+        "when": "Chamado com senha 'SenhaSegura123'",
+        "given": "Utilitário hashPassword() do Toolkit",
+        "scenario": "Hash de senha com argon2id",
+        "target_section": "definition"
+      },
+      {
+        "id": 133,
+        "then": "Retorna Promise que resolve para true",
+        "type": "unit",
+        "when": "Chamado com mesma senha 'SenhaSegura123'",
+        "given": "Utilitário verifyPassword() do Toolkit com senha 'SenhaSegura123' e seu hash",
+        "scenario": "Verificação de senha contra hash",
+        "target_section": "definition"
+      },
+      {
+        "id": 134,
+        "then": "Retorna Promise que resolve para false",
+        "type": "unit",
+        "when": "Chamado com senha diferente 'SenhaErrada456'",
+        "given": "Utilitário verifyPassword() do Toolkit com senha 'SenhaSegura123' e seu hash",
+        "scenario": "Verificação de senha incorreta contra hash",
+        "target_section": "definition"
+      },
+      {
+        "id": 135,
+        "then": "Retorna true (data limite é anterior à data de referência)",
+        "type": "unit",
+        "when": "Chamado com essas datas",
+        "given": "Utilitário isDateOverdue() do Toolkit com data limite '2024-01-01' e data de referência '2024-01-15'",
+        "scenario": "Identificação de data vencida",
+        "target_section": "definition"
+      },
+      {
+        "id": 136,
+        "then": "Retorna false (data limite é posterior à data de referência)",
+        "type": "unit",
+        "when": "Chamado com essas datas",
+        "given": "Utilitário isDateOverdue() do Toolkit com data limite '2024-12-31' e data de referência '2024-01-15'",
+        "scenario": "Identificação de data não vencida",
+        "target_section": "definition"
+      },
+      {
+        "id": 137,
+        "then": "Resposta segue envelope StandardSuccessEnvelope com campos: data { access_token, refresh_token, user, tenant }, meta { timestamp, request_id, version }",
+        "type": "contract",
+        "when": "Resposta é serializada para JSON",
+        "given": "Handler de autenticação retornando resposta bem-sucedida",
+        "scenario": "Contrato de resposta de sucesso de login",
+        "target_section": "flow"
+      },
+      {
+        "id": 138,
+        "then": "Resposta segue envelope StandardErrorEnvelope com campos: error { code='INVALID_INPUT', message, details }, meta { timestamp, request_id }; HTTP status 400",
+        "type": "contract",
+        "when": "Resposta é serializada para JSON",
+        "given": "Handler retornando erro de validação (ex: e-mail inválido)",
+        "scenario": "Contrato de resposta de erro de validação",
+        "target_section": "flow"
+      },
+      {
+        "id": 139,
+        "then": "Resposta segue envelope StandardErrorEnvelope com código 'FORBIDDEN'; HTTP status 403",
+        "type": "contract",
+        "when": "Resposta é serializada para JSON",
+        "given": "Handler retornando erro de autorização (ex: perfil insuficiente)",
+        "scenario": "Contrato de resposta de erro de autorização",
+        "target_section": "flow"
+      },
+      {
+        "id": 140,
+        "then": "Resposta segue envelope StandardErrorEnvelope com código 'CONFLICT'; HTTP status 409",
+        "type": "contract",
+        "when": "Resposta é serializada para JSON",
+        "given": "Handler retornando erro de conflito (ex: e-mail já cadastrado)",
+        "scenario": "Contrato de resposta de conflito (e-mail duplicado)",
+        "target_section": "flow"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 87,
+        "target": "p99 <= 500ms para operação de login",
+        "category": "performance",
+        "requirement": "Operações de autenticação (login) devem ser concluídas e retornar resposta ao cliente em tempo adequado, mesmo sob carga de até 5.000 usuários ativos simultâneos na plataforma.",
+        "verification": "Teste de carga com 5.000 usuários simultâneos; monitoramento de latência p99 em produção"
+      },
+      {
+        "id": 88,
+        "target": "p99 <= 300ms para operação de criação de usuário",
+        "category": "performance",
+        "requirement": "Operações de criação de usuário devem ser concluídas e retornar resposta ao cliente em tempo adequado, mesmo sob carga de até 5.000 usuários ativos na plataforma.",
+        "verification": "Teste de carga; monitoramento de latência p99 em produção"
+      },
+      {
+        "id": 89,
+        "target": "p99 <= 300ms para operação de criação de tarefa",
+        "category": "performance",
+        "requirement": "Operações de criação de tarefa devem ser concluídas e retornar resposta ao cliente em tempo adequado, mesmo sob carga de até 5.000 usuários ativos e 10.000 tarefas por tenant na plataforma.",
+        "verification": "Teste de carga; monitoramento de latência p99 em produção"
+      },
+      {
+        "id": 90,
+        "target": "p99 <= 300ms para operação de edição/atualização de tarefa",
+        "category": "performance",
+        "requirement": "Operações de edição e atualização de status de tarefa devem ser concluídas e retornar resposta ao cliente em tempo adequado, mesmo sob carga de até 5.000 usuários ativos e 10.000 tarefas por tenant na plataforma.",
+        "verification": "Teste de carga; monitoramento de latência p99 em produção"
+      },
+      {
+        "id": 91,
+        "target": "p99 <= 500ms para operação de listagem com filtros",
+        "category": "performance",
+        "requirement": "Operações de listagem de tarefas com filtragem, pesquisa e ordenação devem ser concluídas e retornar resposta ao cliente em tempo adequado, mesmo em tenants com até 10.000 tarefas.",
+        "verification": "Teste de carga com 10.000 tarefas; monitoramento de latência p99 em produção"
+      },
+      {
+        "id": 92,
+        "target": "p99 <= 300ms para operação de listagem de usuários",
+        "category": "performance",
+        "requirement": "Operações de listagem de usuários devem ser concluídas e retornar resposta ao cliente em tempo adequado, mesmo em tenants com até 100 usuários ativos.",
+        "verification": "Teste de carga com 100 usuários; monitoramento de latência p99 em produção"
+      },
+      {
+        "id": 93,
+        "target": "p99 <= 500ms para operações de gerenciamento de tenant",
+        "category": "performance",
+        "requirement": "Operações de provisionamento, ativação e desativação de tenants devem ser concluídas e retornar resposta ao administrador em tempo adequado, suportando o volume operacional estimado de até 50 tenants cadastrados na plataforma.",
+        "verification": "Teste de carga com 50 tenants; monitoramento de latência p99 em produção"
+      },
+      {
+        "id": 94,
+        "target": "p99 <= 2000ms para processamento de lote de 100 e-mails",
+        "category": "performance",
+        "requirement": "Processamento de fila de e-mails deve ser concluído em tempo adequado, enfileirando e processando lotes de até 100 e-mails a cada 5 segundos.",
+        "verification": "Teste de carga de fila de e-mail; monitoramento de latência p99 em produção"
+      },
+      {
+        "id": 95,
+        "target": "Suporte a 500 requisições HTTP simultâneas com p99 <= 1000ms",
+        "category": "scalability",
+        "requirement": "A unidade de processamento backend deve suportar até 500 requisições HTTP simultâneas sem degradação perceptível de desempenho.",
+        "verification": "Teste de carga com 500 requisições simultâneas; monitoramento de pool de conexões e recursos"
+      },
+      {
+        "id": 96,
+        "target": "Pool de 20 conexões com banco de dados",
+        "category": "scalability",
+        "requirement": "Pool de conexões com banco de dados deve ser dimensionado adequadamente para suportar carga de até 500 requisições simultâneas.",
+        "verification": "Monitoramento de utilização do pool; testes de esgotamento de conexões"
+      },
+      {
+        "id": 97,
+        "target": "100% de requisições validadas; 0% de requisições não autenticadas/autorizadas processadas",
+        "category": "security",
+        "requirement": "Todas as requisições HTTP devem ser validadas quanto a autenticação (token JWT válido) e autorização (perfil adequado) antes de executar operação.",
+        "verification": "Testes de segurança tentando acessar endpoints sem token ou com token inválido; auditoria de logs"
+      },
+      {
+        "id": 98,
+        "target": "100% de isolamento de tenant; 0% de violações de isolamento detectadas",
+        "category": "security",
+        "requirement": "Isolamento de dados por tenant deve ser garantido em todas as operações: dados de um tenant nunca são acessíveis por usuários de outro tenant.",
+        "verification": "Testes de segurança tentando acessar dados de outro tenant; auditoria de consultas SQL"
+      },
+      {
+        "id": 99,
+        "target": "100% de senhas hasheadas com argon2id; 0% de senhas em texto simples",
+        "category": "security",
+        "requirement": "Senhas de usuários devem ser armazenadas exclusivamente em formato de hash seguro, nunca em texto simples ou formato reversível.",
+        "verification": "Inspeção do banco de dados; auditoria de código"
+      },
+      {
+        "id": 100,
+        "target": "100% de tokens hasheados; 0% de tokens em texto simples",
+        "category": "security",
+        "requirement": "Tokens de recuperação de senha devem ser armazenados em formato de hash seguro, nunca em texto simples.",
+        "verification": "Inspeção do banco de dados; auditoria de código"
+      },
+      {
+        "id": 101,
+        "target": "5 tentativas falhadas de login em 15 minutos por IP; 3 solicitações de recuperação de senha por hora por e-mail",
+        "category": "security",
+        "requirement": "Rate limiting deve ser implementado para proteger contra ataques de força bruta em login e recuperação de senha.",
+        "verification": "Testes de rate limiting; monitoramento de tentativas bloqueadas"
+      },
+      {
+        "id": 102,
+        "target": "99.9% de disponibilidade (SLA); RTO <= 5 minutos; RPO <= 1 minuto",
+        "category": "availability",
+        "requirement": "Serviço de autenticação deve estar disponível com alta disponibilidade, dado que sua indisponibilidade impede o acesso de todos os usuários à plataforma.",
+        "verification": "Monitoramento de disponibilidade; testes de failover; análise de logs de incidentes"
+      },
+      {
+        "id": 103,
+        "target": "99.9% de disponibilidade (SLA); RTO <= 5 minutos; RPO <= 1 minuto",
+        "category": "availability",
+        "requirement": "Serviço de gerenciamento de usuários e tenants deve estar disponível com alta disponibilidade.",
+        "verification": "Monitoramento de disponibilidade; testes de failover"
+      },
+      {
+        "id": 104,
+        "target": "99.9% de disponibilidade (SLA); RTO <= 5 minutos; RPO <= 1 minuto",
+        "category": "availability",
+        "requirement": "Serviço de gerenciamento de tarefas deve estar disponível com alta disponibilidade.",
+        "verification": "Monitoramento de disponibilidade; testes de failover"
+      },
+      {
+        "id": 105,
+        "target": "100% de requisições com request_id; 100% de logs contendo request_id",
+        "category": "observability",
+        "requirement": "Todas as requisições HTTP devem ser rastreadas com request_id único, incluído em logs, eventos e respostas de erro.",
+        "verification": "Auditoria de logs; testes de rastreamento end-to-end"
+      },
+      {
+        "id": 106,
+        "target": "100% de operações críticas auditadas; 0% de operações críticas sem registro de auditoria",
+        "category": "observability",
+        "requirement": "Todas as operações críticas devem ser registradas em log de auditoria com identificação do usuário, tenant, timestamp, operação e dados alterados.",
+        "verification": "Auditoria de logs; testes de conformidade LGPD"
+      },
+      {
+        "id": 107,
+        "target": "Coleta de métricas em tempo real; exposição via Prometheus; alertas configurados para anomalias",
+        "category": "observability",
+        "requirement": "Métricas de desempenho (latência, throughput, taxa de erro) devem ser coletadas e expostas para monitoramento contínuo.",
+        "verification": "Verificação de métricas em dashboard; testes de alertas"
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 4,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T05:00:55.065Z",
+  "updatedAt": null
+}

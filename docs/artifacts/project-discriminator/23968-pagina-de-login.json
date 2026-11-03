@@ -1,0 +1,224 @@
+{
+  "id": 23968,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 12,
+        "name": "Gargalos e Timeouts",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Tentativas de login repetidas em um intervalo curto causam bloqueio, e o limite de falhas é atingido em 15 minutos.",
+        "confidence": 0.8443,
+        "context_element_id": 2813
+      },
+      {
+        "id": 13,
+        "name": "Autenticação e Controle de Acesso",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Credenciais corretas de usuário em tenant inativo são aceitas, mas o acesso é bloqueado, o que indica que o sistema não reconhece o status inativo do tenant.",
+        "confidence": 0.9024,
+        "context_element_id": 2824
+      },
+      {
+        "id": 14,
+        "name": "Formato e Tradução de Dados",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem feedback direto, o usuário não consegue reavaliar o que escreveu e a tentativa de login é perdida.",
+        "confidence": 0.8048,
+        "context_element_id": 2834
+      }
+    ],
+    "attributes": [
+      {
+        "id": 6,
+        "name": "Identificador de configuração específico dentro do escopo",
+        "value": [
+          "max-retry-attempts"
+        ],
+        "method": "user-input",
+        "reasoning": "A regra de segurança é especificada com o limite máximo de tentativas de autenticação em 15 minutos.",
+        "confidence": 0.7451,
+        "context_element_id": 2680
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 15,
+        "name": "Implementar rate limiting com throttling configurável por endpoint e amostragem de requisições em cenários de alta carga",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O bloqueio é aplicado após o limite atingido, não antes, o que torna a reação mais rápida e eficaz.",
+        "confidence": 0.7012,
+        "context_element_id": 2860
+      },
+      {
+        "id": 16,
+        "name": "Implementar validação rigorosa de entradas e prevenção de condições que levem a exceções",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem checagem, o sistema aceita cadastro sem e-mail ou senha, e a confirmação de cadastro é feita com campos vazios.",
+        "confidence": 0.9373,
+        "context_element_id": 2909
+      },
+      {
+        "id": 17,
+        "name": "Definir metas de disponibilidade mensuráveis com SLA/SLO e monitoramento de conformidade",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Uma indisponibilidade de 43,2 minutos por mês é equivalente a 14 dias de ausência, e a plataforma precisa manter acesso para todos os usuários.",
+        "confidence": 0.9531,
+        "context_element_id": 2916
+      },
+      {
+        "id": 18,
+        "name": "Implementar identificação única de atores com sistemas de identidade centralizados e gerenciamento unificado de credenciais",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Uma chave única identifica o tenant em cada chamada, evitando que um usuário ou sistema se confunda com outro.",
+        "confidence": 0.9269,
+        "context_element_id": 2928
+      },
+      {
+        "id": 19,
+        "name": "Implementar autorização granular com RBAC, ABAC e ACLs baseada no princípio do menor privilégio e Zero Trust",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Isolamento de dados por tenant é garantido em toda a operação de autenticação, e tentar acessar dados de outro retorna erro 403.",
+        "confidence": 0.7267,
+        "context_element_id": 2930
+      },
+      {
+        "id": 20,
+        "name": "Implementar criptografia robusta para dados em trânsito e em repouso usando algoritmos aprovados e gerenciamento seguro de chaves",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem o TLS, a comunicação em texto simples permite interceptação e leitura das credenciais, que são obrigatórias para acesso.",
+        "confidence": 0.7894,
+        "context_element_id": 2933
+      },
+      {
+        "id": 21,
+        "name": "Implementar validação rigorosa de entradas com sanitização, whitelists de caracteres permitidos e prevenção contra ataques de injeção",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Mensagens distintas para e-mail e senha não distinguem o erro de login, tornando a identificação de falha difícil e a correção difícil.",
+        "confidence": 0.856,
+        "context_element_id": 2936
+      },
+      {
+        "id": 22,
+        "name": "Configurar segurança específica para APIs e web services com rate limiting, validação de schema e autenticação por endpoint",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem o token expirar, o acesso ao sistema é liberado sem que o usuário saia do login, e o servidor precisa ser acessado por meio de um endpoint externo.",
+        "confidence": 0.8109,
+        "context_element_id": 2945
+      },
+      {
+        "id": 23,
+        "name": "Configurar revogação automática de acesso para contas comprometidas com invalidação imediata de tokens e sessões ativas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem sessão expirada, o acesso ao sistema é liberado e o usuário pode acessar sem autorização, o que não pode acontecer.",
+        "confidence": 0.7659,
+        "context_element_id": 2946
+      },
+      {
+        "id": 24,
+        "name": "Implementar bloqueio automático de recursos sob ataque com isolamento temporário e redirecionamento de tráfego",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Um bloqueio automático de 5 tentativas em 15 minutos é o único mecanismo de segurança que pode reagir a um ataque de força bruta.",
+        "confidence": 0.8597,
+        "context_element_id": 2947
+      },
+      {
+        "id": 25,
+        "name": "Implementar validação de dados em múltiplas camadas com verificações de tipo, formato, faixa e regras de negócio antes da persistência",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Entrada malformada é rejeitada antes que o sistema saia do escopo de validação, evitando que o erro se espalhe para a integridade do sistema.",
+        "confidence": 0.7945,
+        "context_element_id": 2954
+      },
+      {
+        "id": 26,
+        "name": "Implemente event sourcing com um log de eventos imutável para dados críticos de auditoria e reconstrução de estado",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem registro imutável, a trilha de auditoria perde a prova de quem fez o que, e a responsabilidade passa a depender de quem a perguntou.",
+        "confidence": 0.7452,
+        "context_element_id": 2966
+      },
+      {
+        "id": 27,
+        "name": "Implemente operações idempotentes que podem ser executadas múltiplas vezes sem efeitos colaterais",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Repetição de login com a mesma senha em duas tentativas seguidas geraria o mesmo token, permitindo que o usuário se acesse sem autenticação.",
+        "confidence": 0.7364,
+        "context_element_id": 2968
+      },
+      {
+        "id": 28,
+        "name": "Gere automaticamente trilhas de auditoria capturando todas as operações críticas com timestamps, identificação do usuário, dados antes/depois e contexto da operação",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem registro completo, auditoria e investigação de falhas de login não conseguem identificar responsáveis nem reverter o erro.",
+        "confidence": 0.8965,
+        "context_element_id": 3012
+      },
+      {
+        "id": 29,
+        "name": "Implemente funcionalidade de pausar e retomar para operações longas, preservando o estado da sessão e permitindo a continuação após interrupções",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem sessão, o acesso ao sistema é perdido e o usuário precisa entrar novamente, o que não é possível sem token válido.",
+        "confidence": 0.7716,
+        "context_element_id": 3043
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 5,
+        "name": "Padrão de Isolamento",
+        "value": "repasse direto",
+        "method": "internal-inference",
+        "reasoning": "O uso de localStorage para ambos os requisitos de integração e segurança é uma abordagem de passagem direta, sem isolamento entre sistemas externos.",
+        "confidence": 0.7508,
+        "context_element_id": 2058
+      },
+      {
+        "id": 34,
+        "name": "Proteção de Arquivos",
+        "value": "cofre seguro de arquivos",
+        "method": "internal-inference",
+        "reasoning": "O uso de localStorage para ambos os requisitos de integração e segurança requer proteção adicional contra XSS, caracterizando um arquivo seguro.",
+        "confidence": 0.8087,
+        "context_element_id": 4129
+      },
+      {
+        "id": 36,
+        "name": "Modo de Recuperação",
+        "value": "abordagem híbrida",
+        "method": "user-input",
+        "reasoning": "A recuperação inline na página de login é implementada por meio de modal ou abas, combinando intervenção manual e compensação automática.",
+        "confidence": 0.7553,
+        "context_element_id": 4416
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 2,
+  "active": true,
+  "sourceId": 23959,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T15:57:03.734Z",
+  "updatedAt": null
+}

@@ -1,0 +1,347 @@
+{
+  "id": 24020,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 8,
+        "name": "Conjunto de idiomas e configurações regionais suportados pelo sistema",
+        "value": [
+          "en-US, pt-BR, es-ES, fr-FR, zh-CN"
+        ],
+        "method": "user-input",
+        "reasoning": "O sistema suporta os seguintes idiomas e regiões regionais: inglês (en-US), português (pt-BR), espanhol (es-ES), francês (fr-FR) e chinês (zh-CN).",
+        "confidence": 0.9834,
+        "context_element_id": 2684
+      },
+      {
+        "id": 10,
+        "name": "Profundidade esperada da estrutura hierárquica",
+        "value": [
+          "4-levels",
+          "3 levels"
+        ],
+        "method": "user-input",
+        "reasoning": "O nível de critério de 4 níveis crescentes de Baixa, Média, Alta e Urgente é definido como hierarquia de 4 níveis.\nOs níveis de hierarquia são Baixa, Normal e Alta, com 3 níveis.",
+        "confidence": 0.836,
+        "context_element_id": 2712
+      },
+      {
+        "id": 11,
+        "name": "Identificador específico do canal de experiência",
+        "value": [
+          "web-application"
+        ],
+        "method": "user-input",
+        "reasoning": "A Aplicação Web é o canal de experiência do usuário que materializa todas as funcionalidades da plataforma de gerenciamento de tarefas.",
+        "confidence": 0.8006,
+        "context_element_id": 2713
+      },
+      {
+        "id": 12,
+        "name": "Identificador único da página no sistema",
+        "value": [
+          "login_page"
+        ],
+        "method": "user-input",
+        "reasoning": "A página de login é identificada como login_page.",
+        "confidence": 0.8492,
+        "context_element_id": 2718
+      },
+      {
+        "id": 13,
+        "name": "Domínio funcional ou área de negócio que a página representa",
+        "value": [
+          "tenants-management",
+          "tasks"
+        ],
+        "method": "internal-inference",
+        "reasoning": "A página representa o gerenciamento de tenants, o domínio funcional da gestão de tenants.\nA página é dedicada à visualização de tarefas, com o nome 'tasks_page', indicando o domínio funcional de tarefas.",
+        "confidence": 0.8356,
+        "context_element_id": 2719
+      },
+      {
+        "id": 14,
+        "name": "Profundidade máxima esperada da hierarquia de navegação",
+        "value": [
+          "4-levels"
+        ],
+        "method": "user-input",
+        "reasoning": "Os níveis padrão de critério são Baixa, Média, Alta e Urgente, em ordem crescente de criticidade, com 4 níveis.",
+        "confidence": 0.8913,
+        "context_element_id": 2725
+      },
+      {
+        "id": 17,
+        "name": "Tipo principal de falha ou degradação que o padrão deve mitigar",
+        "value": [
+          "timeout, conexão recusada, etc.",
+          "network-latency"
+        ],
+        "method": "user-input",
+        "reasoning": "A mensagem de erro exibe o tipo de falha específico, como timeout, conexão recusada ou outra condição de falha.\nA interface não responde quando a conexão é perdida, caracterizando falha de latência de rede.",
+        "confidence": 0.8934,
+        "context_element_id": 2771
+      },
+      {
+        "id": 20,
+        "name": "Operação de domínio ou caso de uso que o handler processa",
+        "value": [
+          "authenticate-user"
+        ],
+        "method": "user-input",
+        "reasoning": "O formulário de login é o domínio operação processado pelo handler.",
+        "confidence": 0.7218,
+        "context_element_id": 2782
+      },
+      {
+        "id": 21,
+        "name": "Entidade de domínio principal tratada pelo handler",
+        "value": [
+          "user"
+        ],
+        "method": "user-input",
+        "reasoning": "O usuário é criado no tenant, com nome, e-mail e nível hierárquico preenchidos pelo administrador de tenant.",
+        "confidence": 0.7037,
+        "context_element_id": 2783
+      },
+      {
+        "id": 22,
+        "name": "Fonte de dados a ser processada pelo worker",
+        "value": [
+          "database-table"
+        ],
+        "method": "user-input",
+        "reasoning": "A consulta de definição de status de tarefas é feita através da tabela project_scope, um banco de dados.",
+        "confidence": 0.7527,
+        "context_element_id": 2787
+      },
+      {
+        "id": 23,
+        "name": "Domínio funcional ou área de negócio que requer proteção de segurança",
+        "value": [
+          "user-authentication"
+        ],
+        "method": "user-input",
+        "reasoning": "A requisição de autenticação é do domínio de segurança, caracterizando o domínio de autenticação.",
+        "confidence": 0.7202,
+        "context_element_id": 2797
+      },
+      {
+        "id": 24,
+        "name": "Contexto de usuários ou sistemas que interagem com a camada de segurança",
+        "value": [
+          "internal-employees, external-customers, partner-systems, mobile-users, privileged-admins"
+        ],
+        "method": "user-input",
+        "reasoning": "O acesso é autorizado a partir de um contexto autenticado, incluindo funcionários internos, clientes externos, sistemas parceiros e usuários privilegiados.",
+        "confidence": 0.7418,
+        "context_element_id": 2799
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 27,
+        "name": "Implementar rate limiting com throttling configurável por endpoint e amostragem de requisições em cenários de alta carga",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem limite, o sistema seria exposto a tentativas de login repetidas, e a mensagem de bloqueio seria o único mecanismo de rejeição.",
+        "confidence": 0.7191,
+        "context_element_id": 2860
+      },
+      {
+        "id": 28,
+        "name": "Definir timeouts configuráveis para todas as operações críticas e monitorar orçamentos de tempo por transação/endpoint",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O tempo de inatividade de 60 minutos é definido em alinhamento com o valor padrão do access_token_ttl_seconds do IAM, garantindo que a sessão seja preservada até que o token expire.",
+        "confidence": 0.9462,
+        "context_element_id": 2863
+      },
+      {
+        "id": 33,
+        "name": "Implementar validação rigorosa de entradas com sanitização, whitelists de caracteres permitidos e prevenção contra ataques de injeção",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Rejeitar payloads malformados é a regra de negócio que garante que a API receba dados válidos e seguros.",
+        "confidence": 0.8787,
+        "context_element_id": 2936
+      },
+      {
+        "id": 35,
+        "name": "Configurar segurança específica para APIs e web services com rate limiting, validação de schema e autenticação por endpoint",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem barreira, o token é acessível via script, e o usuário pode alterá-lo sem ser notificado.",
+        "confidence": 0.7745,
+        "context_element_id": 2945
+      },
+      {
+        "id": 37,
+        "name": "Implemente sincronização de estado entre componentes com mecanismos de consenso e resolução de conflitos",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Cada mudança de estado altera visualizações independentes, e a reação precisa ser consistente entre elas para não confundir o usuário.",
+        "confidence": 0.7994,
+        "context_element_id": 2965
+      },
+      {
+        "id": 38,
+        "name": "Implemente event sourcing com um log de eventos imutável para dados críticos de auditoria e reconstrução de estado",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem registro imutável, auditoria deixa a prova de que a operação ocorreu sem testes de integração ou revisão manual.",
+        "confidence": 0.8744,
+        "context_element_id": 2966
+      },
+      {
+        "id": 40,
+        "name": "Implemente Policy Enforcement Points em gateways e APIs para validar requisições contra regras de conformidade antes da execução",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem validação antes, a requisição que acessa dados pessoais pode ser interceptada e vazada, e a violação só é descoberta depois.",
+        "confidence": 0.7944,
+        "context_element_id": 3010
+      },
+      {
+        "id": 42,
+        "name": "Implemente agendamento automatizado de recursos com base em padrões de demanda, ativando/desativando recursos conforme necessário",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem um cronograma definido, a demanda de listagem de tarefas não seria atendida, e a equipe ficaria sem saber o que fazer.",
+        "confidence": 0.7152,
+        "context_element_id": 3030
+      },
+      {
+        "id": 43,
+        "name": "Implemente dimensionamento automático de recursos com base em métricas de utilização, ajustando CPU, memória e armazenamento de acordo com a demanda real",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem monitoramento, a demanda cresce sem que ninguém saiba, e a solução só aparece quando o custo já está alto.",
+        "confidence": 0.8193,
+        "context_element_id": 3032
+      },
+      {
+        "id": 44,
+        "name": "Mantenha um modelo de tarefas do usuário com rastreamento do contexto atual, histórico de ações e sugestões de próximos passos com base no fluxo de trabalho",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "A alteração de status de tarefa via Kanban é refletida em todas as visualizações, garantindo que o status seja visível em qualquer momento.",
+        "confidence": 0.7234,
+        "context_element_id": 3045
+      },
+      {
+        "id": 45,
+        "name": "Implemente compreensibilidade com linguagem clara, comportamento previsível da interface e assistência para prevenção de erros",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Mensagens claras e acionáveis ao usuário são a chave para que o erro seja resolvido sem que o usuário se confunda com detalhes técnicos.",
+        "confidence": 0.9361,
+        "context_element_id": 3060
+      },
+      {
+        "id": 46,
+        "name": "Estabeleça validação rigorosa de entrada e saída com sanitização automática, verificação de tipos de dados, limites de intervalo e detecção de payloads maliciosos ou malformados",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Rejeitar campos vazios é uma exigência de segurança que garante que a API receba dados completos.",
+        "confidence": 0.774,
+        "context_element_id": 3063
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 5,
+        "name": "Paradigma Operacional de API",
+        "value": "orientado a ação",
+        "method": "user-input",
+        "reasoning": "A captura de intenção do usuário interpreta ações do usuário (cliques, submissões, drag-and-drop) e traduz-as em requisições estruturadas para a API, caracterizando um paradigma de operação de ação.",
+        "confidence": 0.8018,
+        "context_element_id": 1938
+      },
+      {
+        "id": 6,
+        "name": "Natureza da Operação",
+        "value": "operação de ação",
+        "method": "user-input",
+        "reasoning": "Ação de editar tarefa é uma operação de execução.",
+        "confidence": 0.8028,
+        "context_element_id": 1974
+      },
+      {
+        "id": 49,
+        "name": "Tipo de Aplicação",
+        "value": "aplicação web",
+        "method": "internal-inference",
+        "reasoning": "A Aplicação Web é o ponto de contato entre usuários e o sistema, caracterizando uma web-application.",
+        "confidence": 0.8649,
+        "context_element_id": 4123
+      },
+      {
+        "id": 54,
+        "name": "Gerenciamento de Estado",
+        "value": "baseado em checkpoint",
+        "method": "user-input",
+        "reasoning": "Os três estados fixos são gerenciados por checkpoints, caracterizando um modelo de gestão de estado baseado em checkpoints.",
+        "confidence": 0.7577,
+        "context_element_id": 4246
+      },
+      {
+        "id": 64,
+        "name": "Natureza do Módulo",
+        "value": "fluxo de trabalho",
+        "method": "user-input",
+        "reasoning": "A criação e edição de tarefas são atividades de natureza workflow, caracterizadas por uma sequência de etapas.",
+        "confidence": 0.7939,
+        "context_element_id": 4574
+      },
+      {
+        "id": 69,
+        "name": "Tipo de Interação",
+        "value": "busca e filtro",
+        "method": "internal-inference",
+        "reasoning": "O painel de filtros e pesquisa é uma interface de busca e filtro.",
+        "confidence": 0.8058,
+        "context_element_id": 4868
+      },
+      {
+        "id": 71,
+        "name": "Natureza da Interação",
+        "value": "colaboração compartilhada",
+        "method": "internal-inference",
+        "reasoning": "A interface web é responsável por compartilhar tarefas entre colaboradores, caracterizando colaboração compartilhada.",
+        "confidence": 0.8785,
+        "context_element_id": 4945
+      },
+      {
+        "id": 72,
+        "name": "Modelo de Sessão",
+        "value": "ação única",
+        "method": "user-input",
+        "reasoning": "A autenticação e a gestão de sessão são operações unidirecionais, sem fluxo progressivo ou múltiplos passos.",
+        "confidence": 0.7439,
+        "context_element_id": 4947
+      },
+      {
+        "id": 74,
+        "name": "Estratégia Responsiva",
+        "value": "mobile first",
+        "method": "user-input",
+        "reasoning": "A responsividade em dispositivos móveis é definida como estratégia mobile-first.",
+        "confidence": 0.9311,
+        "context_element_id": 4982
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 5,
+  "active": true,
+  "sourceId": 23826,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}

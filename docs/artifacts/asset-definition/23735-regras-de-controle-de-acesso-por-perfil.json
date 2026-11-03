@@ -1,0 +1,505 @@
+{
+  "id": 23735,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 21,
+          "name": "Requisição de operação com contexto de usuário autenticado",
+          "format": "HTTP request com headers de autenticação (token JWT) e corpo contendo parâmetros da operação",
+          "origin": "Camada de apresentação (página, formulário) ou API interna",
+          "trigger": "Ação do usuário (clique em botão, envio de formulário) ou chamada de API programática"
+        },
+        {
+          "id": 22,
+          "name": "Contexto de autenticação resolvido",
+          "format": "Objeto contendo usuario_executor (id, email, perfil, status, tenant_id) e tenant_executor (id, status, slug)",
+          "origin": "Middleware de autenticação (ASSET-038 Endpoints de Autenticação)",
+          "trigger": "Validação bem-sucedida de token JWT no middleware de autenticação"
+        },
+        {
+          "id": 23,
+          "name": "Dados do recurso alvo (quando aplicável)",
+          "format": "Objeto contendo identificadores e atributos do recurso sendo acessado (id, tenant_id, status, perfil)",
+          "origin": "Banco de dados relacional (tabelas de usuários, tarefas, tenants, níveis hierárquicos)",
+          "trigger": "Consulta ao repositório de dados antes da execução da operação"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 30,
+          "name": "Decisão de autorização",
+          "format": "Objeto contendo acesso_autorizado (boolean), mensagem_erro (string), motivo_negacao (enum)",
+          "destination": "Camada de aplicação (handler de requisição, serviço de negócio)"
+        },
+        {
+          "id": 31,
+          "name": "Resposta de erro ao cliente (quando negado)",
+          "format": "HTTP response com status 403 Forbidden e corpo contendo mensagem de erro descritiva",
+          "destination": "Cliente HTTP (navegador, aplicação cliente)"
+        },
+        {
+          "id": 32,
+          "name": "Registro de auditoria de tentativa de acesso negado",
+          "format": "Evento de auditoria contendo usuario_executor, tipo_operacao, recurso_alvo, motivo_negacao, timestamp",
+          "destination": "Trilha de Auditoria de Ações (ASSET-053)"
+        }
+      ],
+      "processing": [
+        {
+          "id": 24,
+          "step": "Validar status do usuário executor",
+          "description": "Verificar se o usuário autenticado possui status = ativo; rejeitar se status = inativo"
+        },
+        {
+          "id": 25,
+          "step": "Validar status do tenant executor",
+          "description": "Verificar se o tenant ao qual o usuário pertence possui status = ativo; rejeitar se status = inativo"
+        },
+        {
+          "id": 26,
+          "step": "Validar isolamento multi-tenant",
+          "description": "Verificar que o recurso alvo (quando existe) pertence ao tenant_executor; rejeitar se tenant_alvo != tenant_executor.id"
+        },
+        {
+          "id": 27,
+          "step": "Validar perfil do executor conforme tipo de operação",
+          "description": "Consultar a Variante de Permissão por Perfil (ASSET-060) para determinar se o perfil do executor possui permissão para a operação solicitada; rejeitar se perfil insuficiente"
+        },
+        {
+          "id": 28,
+          "step": "Validar restrições de negócio específicas",
+          "description": "Aplicar validações adicionais conforme tipo de operação: impedir auto-desativação de administrador único, impedir operações em recursos críticos sem confirmação, etc."
+        },
+        {
+          "id": 29,
+          "step": "Retornar decisão de autorização",
+          "description": "Emitir resultado booleano de acesso autorizado/negado com mensagem de erro e motivo categorizado quando aplicável"
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 33,
+        "category": "authorization",
+        "description": "Apenas usuários com perfil de administrador do tenant podem executar operações de cadastro, edição e desativação de usuários dentro do tenant",
+        "enforcement": "code",
+        "verification": "Validação no serviço de negócio antes de executar operação; rejeição com erro 403 Forbidden se perfil != administrador_tenant"
+      },
+      {
+        "id": 34,
+        "category": "authorization",
+        "description": "Apenas usuários com perfil de administrador da plataforma podem executar operações de provisionamento, ativação e desativação de tenants",
+        "enforcement": "code",
+        "verification": "Validação no serviço de negócio antes de executar operação; rejeição com erro 403 Forbidden se perfil != administrador_plataforma"
+      },
+      {
+        "id": 35,
+        "category": "authorization",
+        "description": "Apenas usuários com perfil de administrador do tenant podem executar operações de criação, edição e exclusão de níveis hierárquicos",
+        "enforcement": "code",
+        "verification": "Validação no serviço de negócio antes de executar operação; rejeição com erro 403 Forbidden se perfil != administrador_tenant"
+      },
+      {
+        "id": 36,
+        "category": "authorization",
+        "description": "Qualquer usuário autenticado e ativo pode criar tarefas, independentemente do nível hierárquico, desde que pertença ao tenant",
+        "enforcement": "code",
+        "verification": "Validação no serviço de negócio: verificar status = ativo e tenant_id = tenant_executor; permitir se ambas as condições forem satisfeitas"
+      },
+      {
+        "id": 37,
+        "category": "authorization",
+        "description": "Usuários inativos (status = inativo) não podem executar nenhuma operação na plataforma, incluindo login, criação de tarefas ou acesso a dados",
+        "enforcement": "code",
+        "verification": "Validação no middleware de autenticação e em cada operação; rejeição com erro 403 Forbidden se status = inativo"
+      },
+      {
+        "id": 38,
+        "category": "authorization",
+        "description": "Usuários pertencentes a tenants inativos (status = inativo) não podem acessar nenhuma funcionalidade da plataforma",
+        "enforcement": "code",
+        "verification": "Validação no middleware de autenticação; rejeição com erro 403 Forbidden se tenant.status = inativo"
+      },
+      {
+        "id": 39,
+        "category": "authorization",
+        "description": "Nenhum usuário pode acessar, visualizar, editar ou deletar dados pertencentes a outro tenant, garantindo isolamento multi-tenant rigoroso",
+        "enforcement": "code",
+        "verification": "Validação em cada operação de acesso a dados: verificar tenant_id do recurso == tenant_id do executor; rejeição com erro 403 Forbidden se não corresponder"
+      },
+      {
+        "id": 40,
+        "category": "authorization",
+        "description": "Um administrador do tenant não pode desativar seu próprio perfil se for o único administrador ativo no tenant",
+        "enforcement": "code",
+        "verification": "Validação no serviço de negócio antes de desativar usuário: contar administradores ativos no tenant; rejeição com erro 409 Conflict se count = 1 e executor = alvo"
+      },
+      {
+        "id": 41,
+        "category": "authorization",
+        "description": "Operações de edição, ativação e desativação de usuários devem ser executadas apenas pelo administrador do tenant ao qual o usuário pertence",
+        "enforcement": "code",
+        "verification": "Validação no serviço de negócio: verificar tenant_id do usuário alvo == tenant_id do executor; rejeição com erro 403 Forbidden se não corresponder"
+      },
+      {
+        "id": 42,
+        "category": "compliance",
+        "description": "Todas as tentativas de acesso negado devem ser registradas em log de auditoria para rastreabilidade e conformidade com LGPD",
+        "enforcement": "code",
+        "verification": "Registro em Trilha de Auditoria de Ações (ASSET-053) de cada tentativa de acesso negado, incluindo usuario_executor, tipo_operacao, motivo_negacao, timestamp"
+      },
+      {
+        "id": 43,
+        "category": "observability",
+        "description": "Decisões de autorização devem ser registradas em log estruturado para monitoramento de segurança e detecção de anomalias",
+        "enforcement": "code",
+        "verification": "Emissão de evento de log estruturado (JSON) contendo usuario_executor, tenant_executor, tipo_operacao, resultado (autorizado/negado), timestamp"
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "Regras de Controle de Acesso por Perfil é um conjunto de regras de negócio que encapsula as decisões de autorização e permissão aplicadas a cada usuário conforme seu perfil (colaborador, gestor, administrador do tenant ou administrador da plataforma) dentro de um contexto multi-tenant. Implementa validações que garantem que apenas usuários com perfil apropriado possam executar operações específicas (cadastro de usuários, gerenciamento de tarefas, provisionamento de tenants), que o acesso seja sempre escopado ao tenant do usuário autenticado, e que restrições de negócio como a impossibilidade de auto-desativação de administrador sejam rigorosamente aplicadas. Funciona em conjunto com a Variante de Permissão por Perfil (que define quais interfaces e endpoints estão visíveis) para reforçar a autorização em tempo de execução, garantindo que nenhuma operação seja executada por um usuário sem permissão, independentemente de manipulação de parâmetros ou tentativas de contorno. Serve como guardrail crítico para segurança, conformidade com LGPD e isolamento multi-tenant."
+    },
+    "definition": {
+      "cases": [
+        {
+          "id": 2,
+          "description": "Validação de controle de acesso para operação de cadastro de usuário restrita a administrador do tenant",
+          "input_pattern": "Tentativa de cadastro de novo usuário por usuário com perfil de colaborador",
+          "expected_output": "Rejeição com mensagem de erro: 'Acesso negado. Apenas administradores do tenant podem cadastrar usuários'"
+        },
+        {
+          "id": 3,
+          "description": "Validação de controle de acesso para operação de edição de perfil restrita a administrador do tenant",
+          "input_pattern": "Tentativa de edição de perfil de outro usuário por usuário com perfil de gestor",
+          "expected_output": "Rejeição com mensagem de erro: 'Acesso negado. Apenas administradores podem editar perfis de outros usuários'"
+        },
+        {
+          "id": 4,
+          "description": "Validação de controle de acesso para operação de desativação de usuário restrita a administrador do tenant",
+          "input_pattern": "Tentativa de desativação de usuário por usuário com perfil de colaborador",
+          "expected_output": "Rejeição com mensagem de erro: 'Acesso negado. Apenas administradores do tenant podem desativar usuários'"
+        },
+        {
+          "id": 5,
+          "description": "Validação de controle de acesso para operação de provisionamento de tenant restrita a administrador da plataforma",
+          "input_pattern": "Tentativa de provisionamento de novo tenant por usuário com perfil de administrador do tenant",
+          "expected_output": "Rejeição com mensagem de erro: 'Acesso negado. Apenas administradores internos da plataforma podem provisionar tenants'"
+        },
+        {
+          "id": 6,
+          "description": "Validação de controle de acesso para operação de gerenciamento de ciclo de vida de tenant restrita a administrador da plataforma",
+          "input_pattern": "Tentativa de ativação ou desativação de tenant por usuário com perfil de administrador do tenant",
+          "expected_output": "Rejeição com mensagem de erro: 'Acesso negado. Apenas administradores internos da plataforma podem gerenciar ciclo de vida de tenants'"
+        },
+        {
+          "id": 7,
+          "description": "Validação de isolamento multi-tenant impedindo acesso cruzado entre organizações",
+          "input_pattern": "Tentativa de acesso a dados de usuários de outro tenant por usuário autenticado em tenant diferente",
+          "expected_output": "Rejeição com mensagem de erro: 'Acesso negado. Usuário não pertence a este tenant'"
+        },
+        {
+          "id": 8,
+          "description": "Validação de controle de acesso para operação de gerenciamento de níveis hierárquicos restrita a administrador do tenant",
+          "input_pattern": "Tentativa de edição de nível hierárquico por usuário com perfil de colaborador",
+          "expected_output": "Rejeição com mensagem de erro: 'Acesso negado. Apenas administradores do tenant podem gerenciar níveis hierárquicos'"
+        },
+        {
+          "id": 9,
+          "description": "Validação de status de ativação do usuário impedindo operações de usuários desativados",
+          "input_pattern": "Tentativa de criação de tarefa por usuário com status inativo",
+          "expected_output": "Rejeição com mensagem de erro: 'Acesso negado. Usuário inativo não pode executar operações na plataforma'"
+        },
+        {
+          "id": 10,
+          "description": "Validação de status de ativação do tenant impedindo operações em organizações desativadas",
+          "input_pattern": "Tentativa de acesso a funcionalidades de um tenant desativado por usuário pertencente àquele tenant",
+          "expected_output": "Rejeição com mensagem de erro: 'Acesso negado. Tenant inativo não pode acessar a plataforma'"
+        },
+        {
+          "id": 11,
+          "description": "Validação de restrição de negócio impedindo que o tenant fique sem administrador ativo",
+          "input_pattern": "Tentativa de auto-desativação de administrador do tenant (único administrador ativo)",
+          "expected_output": "Rejeição com mensagem de erro: 'Acesso negado. Não é permitido desativar o próprio perfil de administrador quando é o único ativo'"
+        }
+      ],
+      "rule_spec": {
+        "id": 12,
+        "inputs": [
+          {
+            "id": 13,
+            "name": "usuario_executor",
+            "type": "object",
+            "description": "Objeto contendo dados do usuário autenticado que está tentando executar a operação (id, email, perfil, status, tenant_id)"
+          },
+          {
+            "id": 14,
+            "name": "tenant_executor",
+            "type": "object",
+            "description": "Objeto contendo dados do tenant ao qual o usuário executor pertence (id, status, slug)"
+          },
+          {
+            "id": 15,
+            "name": "tipo_operacao",
+            "type": "enum[cadastro_usuario|edicao_usuario|desativacao_usuario|ativacao_usuario|criacao_nivel_hierarquico|edicao_nivel_hierarquico|exclusao_nivel_hierarquico|criacao_tarefa|edicao_tarefa|desativacao_tarefa|provisionar_tenant|ativar_desativar_tenant|listar_usuarios|listar_tarefas]",
+            "description": "Tipo de operação que o usuário está tentando executar, determinando qual conjunto de validações de acesso aplicar"
+          },
+          {
+            "id": 16,
+            "name": "recurso_alvo",
+            "type": "object",
+            "description": "Objeto contendo dados do recurso sendo acessado (usuário, tarefa, tenant, nível hierárquico) quando aplicável; null para operações de criação"
+          },
+          {
+            "id": 17,
+            "name": "tenant_alvo",
+            "type": "uuid",
+            "description": "Identificador do tenant ao qual o recurso alvo pertence; utilizado para validar isolamento multi-tenant"
+          }
+        ],
+        "outputs": [
+          {
+            "id": 18,
+            "name": "acesso_autorizado",
+            "type": "boolean",
+            "description": "Indica se o usuário executor possui permissão para executar a operação solicitada (true) ou se o acesso deve ser negado (false)"
+          },
+          {
+            "id": 19,
+            "name": "mensagem_erro",
+            "type": "string",
+            "description": "Mensagem de erro descritiva quando acesso_autorizado = false; vazio quando acesso_autorizado = true"
+          },
+          {
+            "id": 20,
+            "name": "motivo_negacao",
+            "type": "enum[perfil_insuficiente|tenant_inativo|usuario_inativo|isolamento_multi_tenant|restricao_negocio|outro]",
+            "description": "Categoria do motivo da negação de acesso, facilitando o tratamento específico do erro na camada de apresentação"
+          }
+        ],
+        "decision": "Aplicar validações sequenciais de controle de acesso: (1) Validar que o usuário executor está ativo (status = ativo); (2) Validar que o tenant executor está ativo (status = ativo); (3) Validar isolamento multi-tenant: recurso alvo deve pertencer ao tenant executor; (4) Validar perfil do executor conforme tipo de operação: operações de cadastro/edição/exclusão de usuários requerem perfil administrador_tenant; operações de provisionar/ativar/desativar tenant requerem perfil administrador_plataforma; operações de criação/edição/conclusão de tarefas requerem perfil colaborador ou superior; (5) Validar restrições de negócio específicas: impedir auto-desativação de administrador quando é o único ativo no tenant; impedir desativação de tenant se causaria perda de acesso crítico. Retornar autorização (true) apenas quando todas as validações forem satisfeitas; caso contrário, retornar negação (false) com mensagem de erro específica e motivo categorizado."
+      }
+    },
+    "pendencies": [
+      {
+        "id": 62,
+        "section": "definition",
+        "description": "Necessário definir explicitamente o conjunto completo de perfis de usuário suportados pela plataforma e suas permissões associadas. Atualmente, o documento menciona colaborador, gestor, administrador_tenant e administrador_plataforma, mas não há especificação formal de quais operações cada perfil pode executar além do que está implícito nos casos de teste.",
+        "resolutionOptions": [
+          {
+            "id": 63,
+            "text": "Criar matriz de permissões (RACI ou similar) mapeando cada perfil contra cada tipo de operação (cadastro_usuario, edicao_usuario, criacao_tarefa, etc.), documentando explicitamente quais perfis têm acesso a quais operações"
+          },
+          {
+            "id": 64,
+            "text": "Referenciar a Variante de Permissão por Perfil (ASSET-060) como fonte de verdade para definição de permissões por perfil, e adicionar correlação explícita neste documento"
+          },
+          {
+            "id": 65,
+            "text": "Expandir a seção de casos de teste para cobrir todas as combinações de perfil × operação, deixando implícita a matriz de permissões através dos testes"
+          }
+        ],
+        "recommendedOptionId": 64
+      },
+      {
+        "id": 66,
+        "section": "rules",
+        "description": "Necessário esclarecer se existem operações que requerem múltiplos níveis de aprovação ou confirmação (ex: desativação de tenant requer confirmação de administrador da plataforma). Atualmente, as regras assumem validação simples de perfil, mas operações críticas podem exigir fluxos de aprovação mais complexos.",
+        "resolutionOptions": [
+          {
+            "id": 67,
+            "text": "Adicionar regra de autorização para operações críticas (desativação de tenant, exclusão de nível hierárquico com usuários vinculados) exigindo confirmação explícita do executor"
+          },
+          {
+            "id": 68,
+            "text": "Manter validação simples de perfil conforme especificado, e delegar fluxos de aprovação multi-nível para um Business Rule separado (ASSET-008) dedicado a operações críticas"
+          }
+        ],
+        "recommendedOptionId": 68
+      },
+      {
+        "id": 69,
+        "section": "non_functional_requirements",
+        "description": "Necessário definir SLA específico para disponibilidade do serviço de autorização. Atualmente, foi proposto 99.9%, mas isso deve ser validado contra os requisitos operacionais do projeto e capacidade de infraestrutura.",
+        "resolutionOptions": [
+          {
+            "id": 70,
+            "text": "Manter SLA de 99.9% (43.2 minutos de downtime permitido por mês) conforme proposto, alinhado com requisitos de alta disponibilidade do projeto"
+          },
+          {
+            "id": 71,
+            "text": "Revisar com arquitetura de infraestrutura e definir SLA mais agressivo (99.95% ou 99.99%) se o projeto exigir disponibilidade crítica"
+          }
+        ],
+        "recommendedOptionId": 70
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 49,
+        "then": "A operação é rejeitada com erro 403 Forbidden e mensagem 'Acesso negado'",
+        "type": "unit",
+        "when": "O usuário tenta executar a operação de cadastro de novo usuário",
+        "given": "Um usuário com perfil de colaborador autenticado em um tenant ativo",
+        "scenario": "Validação de autorização para cadastro de usuário por colaborador",
+        "target_section": "rules"
+      },
+      {
+        "id": 50,
+        "then": "A operação é autorizada e prossegue para validações de negócio (Regras de Validação de Usuário)",
+        "type": "unit",
+        "when": "O usuário tenta executar a operação de cadastro de novo usuário",
+        "given": "Um usuário com perfil de administrador_tenant autenticado em um tenant ativo",
+        "scenario": "Validação de autorização para cadastro de usuário por administrador do tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 51,
+        "then": "A operação é rejeitada com erro 403 Forbidden e mensagem 'Acesso negado'",
+        "type": "unit",
+        "when": "O usuário tenta acessar ou editar um usuário pertencente ao tenant B",
+        "given": "Um usuário autenticado no tenant A",
+        "scenario": "Validação de isolamento multi-tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 52,
+        "then": "A operação é rejeitada com erro 403 Forbidden e mensagem 'Acesso negado'",
+        "type": "unit",
+        "when": "O usuário tenta executar qualquer operação (criar tarefa, editar perfil, etc.)",
+        "given": "Um usuário com status = inativo autenticado (cenário de teste)",
+        "scenario": "Validação de status de usuário inativo",
+        "target_section": "rules"
+      },
+      {
+        "id": 53,
+        "then": "A operação é rejeitada com erro 403 Forbidden e mensagem 'Acesso negado'",
+        "type": "unit",
+        "when": "O usuário tenta acessar qualquer funcionalidade da plataforma",
+        "given": "Um usuário ativo pertencente a um tenant com status = inativo",
+        "scenario": "Validação de status de tenant inativo",
+        "target_section": "rules"
+      },
+      {
+        "id": 54,
+        "then": "A operação é rejeitada com erro 409 Conflict e mensagem 'Não é permitido desativar o próprio perfil de administrador'",
+        "type": "unit",
+        "when": "O usuário tenta desativar seu próprio perfil",
+        "given": "Um usuário com perfil de administrador_tenant que é o único administrador ativo no tenant",
+        "scenario": "Validação de restrição de auto-desativação de administrador único",
+        "target_section": "rules"
+      },
+      {
+        "id": 55,
+        "then": "A operação é rejeitada com erro 403 Forbidden e mensagem 'Acesso negado'",
+        "type": "unit",
+        "when": "O usuário tenta executar a operação de provisionamento de novo tenant",
+        "given": "Um usuário com perfil de administrador_tenant autenticado",
+        "scenario": "Validação de autorização para provisionamento de tenant por administrador do tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 56,
+        "then": "A operação é autorizada e prossegue para validações de negócio",
+        "type": "unit",
+        "when": "O usuário tenta executar a operação de provisionamento de novo tenant",
+        "given": "Um usuário com perfil de administrador_plataforma autenticado",
+        "scenario": "Validação de autorização para provisionamento de tenant por administrador da plataforma",
+        "target_section": "rules"
+      },
+      {
+        "id": 57,
+        "then": "O servidor valida a autorização e rejeita a operação com erro 403 Forbidden",
+        "type": "security",
+        "when": "O cliente tenta contornar a validação do cliente e enviar requisição diretamente ao servidor",
+        "given": "Um cliente HTTP (navegador ou aplicação) com validação de autorização apenas no lado do cliente",
+        "scenario": "Teste de contorno de validação de autorização no cliente",
+        "target_section": "rules"
+      },
+      {
+        "id": 58,
+        "then": "As mensagens de erro são genéricas ('Acesso negado') sem revelar se o usuário existe ou não",
+        "type": "security",
+        "when": "O atacante tenta acessar usuários de outro tenant e observa as mensagens de erro",
+        "given": "Um atacante tentando descobrir quais usuários existem no sistema",
+        "scenario": "Teste de enumeração de usuários via mensagens de erro",
+        "target_section": "rules"
+      },
+      {
+        "id": 59,
+        "then": "A Variante indica que colaborador não tem acesso a endpoints de cadastro de usuário, e a regra de autorização rejeita a operação",
+        "type": "integration",
+        "when": "O sistema resolve a Variante de Permissão por Perfil (ASSET-060) e depois valida autorização para operação de cadastro de usuário",
+        "given": "Um usuário com perfil de colaborador autenticado",
+        "scenario": "Integração com Variante de Permissão por Perfil",
+        "target_section": "rules"
+      },
+      {
+        "id": 60,
+        "then": "Um evento de auditoria é registrado em ASSET-053 contendo usuario_executor, tipo_operacao, motivo_negacao, timestamp",
+        "type": "integration",
+        "when": "A regra de autorização rejeita a operação",
+        "given": "Um usuário tenta executar operação para a qual não tem autorização",
+        "scenario": "Integração com Trilha de Auditoria",
+        "target_section": "rules"
+      },
+      {
+        "id": 61,
+        "then": "Latência p99 de validação de autorização é <= 5ms, sem degradação perceptível no tempo de resposta total",
+        "type": "performance",
+        "when": "O sistema processa as requisições de autorização",
+        "given": "5.000 usuários simultâneos executando operações que requerem validação de autorização",
+        "scenario": "Teste de latência de validação de autorização sob carga",
+        "target_section": "non_functional_requirements"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 44,
+        "target": "p99 <= 5ms para validação de autorização, mesmo em tenants com até 5.000 usuários ativos",
+        "category": "performance",
+        "requirement": "Avaliação de autorização deve ser executada com latência mínima, sem impacto perceptível no tempo de resposta da operação",
+        "verification": "Teste de carga com 5.000 usuários simultâneos; medição de latência p99 de validação de autorização; aceitação se p99 <= 5ms"
+      },
+      {
+        "id": 45,
+        "target": "100% das operações críticas (cadastro, edição, desativação de usuários; provisionamento de tenants) devem ser validadas no backend",
+        "category": "security",
+        "requirement": "Validações de autorização devem ser executadas no servidor (backend), nunca confiando em validações do lado do cliente",
+        "verification": "Revisão de código; teste de segurança tentando contornar validações do cliente; confirmação de que todas as operações críticas validam no servidor"
+      },
+      {
+        "id": 46,
+        "target": "Mensagens de erro devem ser padronizadas (ex: 'Acesso negado') sem indicar motivo específico ou perfil necessário",
+        "category": "security",
+        "requirement": "Mensagens de erro de autorização devem ser genéricas e não revelar detalhes internos do sistema ou estrutura de permissões",
+        "verification": "Revisão de mensagens de erro em testes de segurança; confirmação de que mensagens não revelam estrutura de permissões"
+      },
+      {
+        "id": 47,
+        "target": "Disponibilidade >= 99.9% (SLA de 43.2 minutos de downtime permitido por mês)",
+        "category": "availability",
+        "requirement": "Serviço de autorização deve estar disponível com alta disponibilidade, dado que sua indisponibilidade bloqueia acesso de todos os usuários",
+        "verification": "Monitoramento contínuo de disponibilidade; alertas quando disponibilidade cai abaixo de 99.9%; teste de failover de componentes críticos"
+      },
+      {
+        "id": 48,
+        "target": "100% das operações críticas devem ter registro de auditoria com usuario_executor, tipo_operacao, resultado, timestamp",
+        "category": "observability",
+        "requirement": "Todas as decisões de autorização (aprovadas e negadas) devem ser registradas para auditoria e análise de segurança",
+        "verification": "Verificação de logs de auditoria; confirmação de que nenhuma operação crítica deixa de ser registrada"
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 29,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T02:59:50.783Z",
+  "updatedAt": null
+}

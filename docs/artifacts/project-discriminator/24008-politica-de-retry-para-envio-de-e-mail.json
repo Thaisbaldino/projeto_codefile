@@ -1,0 +1,183 @@
+{
+  "id": 24008,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 16,
+        "name": "Falhas de Execução e Idempotência",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "A segunda tentativa é rejeitada por erro 503, e a rejeição não é revertida, o que torna a falha irreparável.",
+        "confidence": 0.7498,
+        "context_element_id": 2819
+      }
+    ],
+    "attributes": [
+      {
+        "id": 10,
+        "name": "Tipo específico de evento ou mensagem que está sendo comunicado",
+        "value": [
+          "success",
+          "email-delivery"
+        ],
+        "method": "user-input",
+        "reasoning": "O resultado de sucesso de envio é comunicado com status='success'.\nA métrica de observabilidade é emitida em observabilidade, com contadores e histogramas segmentados por email_type e result.",
+        "confidence": 0.7283,
+        "context_element_id": 2755
+      },
+      {
+        "id": 11,
+        "name": "Tipo principal de falha ou degradação que o padrão deve mitigar",
+        "value": [
+          "transient-failures, permanent-failures",
+          "permanent-failures"
+        ],
+        "method": "user-input",
+        "reasoning": "A classificação do resultado da tentativa analisa falhas temporárias (5xx, timeout, erro de rede) e falhas permanentes (4xx, credenciais inválidas), caracterizando falhas transientes e permanentes.\nO status 'failed' do objeto indica falha permanente, com motivo de falha 'temporária esgotada ou permanente', caracterizando falhas permanentes.",
+        "confidence": 0.7306,
+        "context_element_id": 2771
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 17,
+        "name": "Implementar rate limiting com throttling configurável por endpoint e amostragem de requisições em cenários de alta carga",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem limite, a demanda sobe e a operação fica parada, o que não é aceitável em um sistema de e-commerce.\nO limite de 100 requisições por minuto com burst máximo de 10 requisições simultâneas é configurado para simular e validar.",
+        "confidence": 0.8362,
+        "context_element_id": 2860
+      },
+      {
+        "id": 18,
+        "name": "Definir timeouts configuráveis para todas as operações críticas e monitorar orçamentos de tempo por transação/endpoint",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Requisição HTTP ao provedor de e-mail é a única saída do sistema, e o tempo de resposta é o que determina a operação.\nO tempo de espera calculado é configurável e monitorado, com intervalo entre 1800ms e 2200ms, e o sistema calcula o tempo de espera para a próxima tentativa.",
+        "confidence": 0.7371,
+        "context_element_id": 2863
+      },
+      {
+        "id": 19,
+        "name": "Configurar o escalonamento de recursos com políticas FIFO, de prioridade ou baseadas em deadline conforme a criticidade das operações",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A enfileirada é a única opção disponível para rejeitar a requisição quando o limite é excedido.",
+        "confidence": 0.8027,
+        "context_element_id": 2870
+      },
+      {
+        "id": 20,
+        "name": "Implementar tratamento robusto de exceções com circuit breakers, bulkheads e isolamento de falhas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem circuit breaker, falhas do provedor de e-mail causam interrupção geral do sistema, sem que o usuário saiba o que aconteceu.",
+        "confidence": 0.9137,
+        "context_element_id": 2892
+      },
+      {
+        "id": 21,
+        "name": "Implementar retry automático com exponential backoff, jitter e circuit breaker para prevenir falhas em cascata",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Ciclo de tentativa de envio e circuit breaker aberto são a mesma coisa: o envio parado fica parado, e a mensagem não chega.",
+        "confidence": 0.8933,
+        "context_element_id": 2895
+      },
+      {
+        "id": 23,
+        "name": "Implementar redundância em todos os componentes críticos, eliminando pontos únicos de falha",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem backup, uma falha em um ponto de falha isolado deixa toda a aplicação parada, e a única saída é recomeçar tudo de novo.",
+        "confidence": 0.9039,
+        "context_element_id": 2912
+      },
+      {
+        "id": 24,
+        "name": "Implementar verificação de integridade de mensagens usando checksums e HMAC para detectar alterações não autorizadas durante a transmissão",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem verificação de integridade, o sistema corre risco de receber mensagens que não chegaram ao destinatário, e a correção só acontece depois.",
+        "confidence": 0.7526,
+        "context_element_id": 2923
+      },
+      {
+        "id": 25,
+        "name": "Estabelecer um sistema de rastreabilidade abrangente com logs detalhados de todas as ações de usuários e mudanças do sistema",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem rastreabilidade, a identificação de falha em um único envio não pode ser feita, e a correção só chega depois de toda a camada de envio ter sido executada.",
+        "confidence": 0.8521,
+        "context_element_id": 2925
+      },
+      {
+        "id": 26,
+        "name": "Configurar tratamento seguro de erros com logging detalhado que não exponha informações sensíveis, mas permita análise forense",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Logs de auditoria e métricas não contêm email, token ou link em texto claro, garantindo que a violação de dados sensíveis seja identificada sem revelar o conteúdo original.",
+        "confidence": 0.7164,
+        "context_element_id": 2927
+      },
+      {
+        "id": 28,
+        "name": "Implementar validação rigorosa de entradas com sanitização, whitelists de caracteres permitidos e prevenção contra ataques de injeção",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "RecoveryToken e RecoveryLink são campos obrigatórios e aceitos apenas por valores válidos, sem que o sistema aceite tentativas semelhantes.",
+        "confidence": 0.793,
+        "context_element_id": 2936
+      },
+      {
+        "id": 29,
+        "name": "Implemente operações idempotentes que podem ser executadas múltiplas vezes sem efeitos colaterais",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Reenviar a mesma requisição repetidamente ao mesmo destinatário é uma falha de execução crítica que deve ser detectada e rejeitada.",
+        "confidence": 0.8583,
+        "context_element_id": 2968
+      },
+      {
+        "id": 32,
+        "name": "Configure o sistema para sempre falhar em um estado seguro por meio de valores padrão conservadores, modo somente leitura ou desligamento controlado quando condições inseguras são detectadas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem rejeição imediata, a falha do provedor de e-mail se propagaria a toda a rede, causando um corte geral sem que ninguém soubesse o que aconteceu.",
+        "confidence": 0.8539,
+        "context_element_id": 3070
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 2,
+        "name": "Mecanismo de Gatilho",
+        "value": "agendado",
+        "method": "user-input",
+        "reasoning": "O agendamento de tentativa de reavaliação de falha temporária é iniciado por um cron, caracterizando um mecanismo de execução agendado.",
+        "confidence": 0.7595,
+        "context_element_id": 1399
+      },
+      {
+        "id": 40,
+        "name": "Persistência de Estado",
+        "value": "true",
+        "method": "user-input",
+        "reasoning": "O estado do circuit breaker é armazenado em banco de dados, caracterizando uma persistência.",
+        "confidence": 0.7392,
+        "context_element_id": 4286
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 4,
+  "active": true,
+  "sourceId": 23847,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}

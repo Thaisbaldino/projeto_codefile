@@ -1,0 +1,462 @@
+{
+  "id": 23744,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 19,
+          "name": "Dados de Tarefa",
+          "format": "JSON { titulo, descricao?, responsavel_id, prioridade, status?, data_limite? }",
+          "origin": "Formulário de Criação/Edição de Tarefa ou Requisição de API",
+          "trigger": "Ação do usuário de criar ou editar tarefa, ou consulta de listagem/filtro"
+        },
+        {
+          "id": 20,
+          "name": "Data Atual do Servidor",
+          "format": "ISO 8601 date (YYYY-MM-DD)",
+          "origin": "Sistema de Tempo do Servidor",
+          "trigger": "Automático em cada avaliação de regra"
+        },
+        {
+          "id": 21,
+          "name": "Contexto de Usuário Executor",
+          "format": "JSON { user_id: uuid, tenant_id: uuid, status: enum, perfil: enum }",
+          "origin": "Sessão Autenticada",
+          "trigger": "Requisição autenticada"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 29,
+          "name": "Resultado de Validação e Classificação",
+          "format": "JSON { prioridade_valida, prazo_valido, tarefa_critica, tarefa_atrasada, isolamento_tenant_garantido, responsavel_ativo_no_tenant, mensagem_erro }",
+          "destination": "Camada de Aplicação (Handlers de Tarefas, Visualizações)"
+        },
+        {
+          "id": 30,
+          "name": "Evento de Auditoria",
+          "format": "JSON { timestamp, usuario_id, tenant_id, tarefa_id, operacao, resultado, detalhes }",
+          "destination": "Trilha de Auditoria"
+        }
+      ],
+      "processing": [
+        {
+          "id": 22,
+          "step": "Validar Prioridade",
+          "description": "Verificar se o valor de prioridade da tarefa pertence ao conjunto permitido (baixa, média, alta, urgente)."
+        },
+        {
+          "id": 23,
+          "step": "Validar Prazo",
+          "description": "Verificar se a data limite é válida (data futura ou ausente, não retroativa em relação à data atual)."
+        },
+        {
+          "id": 24,
+          "step": "Classificar Criticidade",
+          "description": "Determinar se a tarefa é crítica (prioridade alta ou urgente) para fins de destaque visual."
+        },
+        {
+          "id": 25,
+          "step": "Classificar Atraso",
+          "description": "Determinar se a tarefa está em atraso (data limite vencida e status não é Concluído)."
+        },
+        {
+          "id": 26,
+          "step": "Validar Isolamento Multi-Tenant",
+          "description": "Verificar se a tarefa pertence ao tenant do usuário executor, garantindo isolamento de dados."
+        },
+        {
+          "id": 27,
+          "step": "Validar Responsável Ativo",
+          "description": "Verificar se o responsável da tarefa é um usuário ativo pertencente ao mesmo tenant."
+        },
+        {
+          "id": 28,
+          "step": "Produzir Decisão",
+          "description": "Compilar resultado das validações e classificações em estrutura de saída com flags de elegibilidade e mensagem de erro se aplicável."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 31,
+        "category": "validation",
+        "description": "Prioridade de tarefa deve ser um dos valores permitidos: baixa, média, alta ou urgente. Rejeitar qualquer outro valor.",
+        "enforcement": "code",
+        "verification": "Validação executada no handler de criação/edição de tarefa antes de persistência; teste unitário verifica rejeição de valores inválidos."
+      },
+      {
+        "id": 32,
+        "category": "validation",
+        "description": "Data limite de tarefa não pode ser anterior à data atual no momento da criação ou edição. Datas futuras e ausência de prazo são permitidas.",
+        "enforcement": "code",
+        "verification": "Validação executada no handler de criação/edição de tarefa; teste unitário verifica rejeição de datas retroativas e aceitação de datas futuras."
+      },
+      {
+        "id": 33,
+        "category": "invariant",
+        "description": "Tarefa com status 'Concluído' nunca é elegível para destaque de atraso, mesmo que sua data limite esteja vencida.",
+        "enforcement": "code",
+        "verification": "Lógica de classificação de atraso verifica status antes de comparar data limite; teste de integração valida que tarefas concluídas não recebem destaque de atraso."
+      },
+      {
+        "id": 34,
+        "category": "authorization",
+        "description": "Usuário só pode criar, editar ou consultar tarefas pertencentes ao seu próprio tenant. Isolamento multi-tenant é garantido em todas as operações.",
+        "enforcement": "code",
+        "verification": "Filtro de tenant aplicado em todas as consultas e operações de escrita; teste de segurança verifica que usuário de tenant A não consegue acessar tarefas de tenant B."
+      },
+      {
+        "id": 35,
+        "category": "validation",
+        "description": "Responsável de tarefa deve ser um usuário ativo pertencente ao mesmo tenant. Usuários inativos ou de outros tenants não podem ser atribuídos.",
+        "enforcement": "code",
+        "verification": "Validação executada no handler de criação/edição de tarefa; consulta ao repositório de usuários verifica status e tenant do responsável antes de persistência."
+      },
+      {
+        "id": 36,
+        "category": "observability",
+        "description": "Toda operação de criação, edição ou alteração de prioridade/prazo de tarefa deve ser registrada em log de auditoria com identificação do usuário executor, timestamp, tenant, tarefa e valores alterados.",
+        "enforcement": "code",
+        "verification": "Trilha de auditoria registra cada operação; teste de auditoria valida que logs contêm informações completas e rastreáveis."
+      },
+      {
+        "id": 37,
+        "category": "compliance",
+        "description": "Dados pessoais de usuários (nome, e-mail) associados a tarefas devem ser tratados em conformidade com LGPD, aplicando princípios de minimização de dados e proteção de informações pessoais.",
+        "enforcement": "code",
+        "verification": "Política de conformidade LGPD aplicada em camada de acesso a dados; auditoria de conformidade valida que dados pessoais não são expostos desnecessariamente."
+      },
+      {
+        "id": 38,
+        "category": "invariant",
+        "description": "Tarefa é elegível para destaque de criticidade se e somente se sua prioridade é 'alta' ou 'urgente', independentemente de outros atributos.",
+        "enforcement": "code",
+        "verification": "Lógica de classificação de criticidade implementa regra como condição booleana simples; teste unitário valida elegibilidade para cada nível de prioridade."
+      },
+      {
+        "id": 39,
+        "category": "invariant",
+        "description": "Tarefa é elegível para destaque de atraso se e somente se sua data limite é anterior à data atual E seu status não é 'Concluído'.",
+        "enforcement": "code",
+        "verification": "Lógica de classificação de atraso implementa regra como condição booleana composta; teste unitário valida elegibilidade para combinações de data limite e status."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "A regra de negócio Regras de Prioridade e Prazo de Tarefas encapsula as validações, restrições e decisões operacionais que governam como tarefas são priorizadas e como seus prazos são gerenciados dentro do ciclo de vida de execução. Define critérios para classificação de prioridade (baixa, média, alta, urgente), validações de datas limite (não retroativas, conformidade com calendário), regras de destaque automático de tarefas críticas ou atrasadas, e garantias de isolamento multi-tenant. Implementa lógica de negócio que diferencia tarefas urgentes de tarefas em atraso, aplica restrições de integridade referencial (responsável ativo no tenant), e fornece insumos para visualizações e filtros. Serve como ponto centralizado de decisão para priorização e rastreamento de prazos, garantindo que equipes identifiquem rapidamente demandas críticas e atividades vencidas."
+    },
+    "definition": {
+      "cases": [
+        {
+          "id": 13,
+          "description": "Caso de sucesso: tarefa com prioridade elevada e prazo válido é criada e elegível para destaque de criticidade.",
+          "input_pattern": "Criação de tarefa com prioridade 'alta' e data limite 5 dias no futuro, responsável ativo no tenant, usuário criador autenticado no mesmo tenant.",
+          "expected_output": "prioridade_valida=true, prazo_valido=true, tarefa_critica=true, tarefa_atrasada=false, isolamento_tenant_garantido=true, responsavel_ativo_no_tenant=true, mensagem_erro=null."
+        },
+        {
+          "id": 14,
+          "description": "Caso de falha: validação rejeita prazo retroativo.",
+          "input_pattern": "Edição de tarefa existente alterando data limite para data anterior à data atual (retroativa).",
+          "expected_output": "prazo_valido=false, mensagem_erro='Data limite não pode ser anterior à data atual'."
+        },
+        {
+          "id": 15,
+          "description": "Caso de sucesso: tarefa atende critérios de criticidade e atraso, elegível para duplo destaque visual.",
+          "input_pattern": "Consulta de tarefa com prioridade 'urgente', data limite vencida há 3 dias, status 'A Fazer', usuário executor pertence ao mesmo tenant.",
+          "expected_output": "prioridade_valida=true, prazo_valido=true, tarefa_critica=true, tarefa_atrasada=true, isolamento_tenant_garantido=true, mensagem_erro=null."
+        },
+        {
+          "id": 16,
+          "description": "Caso de falha: isolamento multi-tenant é garantido, bloqueando acesso cruzado.",
+          "input_pattern": "Tentativa de edição de tarefa por usuário de tenant diferente daquele ao qual a tarefa pertence.",
+          "expected_output": "isolamento_tenant_garantido=false, mensagem_erro='Acesso negado: tarefa pertence a outro tenant'."
+        },
+        {
+          "id": 17,
+          "description": "Caso de falha: validação rejeita atribuição a usuário inativo.",
+          "input_pattern": "Criação de tarefa com responsável inativo no tenant.",
+          "expected_output": "responsavel_ativo_no_tenant=false, mensagem_erro='Responsável selecionado não está ativo no tenant'."
+        },
+        {
+          "id": 18,
+          "description": "Caso de sucesso: tarefas concluídas não são elegíveis para destaque de atraso, mesmo com prazo vencido.",
+          "input_pattern": "Consulta de tarefa com status 'Concluído', data limite vencida, prioridade 'alta'.",
+          "expected_output": "tarefa_critica=true, tarefa_atrasada=false, mensagem_erro=null."
+        }
+      ],
+      "rule_spec": {
+        "id": 2,
+        "inputs": [
+          {
+            "id": 3,
+            "name": "tarefa",
+            "type": "{ id: uuid, tenant_id: uuid, titulo: string, responsavel_id: uuid, prioridade: enum[baixa|media|alta|urgente], status: string, data_limite?: date, data_criacao: timestamp }",
+            "description": "Registro de tarefa contendo identificadores, atributos de priorização e prazo, e status atual."
+          },
+          {
+            "id": 4,
+            "name": "data_atual",
+            "type": "date",
+            "description": "Data corrente do servidor para cálculo de atrasos e validações temporais."
+          },
+          {
+            "id": 5,
+            "name": "usuario_executor",
+            "type": "{ id: uuid, tenant_id: uuid, status: enum[ativo|inativo], perfil: enum[colaborador|gestor|administrador] }",
+            "description": "Usuário autenticado que está criando, editando ou consultando a tarefa."
+          }
+        ],
+        "outputs": [
+          {
+            "id": 6,
+            "name": "prioridade_valida",
+            "type": "boolean",
+            "description": "Indica se o valor de prioridade da tarefa é um dos valores permitidos (baixa, média, alta, urgente)."
+          },
+          {
+            "id": 7,
+            "name": "prazo_valido",
+            "type": "boolean",
+            "description": "Indica se a data limite da tarefa é válida (data futura ou ausente, não retroativa)."
+          },
+          {
+            "id": 8,
+            "name": "tarefa_critica",
+            "type": "boolean",
+            "description": "Indica se a tarefa é elegível para destaque de criticidade (prioridade alta ou urgente)."
+          },
+          {
+            "id": 9,
+            "name": "tarefa_atrasada",
+            "type": "boolean",
+            "description": "Indica se a tarefa está em atraso (data limite vencida e status não é Concluído)."
+          },
+          {
+            "id": 10,
+            "name": "isolamento_tenant_garantido",
+            "type": "boolean",
+            "description": "Indica se a tarefa pertence ao tenant do usuário executor, garantindo isolamento de dados."
+          },
+          {
+            "id": 11,
+            "name": "responsavel_ativo_no_tenant",
+            "type": "boolean",
+            "description": "Indica se o responsável da tarefa é um usuário ativo pertencente ao mesmo tenant."
+          },
+          {
+            "id": 12,
+            "name": "mensagem_erro",
+            "type": "string | null",
+            "description": "Mensagem de erro descritiva quando alguma validação falha; null quando todas as validações passam."
+          }
+        ],
+        "decision": "Validar e classificar tarefas conforme critérios de prioridade e prazo, aplicando restrições de integridade, isolamento multi-tenant e conformidade com LGPD, e produzindo decisões de elegibilidade para destaque visual e operações de edição."
+      }
+    },
+    "pendencies": [
+      {
+        "id": 54,
+        "section": "definition",
+        "description": "Definição de níveis de prioridade (baixa, média, alta, urgente) não está explicitamente mapeada a valores numéricos ou pesos para ordenação. Necessário clarificar se existe ordem de severidade ou se são apenas categorias nominais para fins de destaque visual.",
+        "resolutionOptions": [
+          {
+            "id": 55,
+            "text": "Definir mapeamento numérico: baixa=1, média=2, alta=3, urgente=4, permitindo ordenação por severidade."
+          },
+          {
+            "id": 56,
+            "text": "Manter como categorias nominais sem ordem numérica; ordenação é apenas por data de criação ou outro critério."
+          },
+          {
+            "id": 57,
+            "text": "Consultar feature_definition de 'Definir Prioridade da Tarefa' para determinar se há requisito explícito de ordenação."
+          }
+        ],
+        "recommendedOptionId": 57
+      },
+      {
+        "id": 58,
+        "section": "definition",
+        "description": "Comportamento de regra quando data limite é null (tarefa sem prazo) não está explicitamente definido. Necessário clarificar se tarefas sem prazo são elegíveis para destaque de atraso ou se são excluídas automaticamente.",
+        "resolutionOptions": [
+          {
+            "id": 59,
+            "text": "Tarefas sem prazo (data_limite = null) nunca são elegíveis para destaque de atraso, independentemente de status."
+          },
+          {
+            "id": 60,
+            "text": "Tarefas sem prazo são tratadas como tendo prazo indefinido e podem ser elegíveis para destaque se critério alternativo for atendido."
+          }
+        ],
+        "recommendedOptionId": 59
+      },
+      {
+        "id": 61,
+        "section": "rules",
+        "description": "Regra de conformidade LGPD menciona 'minimização de dados' mas não especifica quais campos de tarefa contêm dados pessoais ou como devem ser protegidos. Necessário detalhar política de tratamento de dados pessoais em contexto de tarefas.",
+        "resolutionOptions": [
+          {
+            "id": 62,
+            "text": "Campos 'responsavel_id' e 'criador_id' são referências a usuários (dados pessoais); nomes e e-mails não devem ser armazenados na tabela de tarefas, apenas IDs."
+          },
+          {
+            "id": 63,
+            "text": "Consultar política de conformidade LGPD (asset 54) para determinar quais campos são considerados dados pessoais e como devem ser tratados."
+          }
+        ],
+        "recommendedOptionId": 63
+      },
+      {
+        "id": 64,
+        "section": "non_functional_requirements",
+        "description": "Requisito de performance menciona 'p99 <= 50ms' mas não especifica se é para avaliação de regra isolada ou para operação completa de criação/edição de tarefa. Necessário clarificar escopo de medição.",
+        "resolutionOptions": [
+          {
+            "id": 65,
+            "text": "p99 <= 50ms refere-se apenas à execução da regra de validação e classificação, isolada de I/O de banco de dados."
+          },
+          {
+            "id": 66,
+            "text": "p99 <= 50ms refere-se à operação completa de criação/edição de tarefa, incluindo persistência e auditoria."
+          },
+          {
+            "id": 67,
+            "text": "Definir dois SLOs distintos: um para avaliação de regra isolada (< 10ms) e outro para operação completa (< 200ms)."
+          }
+        ],
+        "recommendedOptionId": 67
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 45,
+        "then": "A validação retorna prioridade_valida=false e mensagem_erro contém descrição do erro",
+        "type": "unit",
+        "when": "A regra de validação de prioridade é avaliada",
+        "given": "Uma tarefa com prioridade definida como 'crítica' (valor não permitido)",
+        "scenario": "Validação de Prioridade com Valor Inválido",
+        "target_section": "definition"
+      },
+      {
+        "id": 46,
+        "then": "A validação retorna prazo_valido=false e mensagem_erro contém 'Data limite não pode ser anterior à data atual'",
+        "type": "unit",
+        "when": "A regra de validação de prazo é avaliada",
+        "given": "Uma tarefa com data limite definida como 2024-01-01 e data atual é 2024-12-15",
+        "scenario": "Validação de Prazo Retroativo",
+        "target_section": "definition"
+      },
+      {
+        "id": 47,
+        "then": "A classificação retorna tarefa_critica=true",
+        "type": "unit",
+        "when": "A regra de classificação de criticidade é avaliada",
+        "given": "Uma tarefa com prioridade 'alta'",
+        "scenario": "Classificação de Tarefa Crítica com Prioridade Alta",
+        "target_section": "definition"
+      },
+      {
+        "id": 48,
+        "then": "A classificação retorna tarefa_atrasada=false (tarefas concluídas nunca são atrasadas)",
+        "type": "unit",
+        "when": "A regra de classificação de atraso é avaliada",
+        "given": "Uma tarefa com status 'Concluído' e data limite vencida há 5 dias",
+        "scenario": "Classificação de Tarefa Atrasada com Status Concluído",
+        "target_section": "definition"
+      },
+      {
+        "id": 49,
+        "then": "A operação é rejeitada com mensagem 'Acesso negado: tarefa pertence a outro tenant' e isolamento_tenant_garantido=false",
+        "type": "integration",
+        "when": "A operação de edição é processada com validação de isolamento multi-tenant",
+        "given": "Usuário do tenant A tenta editar tarefa pertencente ao tenant B",
+        "scenario": "Isolamento Multi-Tenant em Operação de Edição",
+        "target_section": "rules"
+      },
+      {
+        "id": 50,
+        "then": "A operação é rejeitada com mensagem 'Responsável selecionado não está ativo no tenant' e responsavel_ativo_no_tenant=false",
+        "type": "integration",
+        "when": "A operação de criação é processada com validação de responsável ativo",
+        "given": "Usuário tenta criar tarefa atribuindo responsável inativo no tenant",
+        "scenario": "Validação de Responsável Ativo na Criação de Tarefa",
+        "target_section": "rules"
+      },
+      {
+        "id": 51,
+        "then": "A requisição é rejeitada no servidor com erro 403 Forbidden; isolamento multi-tenant é garantido",
+        "type": "security",
+        "when": "Tenta consultar tarefas do tenant B através de manipulação de parâmetro tenant_id na requisição",
+        "given": "Usuário autenticado no tenant A com token válido",
+        "scenario": "Tentativa de Acesso Cruzado Entre Tenants",
+        "target_section": "rules"
+      },
+      {
+        "id": 52,
+        "then": "Tempo de resposta é <= 500ms; classificação de criticidade e atraso é aplicada a todas as tarefas sem degradação perceptível",
+        "type": "performance",
+        "when": "Operação de listagem com filtros de prioridade e prazo é executada",
+        "given": "Tenant com 10.000 tarefas armazenadas, com distribuição variada de prioridades e prazos",
+        "scenario": "Desempenho de Classificação em Lote com 10.000 Tarefas",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 53,
+        "then": "Tarefa é criada com sucesso, elegível para destaque de criticidade; edição é persistida; destaque visual é atualizado em lista e Kanban; auditoria registra ambas as operações",
+        "type": "e2e",
+        "when": "Usuário cria tarefa com prioridade 'urgente' e prazo 3 dias no futuro, depois edita prioridade para 'alta'",
+        "given": "Usuário autenticado no tenant, formulário de criação de tarefa acessível",
+        "scenario": "Fluxo Completo de Criação, Edição e Destaque de Tarefa Crítica",
+        "target_section": "flow"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 40,
+        "target": "p99 <= 50ms para avaliação de regra por tarefa, mesmo em tenants com 10.000 tarefas",
+        "category": "performance",
+        "requirement": "Avaliação de regras de prioridade e prazo deve ser executada sem impacto perceptível no tempo de resposta de operações de criação, edição e listagem de tarefas.",
+        "verification": "Teste de desempenho mede tempo de execução de validações e classificações; benchmark compara com baseline de operações sem regras."
+      },
+      {
+        "id": 41,
+        "target": "Tempo de resposta de listagem com filtros de prioridade/prazo <= 500ms para 10.000 tarefas",
+        "category": "scalability",
+        "requirement": "Regras de prioridade e prazo devem escalar para suportar até 10.000 tarefas por tenant sem degradação de desempenho.",
+        "verification": "Teste de carga simula 10.000 tarefas e mede tempo de resposta de operações de filtro e classificação."
+      },
+      {
+        "id": 42,
+        "target": "100% das operações de tarefa validam escopo de tenant antes de execução",
+        "category": "security",
+        "requirement": "Isolamento multi-tenant deve ser garantido em todas as operações de validação e classificação de tarefas, impedindo acesso cruzado entre tenants.",
+        "verification": "Teste de segurança tenta acessar tarefas de outro tenant e valida que acesso é negado; auditoria de código verifica que filtro de tenant é aplicado em todas as consultas."
+      },
+      {
+        "id": 43,
+        "target": "Disponibilidade >= 99.9% para avaliação de regras",
+        "category": "availability",
+        "requirement": "Regras de prioridade e prazo devem estar disponíveis com alta disponibilidade, dado que sua indisponibilidade impede operações críticas de tarefas.",
+        "verification": "Monitoramento de disponibilidade rastreia tempo de inatividade; SLA define objetivo de 99.9% de uptime."
+      },
+      {
+        "id": 44,
+        "target": "100% das operações de regra registram entrada em log com contexto completo (usuário, tenant, tarefa, resultado)",
+        "category": "observability",
+        "requirement": "Todas as operações de validação, classificação e decisão de regras devem ser rastreáveis através de logs estruturados e trilha de auditoria.",
+        "verification": "Auditoria de logs valida que cada operação de regra gera entrada de log estruturada; teste de rastreabilidade segue operação de ponta a ponta."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 33,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T03:34:06.340Z",
+  "updatedAt": null
+}

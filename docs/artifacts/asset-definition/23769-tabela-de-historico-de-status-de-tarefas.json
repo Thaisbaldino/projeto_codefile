@@ -1,0 +1,455 @@
+{
+  "id": 23769,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 23,
+          "name": "Evento de Alteração de Status de Tarefa",
+          "format": "Evento de domínio contendo tarefa_id, tenant_id, status_anterior, status_novo, executor_id, data_transicao",
+          "origin": "Feature Atualizar Status da Tarefa / Feature Concluir Tarefa",
+          "trigger": "Sempre que uma tarefa tem seu status alterado entre os valores fixos do sistema (A Fazer, Em Andamento, Concluído)"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 28,
+          "name": "Registro de Histórico Persistido",
+          "format": "Registro completo com id, tarefa_id, tenant_id, status_anterior, status_novo, data_transicao, executor_id",
+          "destination": "Tabela historico_status_tarefas no banco de dados relacional"
+        },
+        {
+          "id": 29,
+          "name": "Evento de Transição Registrada",
+          "format": "Evento TransicaoStatusRegistrada contendo id, tarefa_id, tenant_id, status_anterior, status_novo, data_transicao, executor_id",
+          "destination": "Sistema de eventos de domínio para consumo por outros módulos"
+        }
+      ],
+      "processing": [
+        {
+          "id": 24,
+          "step": "Validar Integridade Referencial",
+          "description": "Validar que tarefa_id, tenant_id e executor_id existem nas tabelas de tarefas, tenants e usuários respectivamente, garantindo que nenhum registro órfão seja criado."
+        },
+        {
+          "id": 25,
+          "step": "Validar Transição de Status",
+          "description": "Validar que status_anterior e status_novo são valores fixos válidos do sistema (A Fazer, Em Andamento, Concluído) e que são diferentes entre si, impedindo transições inválidas."
+        },
+        {
+          "id": 26,
+          "step": "Validar Isolamento de Tenant",
+          "description": "Validar que a tarefa referenciada pertence ao tenant especificado, garantindo que transições de tarefas de um tenant não sejam registradas sob outro tenant."
+        },
+        {
+          "id": 27,
+          "step": "Registrar Transição no Histórico",
+          "description": "Persistir o registro de histórico na tabela historico_status_tarefas com todos os campos preenchidos, gerando UUID automaticamente e registrando timestamp de transição no servidor."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 30,
+        "category": "invariant",
+        "description": "Cada registro de histórico deve referenciar uma tarefa que existe na tabela tarefas e um tenant que existe na tabela tenants, garantindo integridade referencial e impedindo registros órfãos.",
+        "enforcement": "db_constraint",
+        "verification": "Validação de foreign keys fk_historico_tarefa e fk_historico_tenant no momento da inserção; falha de constraint impede persistência."
+      },
+      {
+        "id": 31,
+        "category": "invariant",
+        "description": "O executor de uma transição de status deve ser um usuário ativo que existe na tabela usuarios, garantindo rastreabilidade de quem realizou cada mudança.",
+        "enforcement": "db_constraint",
+        "verification": "Validação de foreign key fk_historico_executor no momento da inserção; falha de constraint impede persistência."
+      },
+      {
+        "id": 32,
+        "category": "validation",
+        "description": "Status anterior e status novo devem ser valores fixos válidos do sistema (A Fazer, Em Andamento, Concluído), rejeitando qualquer outro valor.",
+        "enforcement": "code",
+        "verification": "Validação em camada de aplicação antes de persistência; rejeição com mensagem de erro se valores forem inválidos."
+      },
+      {
+        "id": 33,
+        "category": "validation",
+        "description": "Status anterior e status novo devem ser diferentes entre si, impedindo registros de transições inválidas onde nenhuma mudança ocorreu.",
+        "enforcement": "db_constraint",
+        "verification": "Constraint CHECK (status_anterior != status_novo) no banco de dados; falha de constraint impede inserção."
+      },
+      {
+        "id": 34,
+        "category": "invariant",
+        "description": "Todos os campos obrigatórios (tarefa_id, tenant_id, status_anterior, status_novo, data_transicao, executor_id) devem estar preenchidos em cada registro, garantindo completude de auditoria.",
+        "enforcement": "db_constraint",
+        "verification": "Constraints NOT NULL em todos os campos obrigatórios; falha de constraint impede inserção de registros incompletos."
+      },
+      {
+        "id": 35,
+        "category": "authorization",
+        "description": "Apenas usuários autenticados e ativos do tenant proprietário da tarefa podem executar alterações de status que geram registros de histórico, garantindo que apenas colaboradores legítimos sejam registrados como executores.",
+        "enforcement": "code",
+        "verification": "Validação em camada de aplicação antes de persistência; rejeição se executor_id não corresponder a usuário ativo do tenant."
+      },
+      {
+        "id": 36,
+        "category": "compliance",
+        "description": "Registros de histórico devem ser imutáveis após criação, preservando a integridade da trilha de auditoria e impedindo alteração ou exclusão de transições já registradas.",
+        "enforcement": "code",
+        "verification": "Aplicação não expõe operações de UPDATE ou DELETE para tabela historico_status_tarefas; apenas INSERT é permitido."
+      },
+      {
+        "id": 37,
+        "category": "compliance",
+        "description": "Data e hora de transição devem ser registradas no servidor (backend) em UTC, garantindo consistência temporal independentemente do fuso horário do cliente e conformidade com requisitos de auditabilidade.",
+        "enforcement": "code",
+        "verification": "Aplicação registra timestamp usando função de servidor (NOW() ou equivalente) em UTC; cliente não fornece data_transicao."
+      },
+      {
+        "id": 38,
+        "category": "invariant",
+        "description": "Registros de histórico de um tenant não devem ser acessíveis ou visíveis por usuários de outro tenant, garantindo isolamento multi-tenant em consultas e operações.",
+        "enforcement": "code",
+        "verification": "Todas as consultas ao histórico incluem filtro WHERE tenant_id = ? com tenant do usuário autenticado; falha de filtro impede exposição de dados cruzados."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "A Tabela de Histórico de Status de Tarefas é uma estrutura de dados lógica que define o esquema relacional para armazenar e organizar o registro imutável de todas as transições de status que as tarefas experimentam ao longo de seu ciclo de vida dentro de cada tenant da plataforma multi-tenant. Contém campos para identificação única (id, referência à tarefa e tenant), informações de transição (status anterior, status novo, data e hora da alteração, usuário executor), e metadados de auditoria. Serve como fonte de verdade para rastreabilidade completa do progresso de atividades, conformidade com requisitos de auditabilidade e LGPD, análise de fluxo de trabalho, e investigação de mudanças históricas. O esquema inclui índices para otimização de consultas por tarefa, tenant, data de transição e executor, constraints de validação de status e integridade referencial, e é projetado como registro imutável que captura cada transição de status conforme definido pelas features de atualização e conclusão de tarefas."
+    },
+    "definition": {
+      "schemas": [
+        {
+          "id": 2,
+          "name": "historico_status_tarefas",
+          "fields": [
+            {
+              "id": 3,
+              "name": "id",
+              "type": "uuid",
+              "nullable": false,
+              "description": "Identificador único do registro de histórico, gerado automaticamente no momento da transição de status.",
+              "primary_key": true
+            },
+            {
+              "id": 4,
+              "name": "tarefa_id",
+              "type": "uuid",
+              "nullable": false,
+              "description": "Referência à tarefa cuja transição de status está sendo registrada, vinculando o histórico ao registro de tarefa."
+            },
+            {
+              "id": 5,
+              "name": "tenant_id",
+              "type": "uuid",
+              "nullable": false,
+              "description": "Referência ao tenant proprietário da tarefa e do histórico, garantindo isolamento de dados entre organizações."
+            },
+            {
+              "id": 6,
+              "name": "status_anterior",
+              "type": "string",
+              "nullable": false,
+              "description": "Status da tarefa antes da transição, um dos valores fixos definidos pelo sistema (A Fazer, Em Andamento, Concluído)."
+            },
+            {
+              "id": 7,
+              "name": "status_novo",
+              "type": "string",
+              "nullable": false,
+              "description": "Status da tarefa após a transição, um dos valores fixos definidos pelo sistema (A Fazer, Em Andamento, Concluído)."
+            },
+            {
+              "id": 8,
+              "name": "data_transicao",
+              "type": "timestamp",
+              "nullable": false,
+              "description": "Data e hora exata em que a transição de status foi executada, registrada automaticamente pelo sistema no servidor (backend) para garantir consistência independentemente do fuso horário do cliente."
+            },
+            {
+              "id": 9,
+              "name": "executor_id",
+              "type": "uuid",
+              "nullable": false,
+              "description": "Referência ao usuário que executou a alteração de status da tarefa, associando a ação ao colaborador responsável para fins de auditoria e rastreabilidade."
+            }
+          ],
+          "indexes": [
+            {
+              "id": 10,
+              "name": "idx_historico_tarefa_id",
+              "unique": false,
+              "columns": [
+                {
+                  "id": 11,
+                  "column_name": "tarefa_id"
+                }
+              ],
+              "description": "Índice não-único sobre tarefa_id para otimizar consultas do histórico completo de transições de uma tarefa específica."
+            },
+            {
+              "id": 12,
+              "name": "idx_historico_tenant_data_transicao",
+              "unique": false,
+              "columns": [
+                {
+                  "id": 13,
+                  "column_name": "tenant_id"
+                },
+                {
+                  "id": 14,
+                  "column_name": "data_transicao"
+                }
+              ],
+              "description": "Índice não-único composto sobre (tenant_id, data_transicao) para otimizar filtros e ordenações de histórico por período dentro de um tenant."
+            },
+            {
+              "id": 15,
+              "name": "idx_historico_tenant_executor",
+              "unique": false,
+              "columns": [
+                {
+                  "id": 16,
+                  "column_name": "tenant_id"
+                },
+                {
+                  "id": 17,
+                  "column_name": "executor_id"
+                }
+              ],
+              "description": "Índice não-único composto sobre (tenant_id, executor_id) para otimizar consultas de histórico filtradas por usuário executor dentro de um tenant."
+            },
+            {
+              "id": 18,
+              "name": "idx_historico_data_transicao",
+              "unique": false,
+              "columns": [
+                {
+                  "id": 19,
+                  "column_name": "data_transicao"
+                }
+              ],
+              "description": "Índice não-único sobre data_transicao para otimizar ordenações e filtros temporais na análise de histórico de transições."
+            }
+          ],
+          "foreign_keys": [
+            {
+              "id": 20,
+              "name": "fk_historico_tarefa",
+              "column": "tarefa_id",
+              "ref_table": "tarefas",
+              "ref_column": "id",
+              "description": "Garante que a tarefa referenciada no histórico existe na tabela de tarefas, mantendo integridade referencial e impedindo registros órfãos."
+            },
+            {
+              "id": 21,
+              "name": "fk_historico_tenant",
+              "column": "tenant_id",
+              "ref_table": "tenants",
+              "ref_column": "id",
+              "description": "Garante que o tenant ao qual o histórico pertence existe na tabela de tenants, mantendo integridade referencial e isolamento multi-tenant."
+            },
+            {
+              "id": 22,
+              "name": "fk_historico_executor",
+              "column": "executor_id",
+              "ref_table": "usuarios",
+              "ref_column": "id",
+              "description": "Garante que o usuário executor da transição existe na tabela de usuários, mantendo integridade referencial e permitindo rastreabilidade de quem realizou cada mudança."
+            }
+          ]
+        }
+      ]
+    },
+    "pendencies": [
+      {
+        "id": 53,
+        "section": "definition",
+        "description": "Definição de política de retenção de dados históricos: por quanto tempo registros de histórico devem ser mantidos antes de arquivamento ou exclusão? A LGPD permite exclusão de dados pessoais após cumprimento de finalidade, mas auditoria pode exigir retenção prolongada.",
+        "resolutionOptions": [
+          {
+            "id": 54,
+            "text": "Manter histórico indefinidamente para auditoria completa; implementar mascaramento de dados pessoais após 2 anos conforme LGPD"
+          },
+          {
+            "id": 55,
+            "text": "Arquivar histórico após 1 ano em tabela separada de histórico_status_tarefas_archive; manter apenas últimos 12 meses em tabela ativa"
+          },
+          {
+            "id": 56,
+            "text": "Implementar política configurável por tenant: administrador define período de retenção entre 90 dias e 7 anos"
+          }
+        ],
+        "recommendedOptionId": 54
+      },
+      {
+        "id": 57,
+        "section": "definition",
+        "description": "Necessidade de capturar motivo ou comentário da transição de status: features de atualização de status não mencionam campo de motivo/comentário, mas auditoria pode exigir contexto da mudança.",
+        "resolutionOptions": [
+          {
+            "id": 58,
+            "text": "Adicionar campo opcional motivo_transicao (string) ao esquema para capturar contexto da mudança"
+          },
+          {
+            "id": 59,
+            "text": "Manter apenas dados estruturais (status anterior/novo); motivos são capturados em sistema de comentários separado (fora de escopo v1)"
+          },
+          {
+            "id": 60,
+            "text": "Implementar campo de comentário obrigatório para transições para status 'Concluído', opcional para outras transições"
+          }
+        ],
+        "recommendedOptionId": 59
+      },
+      {
+        "id": 61,
+        "section": "rules",
+        "description": "Validação de que executor_id pertence ao mesmo tenant da tarefa: regra atual valida apenas que executor existe, mas não valida isolamento de tenant do executor.",
+        "resolutionOptions": [
+          {
+            "id": 62,
+            "text": "Adicionar validação em código: verificar que executor_id pertence a usuário ativo do mesmo tenant_id da tarefa"
+          },
+          {
+            "id": 63,
+            "text": "Adicionar constraint CHECK no banco de dados que valida isolamento (requer join com tabela usuarios)"
+          },
+          {
+            "id": 64,
+            "text": "Confiar em validação de camada de aplicação; não adicionar constraint adicional no banco"
+          }
+        ],
+        "recommendedOptionId": 62
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 45,
+        "then": "Um novo registro é criado com status_anterior='A Fazer', status_novo='Em Andamento', executor_id do usuário, e data_transicao registrada",
+        "type": "unit",
+        "when": "Uma transição de status para 'Em Andamento' é registrada no histórico",
+        "given": "Uma tarefa com status 'A Fazer' e um usuário ativo do tenant proprietário",
+        "scenario": "Validação de transição de status válida",
+        "target_section": "definition"
+      },
+      {
+        "id": 46,
+        "then": "A operação é rejeitada com erro de validação; nenhum registro é criado",
+        "type": "unit",
+        "when": "Uma transição com status_novo='StatusInválido' é tentada",
+        "given": "Uma tarefa e um usuário ativo do tenant",
+        "scenario": "Rejeição de transição com status inválido",
+        "target_section": "rules"
+      },
+      {
+        "id": 47,
+        "then": "A operação é rejeitada por constraint CHECK; nenhum registro é criado",
+        "type": "unit",
+        "when": "Uma transição para o mesmo status 'Em Andamento' é tentada",
+        "given": "Uma tarefa com status 'Em Andamento'",
+        "scenario": "Rejeição de transição com status anterior igual ao novo",
+        "target_section": "rules"
+      },
+      {
+        "id": 48,
+        "then": "Todos os três registros de transição são retornados em ordem cronológica com dados corretos de status anterior/novo e executores",
+        "type": "integration",
+        "when": "O histórico completo da tarefa é consultado",
+        "given": "Uma tarefa que passou por múltiplas transições (A Fazer → Em Andamento → Concluído)",
+        "scenario": "Histórico completo de transições de uma tarefa",
+        "target_section": "flow"
+      },
+      {
+        "id": 49,
+        "then": "Apenas registros do tenant consultado são retornados; histórico do outro tenant não é visível",
+        "type": "integration",
+        "when": "O histórico é consultado para um tenant específico",
+        "given": "Duas tarefas com mesmo ID em tenants diferentes, cada uma com histórico de transições",
+        "scenario": "Isolamento de histórico entre tenants",
+        "target_section": "rules"
+      },
+      {
+        "id": 50,
+        "then": "A operação é rejeitada; o registro permanece inalterado; tentativa é registrada em log de auditoria",
+        "type": "security",
+        "when": "Uma tentativa de UPDATE ou DELETE é executada no registro",
+        "given": "Um registro de histórico já persistido",
+        "scenario": "Imutabilidade de registros de histórico",
+        "target_section": "rules"
+      },
+      {
+        "id": 51,
+        "then": "Todos os 500 registros são retornados em tempo <= 100ms, utilizando índice idx_historico_tarefa_id",
+        "type": "performance",
+        "when": "O histórico completo da tarefa é consultado",
+        "given": "Uma tarefa com 500 registros de histórico de transições",
+        "scenario": "Consulta de histórico com grande volume de transições",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 52,
+        "then": "A operação de deleção falha por violação de foreign key fk_historico_tarefa; histórico é preservado",
+        "type": "contract",
+        "when": "A tarefa é deletada do sistema",
+        "given": "Um registro de histórico referenciando uma tarefa",
+        "scenario": "Integridade referencial com tarefa deletada",
+        "target_section": "rules"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 39,
+        "target": "p95 <= 100ms para consulta de histórico completo de uma tarefa com até 1000 transições",
+        "category": "performance",
+        "requirement": "Consultas de histórico de transições de uma tarefa específica devem retornar resultados em tempo adequado, mesmo em tarefas com centenas de transições registradas.",
+        "verification": "Teste de performance com índice idx_historico_tarefa_id; medição de tempo de resposta em ambiente de produção simulado."
+      },
+      {
+        "id": 40,
+        "target": "p99 <= 50ms para inserção de novo registro de histórico com validação de constraints",
+        "category": "performance",
+        "requirement": "Inserção de novos registros de histórico deve ser rápida e não bloquear operações de alteração de status de tarefas.",
+        "verification": "Teste de performance de inserção; medição de latência em ambiente sob carga de até 5000 usuários ativos."
+      },
+      {
+        "id": 41,
+        "target": "Suportar até 100.000 registros de histórico por tenant no primeiro ano de operação, com crescimento progressivo",
+        "category": "scalability",
+        "requirement": "Tabela de histórico deve suportar crescimento contínuo de registros conforme tarefas são criadas e alteradas, sem degradação de performance.",
+        "verification": "Teste de escalabilidade com volume crescente de dados; monitoramento de tempo de consulta e inserção conforme tabela cresce."
+      },
+      {
+        "id": 42,
+        "target": "99.9% de disponibilidade para operações de leitura do histórico",
+        "category": "availability",
+        "requirement": "Tabela de histórico deve estar sempre disponível para leitura, permitindo auditoria e análise de transições de status a qualquer momento.",
+        "verification": "Monitoramento de uptime da tabela; alertas para indisponibilidade; testes de recuperação de falhas."
+      },
+      {
+        "id": 43,
+        "target": "Nenhuma operação de UPDATE ou DELETE permitida em registros de histórico; apenas INSERT e SELECT",
+        "category": "security",
+        "requirement": "Registros de histórico devem ser imutáveis e protegidos contra alteração ou exclusão não autorizada, preservando a integridade da trilha de auditoria.",
+        "verification": "Teste de segurança tentando alterar ou excluir registros; validação de que apenas INSERT é permitido; auditoria de tentativas de modificação."
+      },
+      {
+        "id": 44,
+        "target": "100% das inserções de histórico registradas em log com timestamp, executor_id, tarefa_id e tenant_id",
+        "category": "observability",
+        "requirement": "Operações de inserção de histórico devem ser registradas em log de auditoria para rastreabilidade completa de quem registrou cada transição.",
+        "verification": "Verificação de logs de auditoria; validação de que cada inserção gera entrada de log correspondente."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 46,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T04:22:13.809Z",
+  "updatedAt": null
+}

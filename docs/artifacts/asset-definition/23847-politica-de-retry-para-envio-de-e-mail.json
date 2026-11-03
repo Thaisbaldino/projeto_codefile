@@ -1,0 +1,508 @@
+{
+  "id": 23847,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 20,
+          "name": "Solicitação de Envio de E-mail de Recuperação de Senha",
+          "format": "Objeto com userId (uuid), email (string), recoveryToken (string), recoveryLink (string)",
+          "origin": "Worker de Envio de E-mail (projeto_asset_id 37)",
+          "trigger": "Disparado após geração bem-sucedida de token de recuperação de senha"
+        },
+        {
+          "id": 21,
+          "name": "Configuração de Retry e Circuit Breaker",
+          "format": "Parâmetros de retry (max_retries, backoff_base_ms, backoff_multiplier, jitter_ratio) e circuit breaker (failure_threshold, half_open_timeout_seconds)",
+          "origin": "Variáveis de ambiente e arquivo de configuração da aplicação",
+          "trigger": null
+        },
+        {
+          "id": 22,
+          "name": "Resposta do Provedor de E-mail",
+          "format": "HTTP response com status code, message_id, e detalhes de erro (se aplicável)",
+          "origin": "Conector de Provedor de E-mail (projeto_asset_id 42)",
+          "trigger": "Retornada após cada tentativa de envio"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 32,
+          "name": "Resultado de Sucesso de Envio",
+          "format": "Objeto com status='success', message_id (identificador único do provedor), timestamp de envio",
+          "destination": "Worker de Envio de E-mail / Fluxo de Recuperação de Senha"
+        },
+        {
+          "id": 33,
+          "name": "Resultado de Falha Temporária com Retry Agendado",
+          "format": "Objeto com status='retry_scheduled', próximo_retry_timestamp, tentativa_número, motivo_falha",
+          "destination": "Fila de Retry / Scheduler de Tarefas"
+        },
+        {
+          "id": 34,
+          "name": "Resultado de Falha Final",
+          "format": "Objeto com status='failed', motivo_falha (temporária esgotada ou permanente), tentativas_executadas, último_erro_detalhado",
+          "destination": "Worker de Envio de E-mail / Fluxo de Recuperação de Senha"
+        },
+        {
+          "id": 35,
+          "name": "Evento de Auditoria",
+          "format": "Log estruturado com campos obrigatórios (timestamp, level, logger_name, message, tenant_id, user_id, request_id, trace_id) e opcionais (duration_ms, error_stack_trace, operation_name)",
+          "destination": "Camada de Observabilidade (projeto_asset_id 8)"
+        },
+        {
+          "id": 36,
+          "name": "Métricas de Observabilidade",
+          "format": "Contadores (email_sent_total, email_failed_total), histogramas (email_delivery_duration_ms), e gauges (circuit_breaker_state)",
+          "destination": "Camada de Observabilidade (projeto_asset_id 8)"
+        }
+      ],
+      "processing": [
+        {
+          "id": 23,
+          "step": "Validar Requisição de Envio",
+          "description": "Valida que a requisição contém todos os campos obrigatórios (userId, email, recoveryToken, recoveryLink) e que o formato está correto antes de iniciar tentativas de envio."
+        },
+        {
+          "id": 24,
+          "step": "Verificar Estado do Circuit Breaker",
+          "description": "Consulta o estado atual do circuit breaker para o provedor de e-mail. Se estiver aberto (OPEN), rejeita a requisição imediatamente com erro de indisponibilidade. Se estiver meio-aberto (HALF_OPEN), permite uma tentativa de teste."
+        },
+        {
+          "id": 25,
+          "step": "Aplicar Rate Limiting",
+          "description": "Verifica se a requisição respeita o limite de taxa configurado (100 requisições por minuto). Se exceder, enfileira a requisição ou rejeita conforme a estratégia configurada (FIFO)."
+        },
+        {
+          "id": 26,
+          "step": "Executar Tentativa de Envio com Timeout",
+          "description": "Invoca o Conector de Provedor de E-mail com timeout de 10 segundos por requisição. Aguarda resposta do provedor ou timeout."
+        },
+        {
+          "id": 27,
+          "step": "Classificar Resultado da Tentativa",
+          "description": "Analisa a resposta do provedor: sucesso (2xx), falha temporária (5xx, timeout, erro de rede), ou falha permanente (4xx, credenciais inválidas). Registra resultado em auditoria."
+        },
+        {
+          "id": 28,
+          "step": "Decidir Retry ou Falha Final",
+          "description": "Se falha temporária e tentativas restantes > 0, calcula backoff exponencial com jitter e agenda próxima tentativa. Se falha permanente ou tentativas esgotadas, registra falha final e notifica chamador."
+        },
+        {
+          "id": 29,
+          "step": "Atualizar Estado do Circuit Breaker",
+          "description": "Incrementa contador de falhas se resultado foi falha. Se contador atinge threshold (5 falhas em 60 segundos), abre o circuit breaker. Se sucesso em estado HALF_OPEN, reseta o circuit breaker para CLOSED."
+        },
+        {
+          "id": 30,
+          "step": "Registrar Evento de Auditoria",
+          "description": "Registra evento em log estruturado com tenant_id, user_id, request_id, trace_id, timestamp, resultado (sucesso/falha), tentativa número, e detalhes de erro (se aplicável). Redacta dados sensíveis conforme política PII."
+        },
+        {
+          "id": 31,
+          "step": "Emitir Métrica de Observabilidade",
+          "description": "Incrementa contadores (email_sent_total, email_failed_total) e histogramas (email_delivery_duration_ms) segmentados por email_type e result. Atualiza gauge de estado do circuit breaker."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 37,
+        "category": "idempotency",
+        "description": "Cada tentativa de envio de e-mail deve ser idempotente: se a mesma requisição for reenviada (mesmo userId, email, recoveryToken), o sistema deve detectar e retornar o resultado anterior sem duplicar o envio ao provedor. Implementar deduplicação baseada em hash (userId + recoveryToken + timestamp_solicitação) com janela de 5 minutos.",
+        "enforcement": "code",
+        "verification": "Validar que requisições duplicadas dentro de 5 minutos retornam o mesmo message_id e não incrementam contador de tentativas. Testar com requisições idênticas enviadas em sequência rápida."
+      },
+      {
+        "id": 38,
+        "category": "rate_limit",
+        "description": "Requisições de envio de e-mail ao provedor devem respeitar limite de 100 requisições por minuto, com burst máximo de 10 requisições simultâneas. Requisições que excedem o limite devem ser enfileiradas (FIFO) ou rejeitadas com erro 429 (Too Many Requests) conforme configuração.",
+        "enforcement": "code",
+        "verification": "Simular 150 requisições em 60 segundos e validar que apenas 100 são processadas no primeiro minuto. Verificar que requisições enfileiradas são processadas no minuto seguinte. Validar resposta HTTP 429 para requisições rejeitadas."
+      },
+      {
+        "id": 39,
+        "category": "invariant",
+        "description": "O circuit breaker para o provedor de e-mail deve transicionar entre três estados (CLOSED, OPEN, HALF_OPEN) de forma determinística: CLOSED → OPEN ao atingir 5 falhas em 60 segundos; OPEN → HALF_OPEN após 60 segundos de espera; HALF_OPEN → CLOSED ao obter 2 sucessos consecutivos; HALF_OPEN → OPEN ao obter 1 falha.",
+        "enforcement": "code",
+        "verification": "Simular 5 falhas consecutivas e validar transição para OPEN. Aguardar 60 segundos e validar transição para HALF_OPEN. Enviar 2 requisições bem-sucedidas e validar retorno para CLOSED. Enviar 1 falha em HALF_OPEN e validar retorno para OPEN."
+      },
+      {
+        "id": 40,
+        "category": "validation",
+        "description": "Toda requisição de envio de e-mail deve ser validada antes de iniciar tentativas: userId deve ser UUID válido, email deve estar em formato válido (RFC 5322 simplificado), recoveryToken deve ser string não-vazia com comprimento >= 32 caracteres, recoveryLink deve ser URL válida começando com https://.",
+        "enforcement": "code",
+        "verification": "Testar com valores inválidos para cada campo (UUID malformado, email sem @, token vazio, link HTTP) e validar rejeição com mensagem de erro específica. Testar com valores válidos e validar aceitação."
+      },
+      {
+        "id": 41,
+        "category": "observability",
+        "description": "Toda operação de envio de e-mail deve gerar evento de auditoria estruturado contendo: timestamp (ISO 8601), level (INFO/WARN/ERROR), logger_name, message, tenant_id, user_id, request_id, trace_id, duration_ms, operation_name, e detalhes de erro (se aplicável). Dados sensíveis (email, token) devem ser redactados conforme política PII.",
+        "enforcement": "code",
+        "verification": "Executar operação de envio e validar que log estruturado contém todos os campos obrigatórios. Validar que email e token não aparecem em texto claro no log. Validar que trace_id é propagado corretamente entre tentativas."
+      },
+      {
+        "id": 42,
+        "category": "compliance",
+        "description": "Operações de envio de e-mail devem estar em conformidade com LGPD: dados pessoais (email, userId) devem ser minimizados (apenas necessários para envio), acesso a logs contendo dados pessoais deve ser restrito a operadores autorizados, e retenção de logs deve respeitar período máximo de 30 dias conforme configuração da Camada de Observabilidade.",
+        "enforcement": "code",
+        "verification": "Validar que email e userId aparecem apenas em logs de auditoria e não em métricas ou traces. Validar que logs são deletados automaticamente após 30 dias. Validar que acesso a logs é auditado."
+      },
+      {
+        "id": 43,
+        "category": "authorization",
+        "description": "Apenas o Worker de Envio de E-mail (projeto_asset_id 37) autorizado deve invocar a Política de Retry. Requisições de outros componentes devem ser rejeitadas com erro 403 (Forbidden). Validar autorização via token de serviço ou contexto de execução.",
+        "enforcement": "code",
+        "verification": "Tentar invocar a política de retry de um componente não autorizado e validar rejeição com erro 403. Invocar do Worker autorizado e validar aceitação."
+      },
+      {
+        "id": 44,
+        "category": "retention",
+        "description": "Registros de tentativas de envio de e-mail (incluindo message_ids, timestamps, resultados) devem ser retidos por no mínimo 90 dias para fins de auditoria e rastreamento de entrega. Após 90 dias, registros podem ser arquivados ou deletados conforme política de retenção.",
+        "enforcement": "infra",
+        "verification": "Validar que registros de envio com timestamp anterior a 90 dias atrás são elegíveis para limpeza. Validar que registros recentes (< 90 dias) são preservados. Implementar job de limpeza automática."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "A Política de Retry para Envio de E-mail é um padrão de resiliência especializado que protege o fluxo crítico de recuperação de senha contra falhas temporárias do provedor de e-mail transacional. Implementa estratégia de retry com backoff exponencial configurável, circuit breaker para prevenir cascata de falhas, rate limiting respeitando limites do provedor, e rastreabilidade completa em logs de auditoria. Garante que tentativas de envio sejam executadas de forma controlada e observável, permitindo que usuários bloqueados recuperem acesso mesmo sob condições adversas de conectividade ou indisponibilidade temporária do serviço externo."
+    },
+    "definition": {
+      "patterns": [
+        {
+          "id": 2,
+          "kind": "retry",
+          "name": "Retry com Backoff Exponencial para Envio de E-mail",
+          "scope": "Operação de envio de e-mail de recuperação de senha via Conector de Provedor de E-mail",
+          "settings": [
+            {
+              "id": 3,
+              "name": "max_retries",
+              "value": "3"
+            },
+            {
+              "id": 4,
+              "name": "initial_backoff_ms",
+              "value": "1000"
+            },
+            {
+              "id": 5,
+              "name": "max_backoff_ms",
+              "value": "30000"
+            },
+            {
+              "id": 6,
+              "name": "backoff_multiplier",
+              "value": "2.0"
+            },
+            {
+              "id": 7,
+              "name": "jitter_ratio",
+              "value": "0.1"
+            }
+          ]
+        },
+        {
+          "id": 8,
+          "kind": "circuit_breaker",
+          "name": "Circuit Breaker para Falhas do Provedor de E-mail",
+          "scope": "Integração com Conector de Provedor de E-mail",
+          "settings": [
+            {
+              "id": 9,
+              "name": "failure_threshold",
+              "value": "5"
+            },
+            {
+              "id": 10,
+              "name": "failure_window_seconds",
+              "value": "60"
+            },
+            {
+              "id": 11,
+              "name": "half_open_timeout_seconds",
+              "value": "60"
+            },
+            {
+              "id": 12,
+              "name": "success_threshold_half_open",
+              "value": "2"
+            }
+          ]
+        },
+        {
+          "id": 13,
+          "kind": "rate_limit",
+          "name": "Rate Limiting para Requisições ao Provedor de E-mail",
+          "scope": "Requisições de envio de e-mail ao provedor externo",
+          "settings": [
+            {
+              "id": 14,
+              "name": "requests_per_minute",
+              "value": "100"
+            },
+            {
+              "id": 15,
+              "name": "burst_size",
+              "value": "10"
+            },
+            {
+              "id": 16,
+              "name": "queue_strategy",
+              "value": "fifo"
+            }
+          ]
+        },
+        {
+          "id": 17,
+          "kind": "timeout",
+          "name": "Timeout para Operações de Envio de E-mail",
+          "scope": "Requisição HTTP ao endpoint de envio do provedor de e-mail",
+          "settings": [
+            {
+              "id": 18,
+              "name": "request_timeout_seconds",
+              "value": "10"
+            },
+            {
+              "id": 19,
+              "name": "total_timeout_seconds",
+              "value": "45"
+            }
+          ]
+        }
+      ]
+    },
+    "pendencies": [
+      {
+        "id": 62,
+        "section": "definition",
+        "description": "Estratégia de persistência de estado do circuit breaker não está definida. É necessário especificar se o estado será armazenado em memória (perdido ao reiniciar aplicação), em cache distribuído (Redis), ou em banco de dados. Isso afeta comportamento em cenários de múltiplas instâncias da aplicação.",
+        "resolutionOptions": [
+          {
+            "id": 63,
+            "text": "Armazenar estado do circuit breaker em memória local da instância. Simples, mas cada instância terá seu próprio estado. Recomendado para aplicações single-instance ou com baixa criticidade."
+          },
+          {
+            "id": 64,
+            "text": "Armazenar estado do circuit breaker em Redis compartilhado. Todas as instâncias veem o mesmo estado. Recomendado para aplicações multi-instance com alta disponibilidade. Requer configuração de Redis."
+          },
+          {
+            "id": 65,
+            "text": "Armazenar estado do circuit breaker em banco de dados relacional com TTL. Persistente e compartilhado. Mais overhead de I/O, mas adequado para auditoria de longo prazo."
+          }
+        ],
+        "recommendedOptionId": 64
+      },
+      {
+        "id": 66,
+        "section": "definition",
+        "description": "Mecanismo de enfileiramento de requisições de retry não está especificado. É necessário definir se será utilizada fila em memória, fila persistente (RabbitMQ, SQS), ou scheduler de tarefas agendadas. Isso afeta garantias de entrega e comportamento em caso de falha da aplicação.",
+        "resolutionOptions": [
+          {
+            "id": 67,
+            "text": "Fila em memória (ex: array ou LinkedList). Rápida, mas requisições são perdidas se aplicação reinicia. Adequado para retry de curta duração (< 5 minutos)."
+          },
+          {
+            "id": 68,
+            "text": "Fila persistente (ex: RabbitMQ, AWS SQS). Requisições são garantidas mesmo após falha. Recomendado para retry crítico com garantia de entrega."
+          },
+          {
+            "id": 69,
+            "text": "Scheduler de tarefas agendadas (ex: cron, APScheduler). Requisições são agendadas para execução em tempo específico. Adequado para retry com backoff exponencial bem definido."
+          }
+        ],
+        "recommendedOptionId": 68
+      },
+      {
+        "id": 70,
+        "section": "non_functional_requirements",
+        "description": "Configuração de timeout para requisições ao provedor de e-mail está definida como 10 segundos por tentativa, mas não está claro se esse timeout inclui apenas a requisição HTTP ou também o tempo de processamento no provedor. Além disso, não está definido timeout total para todas as tentativas (ex: máximo de 45 segundos para 3 tentativas).",
+        "resolutionOptions": [
+          {
+            "id": 71,
+            "text": "Timeout de 10 segundos aplica-se apenas à requisição HTTP (socket timeout). Timeout total para todas as tentativas é calculado como max_retries * request_timeout = 3 * 10 = 30 segundos."
+          },
+          {
+            "id": 72,
+            "text": "Timeout de 10 segundos aplica-se à requisição HTTP. Timeout total para todas as tentativas é configurado separadamente como 45 segundos (conforme definido em settings). Se total_timeout for atingido, operação falha mesmo se tentativas restantes."
+          }
+        ],
+        "recommendedOptionId": 72
+      },
+      {
+        "id": 73,
+        "section": "rules",
+        "description": "Regra de idempotência menciona deduplicação baseada em hash com janela de 5 minutos, mas não está especificado onde esse hash será armazenado (memória, cache, banco de dados) e como será limpo após expiração da janela.",
+        "resolutionOptions": [
+          {
+            "id": 74,
+            "text": "Armazenar hash em cache em memória com TTL de 5 minutos. Simples, mas não persiste entre reinicializações. Adequado para aplicações single-instance."
+          },
+          {
+            "id": 75,
+            "text": "Armazenar hash em Redis com TTL de 5 minutos. Compartilhado entre instâncias. Recomendado para aplicações multi-instance."
+          },
+          {
+            "id": 76,
+            "text": "Armazenar hash em banco de dados com timestamp de criação. Limpeza automática de registros com idade > 5 minutos via job agendado. Mais persistente, mas maior overhead."
+          }
+        ],
+        "recommendedOptionId": 75
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 52,
+        "then": "A requisição é rejeitada com erro de validação indicando que userId não é um UUID válido",
+        "type": "unit",
+        "when": "A política de retry valida a requisição antes de iniciar tentativas",
+        "given": "Uma requisição de envio com userId='abc-123' (UUID inválido), email='usuario@example.com', recoveryToken='token123', recoveryLink='https://app.example.com/recover'",
+        "scenario": "Validação de Requisição de Envio de E-mail",
+        "target_section": "rules"
+      },
+      {
+        "id": 53,
+        "then": "O tempo calculado é aproximadamente 2000ms (1000 * 2^1) ± 10% de jitter, resultando em intervalo entre 1800ms e 2200ms",
+        "type": "unit",
+        "when": "O sistema calcula o tempo de espera para a próxima tentativa",
+        "given": "Configuração com initial_backoff_ms=1000, backoff_multiplier=2.0, jitter_ratio=0.1, e tentativa número 2",
+        "scenario": "Cálculo de Backoff Exponencial com Jitter",
+        "target_section": "definition"
+      },
+      {
+        "id": 54,
+        "then": "A operação é marcada como sucesso, message_id é retornado, e evento de auditoria registra 2 tentativas com resultado final 'success'",
+        "type": "integration",
+        "when": "O sistema aguarda 1 segundo e executa a segunda tentativa, que retorna sucesso (2xx) do provedor",
+        "given": "Primeira tentativa de envio falha com erro 503 (Service Unavailable) do provedor, e segunda tentativa é agendada com backoff de 1 segundo",
+        "scenario": "Retry com Sucesso na Segunda Tentativa",
+        "target_section": "flow"
+      },
+      {
+        "id": 55,
+        "then": "Após a 5ª falha, o circuit breaker transiciona para estado OPEN, e a 6ª requisição é rejeitada imediatamente com erro 'Circuit Breaker Open' sem tentar contato com o provedor",
+        "type": "integration",
+        "when": "O sistema registra cada falha e incrementa o contador de falhas do circuit breaker",
+        "given": "5 requisições consecutivas falham com erro 503 do provedor dentro de uma janela de 60 segundos",
+        "scenario": "Circuit Breaker Abre Após 5 Falhas Consecutivas",
+        "target_section": "rules"
+      },
+      {
+        "id": 56,
+        "then": "O circuit breaker transiciona para estado HALF_OPEN e permite uma tentativa de teste. Se a tentativa sucede, o circuit breaker retorna para CLOSED e requisições subsequentes são processadas normalmente.",
+        "type": "integration",
+        "when": "Uma nova requisição de envio chega",
+        "given": "Circuit breaker está em estado OPEN após 5 falhas, e 60 segundos se passaram",
+        "scenario": "Circuit Breaker Recupera Após Período de Espera",
+        "target_section": "rules"
+      },
+      {
+        "id": 57,
+        "then": "As 100 primeiras requisições são enviadas ao provedor no primeiro minuto. As 50 enfileiradas são processadas no minuto seguinte (até 100 por minuto). Nenhuma requisição é perdida.",
+        "type": "integration",
+        "when": "O sistema processa as primeiras 100 requisições e enfileira as 50 restantes",
+        "given": "150 requisições de envio chegam em 60 segundos, e limite configurado é 100 req/min com estratégia FIFO",
+        "scenario": "Rate Limiting Enfileira Requisições Excedentes",
+        "target_section": "rules"
+      },
+      {
+        "id": 58,
+        "then": "O log contém userId e message_id, mas email, token e link não aparecem em texto claro. Se necessário, apenas um hash ou identificador anônimo é registrado.",
+        "type": "security",
+        "when": "O sistema registra evento de auditoria em log estruturado",
+        "given": "Uma operação de envio de e-mail com email='usuario@example.com', recoveryToken='abc123def456', recoveryLink='https://app.example.com/recover?token=abc123def456'",
+        "scenario": "Redação de Dados Sensíveis em Logs de Auditoria",
+        "target_section": "rules"
+      },
+      {
+        "id": 59,
+        "then": "Latência p99 é <= 50ms. Histograma de métrica email_delivery_duration_ms registra distribuição com maioria das operações < 30ms.",
+        "type": "performance",
+        "when": "O sistema mede latência de cada operação (validação + rate limiting + envio + auditoria)",
+        "given": "1000 requisições de envio bem-sucedidas executadas sob carga normal, com provedor respondendo em tempo típico",
+        "scenario": "Latência de Envio Bem-Sucedido Dentro de SLA",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 60,
+        "then": "A resposta contém message_id (string), status (delivered|bounced|failed), e opcionalmente detalhes de erro. A Política de Retry consome essa resposta conforme contrato definido no Conector.",
+        "type": "contract",
+        "when": "O conector processa a requisição e retorna resposta",
+        "given": "Requisição de envio é enviada ao Conector de Provedor de E-mail (projeto_asset_id 42) com operação 'Enviar E-mail de Recuperação de Senha'",
+        "scenario": "Contrato de Resposta do Conector de Provedor de E-mail",
+        "target_section": "definition"
+      },
+      {
+        "id": 61,
+        "then": "E-mail de recuperação é entregue ao usuário, message_id é registrado em auditoria, e usuário consegue acessar link de redefinição de senha dentro do prazo de expiração do token",
+        "type": "e2e",
+        "when": "Primeira tentativa falha (provedor indisponível), sistema aguarda backoff e executa segunda tentativa que sucede",
+        "given": "Usuário solicita recuperação de senha, token é gerado, e Worker de Envio de E-mail (projeto_asset_id 37) invoca a Política de Retry",
+        "scenario": "Fluxo Completo de Recuperação de Senha com Retry",
+        "target_section": "flow"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 45,
+        "target": "p99 <= 50ms",
+        "category": "performance",
+        "requirement": "Latência de execução de uma tentativa de envio de e-mail (incluindo validação, rate limiting, timeout, e registro de auditoria) deve ser <= 50ms em p99 quando o provedor está disponível e respondendo normalmente.",
+        "verification": "Executar 1000 operações de envio bem-sucedidas sob carga normal e medir distribuição de latência. Validar que p99 não excede 50ms. Registrar histograma em métrica email_delivery_duration_ms."
+      },
+      {
+        "id": 46,
+        "target": "p99 <= 10ms",
+        "category": "performance",
+        "requirement": "Latência de decisão de retry (cálculo de backoff exponencial, verificação de circuit breaker, enfileiramento) deve ser <= 10ms em p99.",
+        "verification": "Executar 1000 operações de retry sob carga e medir latência de decisão. Validar que p99 não excede 10ms."
+      },
+      {
+        "id": 47,
+        "target": "Tempo de recuperação <= 2 minutos após restauração do provedor",
+        "category": "availability",
+        "requirement": "A Política de Retry deve garantir que tentativas de envio de e-mail continuem sendo processadas mesmo quando o provedor está temporariamente indisponível, através do circuit breaker e retry com backoff. Objetivo: recuperação automática em até 2 minutos após restauração do provedor.",
+        "verification": "Simular indisponibilidade do provedor (5 falhas consecutivas), validar que circuit breaker abre. Restaurar provedor e validar que circuit breaker transiciona para HALF_OPEN após 60 segundos. Validar que requisições são processadas novamente após 2 tentativas bem-sucedidas."
+      },
+      {
+        "id": 48,
+        "target": "100 req/min com p99 <= 50ms; fila com capacidade >= 1000 itens",
+        "category": "scalability",
+        "requirement": "A Política de Retry deve suportar até 100 requisições de envio de e-mail por minuto (conforme rate limit configurado) sem degradação de desempenho ou perda de requisições. Fila de retry deve suportar até 1000 requisições enfileiradas simultaneamente.",
+        "verification": "Simular 150 requisições em 60 segundos. Validar que 100 são processadas no primeiro minuto e 50 são enfileiradas. Validar que latência p99 permanece <= 50ms. Validar que fila não descarta requisições quando capacidade < 1000."
+      },
+      {
+        "id": 49,
+        "target": "100% de redação de dados sensíveis em logs",
+        "category": "security",
+        "requirement": "Dados sensíveis (email, recoveryToken, recoveryLink) devem ser redactados em logs de auditoria e métricas, nunca aparecendo em texto claro. Apenas identificadores (userId, message_id) devem ser registrados.",
+        "verification": "Executar operação de envio e validar que logs não contêm email, token ou link em texto claro. Validar que apenas userId e message_id aparecem. Auditar logs manualmente para confirmar conformidade."
+      },
+      {
+        "id": 50,
+        "target": "100% de operações com trace_id; sampling >= 10%",
+        "category": "observability",
+        "requirement": "Toda operação de envio de e-mail deve ser rastreável através de trace_id único propagado entre tentativas, permitindo correlação de eventos em logs distribuídos. Taxa de sampling de traces deve ser >= 10% para operações de envio de e-mail.",
+        "verification": "Executar operação de envio com múltiplas tentativas e validar que todas as tentativas compartilham o mesmo trace_id. Validar que trace_id aparece em logs, métricas e traces. Validar que sampling rate está configurado para >= 10%."
+      },
+      {
+        "id": 51,
+        "target": "Redução de custos de até 40% através de rate limiting",
+        "category": "cost",
+        "requirement": "Rate limiting deve prevenir desperdício de requisições ao provedor de e-mail, limitando a 100 requisições por minuto. Isso reduz custos de integração com provedor (que cobra por requisição) em até 40% comparado a cenário sem limite.",
+        "verification": "Comparar volume de requisições ao provedor com e sem rate limiting sob carga de pico. Validar que limite de 100 req/min é respeitado. Calcular economia de custos baseado em preço por requisição do provedor."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 55,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T07:47:28.696Z",
+  "updatedAt": null
+}

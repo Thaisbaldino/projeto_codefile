@@ -1,0 +1,179 @@
+{
+  "id": 23800,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 16,
+        "name": "Nome do identificador da estrutura lógica de dados",
+        "value": [
+          "users"
+        ],
+        "method": "user-input",
+        "reasoning": "O campo nome_completo, email, status, data_criacao, criador_id, tenant_id e nivel_hierarquico_id são identificadores de entidade do sistema de usuários.",
+        "confidence": 0.7162,
+        "context_element_id": 2690
+      },
+      {
+        "id": 20,
+        "name": "Domínio funcional ao qual a estrutura de relacionamento se aplica",
+        "value": [
+          "organizational"
+        ],
+        "method": "user-input",
+        "reasoning": "A referência ao nível hierárquico atribuído ao usuário pertence ao domínio funcional organizacional.",
+        "confidence": 0.7969,
+        "context_element_id": 2709
+      },
+      {
+        "id": 21,
+        "name": "Perfil ou papel de usuário que é o principal público-alvo da página",
+        "value": [
+          "end-customer"
+        ],
+        "method": "user-input",
+        "reasoning": "O nome completo do colaborador é o campo de entrada do usuário, destinado ao público final.",
+        "confidence": 0.71,
+        "context_element_id": 2721
+      },
+      {
+        "id": 22,
+        "name": "Perfil primário dos usuários que utilizarão a interface",
+        "value": [
+          "administrators"
+        ],
+        "method": "user-input",
+        "reasoning": "O botão de ativação ou desativação é acessível somente a administradores do tenant.",
+        "confidence": 0.7058,
+        "context_element_id": 2723
+      },
+      {
+        "id": 23,
+        "name": "Tipo específico de evento ou mensagem que está sendo comunicado",
+        "value": [
+          "UsuárioCadastrado",
+          "user-registered",
+          "erro"
+        ],
+        "method": "user-input",
+        "reasoning": "O evento é definido como 'UsuárioCadastrado', um evento específico.\nO evento é disparado quando um novo usuário é cadastrado com sucesso no tenant por um administrador.\nA mensagem de erro é comunicada ao usuário como 'erro'.",
+        "confidence": 0.7555,
+        "context_element_id": 2755
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 33,
+        "name": "Implementar validação contínua da integridade dos dados e da consistência de estado por meio de checksums e verificações periódicas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem validação, o status do usuário pode ser alterado indevidamente, confundindo relatórios e processos.",
+        "confidence": 0.7733,
+        "context_element_id": 2881
+      },
+      {
+        "id": 43,
+        "name": "Garanta compatibilidade retroativa e futura por meio de campos opcionais, valores padrão e campos obsoletos com períodos de carência",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem migração de esquema, a adição de campos opcionais em um registro já existente obriga a alteração de todos os registros existentes.",
+        "confidence": 0.7943,
+        "context_element_id": 2962
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 2,
+        "name": "Propósito Operacional",
+        "value": "busca",
+        "method": "user-input",
+        "reasoning": "A operação de consulta e persistência de usuários é destinada ao propósito de busca operacional.",
+        "confidence": 0.8821,
+        "context_element_id": 1284
+      },
+      {
+        "id": 3,
+        "name": "Estratégia de Tratamento de Erros",
+        "value": "continuar",
+        "method": "internal-inference",
+        "reasoning": "O erro é tratado com a estratégia de continuação, não rejeição ou reavaliação.",
+        "confidence": 0.7203,
+        "context_element_id": 1400
+      },
+      {
+        "id": 13,
+        "name": "Múltiplas Hierarquias",
+        "value": "true",
+        "method": "user-input",
+        "reasoning": "O campo tenant_id e o campo nível hierárquico_id são obrigatórios e não nulos, caracterizando múltiplas hierarquias simultâneas.",
+        "confidence": 0.7956,
+        "context_element_id": 1544
+      },
+      {
+        "id": 47,
+        "name": "Fonte de Gatilho",
+        "value": "disparo agendado",
+        "method": "user-input",
+        "reasoning": "O evento é disparado em resposta a um trigger externo, indicando que ele é disparado por um evento externo.",
+        "confidence": 0.832,
+        "context_element_id": 3076
+      },
+      {
+        "id": 50,
+        "name": "Prioridade de Otimização",
+        "value": "eficiência de recursos",
+        "method": "internal-inference",
+        "reasoning": "A otimização de índices e execução eficiente de queries é uma prioridade de otimização de recursos.",
+        "confidence": 0.8523,
+        "context_element_id": 4495
+      },
+      {
+        "id": 53,
+        "name": "Escopo de Validação",
+        "value": "somente entrada",
+        "method": "user-input",
+        "reasoning": "A validação de unicidade é feita apenas no código da aplicação, sem validar o campo no banco de dados.",
+        "confidence": 0.8868,
+        "context_element_id": 4625
+      },
+      {
+        "id": 55,
+        "name": "Camada de Comunicação",
+        "value": "conversa em thread",
+        "method": "internal-inference",
+        "reasoning": "A comunicação de erro é feita por mensagens separadas, caracterizando uma thread de conversa.",
+        "confidence": 0.7503,
+        "context_element_id": 4955
+      },
+      {
+        "id": 58,
+        "name": "Foco de Processamento",
+        "value": "processamento híbrido de conteúdo",
+        "method": "internal-inference",
+        "reasoning": "O nome completo é processado como texto e como um conjunto de nomes, caracterizando um processamento híbrido de conteúdo.",
+        "confidence": 0.7103,
+        "context_element_id": 5159
+      },
+      {
+        "id": 59,
+        "name": "Tipo de Referência",
+        "value": "identificadores simples",
+        "method": "user-input",
+        "reasoning": "A chave estrangeira (tenant_id) é uma identidade simples, não um conjunto de identidades complexas.",
+        "confidence": 0.7693,
+        "context_element_id": 5169
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 6,
+  "active": true,
+  "sourceId": 23669,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T05:29:54.418Z",
+  "updatedAt": null
+}

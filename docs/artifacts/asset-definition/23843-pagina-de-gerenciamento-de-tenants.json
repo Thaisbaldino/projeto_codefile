@@ -1,0 +1,688 @@
+{
+  "id": 23843,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 34,
+          "name": "Requisição de Listagem de Tenants",
+          "format": "HTTP GET /api/tenants",
+          "origin": "Navegação do administrador interno",
+          "trigger": "Administrador acessa a rota /tenants"
+        },
+        {
+          "id": 35,
+          "name": "Seleção de Tenant na Listagem",
+          "format": "Clique em linha da tabela",
+          "origin": "Interação do usuário na tabela",
+          "trigger": "Administrador clica em um tenant para visualizar detalhes"
+        },
+        {
+          "id": 36,
+          "name": "Ação de Ativação de Tenant",
+          "format": "HTTP PATCH /api/tenants/:id/activate",
+          "origin": "Confirmação em modal",
+          "trigger": "Administrador confirma ativação no modal"
+        },
+        {
+          "id": 37,
+          "name": "Ação de Desativação de Tenant",
+          "format": "HTTP PATCH /api/tenants/:id/deactivate",
+          "origin": "Confirmação em modal",
+          "trigger": "Administrador confirma desativação no modal"
+        },
+        {
+          "id": 38,
+          "name": "Submissão de Formulário de Provisionamento",
+          "format": "HTTP POST /api/tenants com { nome_organizacao, slug_tenant }",
+          "origin": "Formulário de entrada",
+          "trigger": "Administrador submete formulário de novo tenant"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 53,
+          "name": "Listagem de Tenants Renderizada",
+          "format": "HTML/CSS/JavaScript com tabela responsiva",
+          "destination": "Interface do navegador"
+        },
+        {
+          "id": 54,
+          "name": "Painel de Detalhes do Tenant",
+          "format": "Componente de painel com informações do tenant selecionado",
+          "destination": "Interface do navegador"
+        },
+        {
+          "id": 55,
+          "name": "Modal de Confirmação",
+          "format": "Modal com botões de confirmação e cancelamento",
+          "destination": "Interface do navegador"
+        },
+        {
+          "id": 56,
+          "name": "Mensagem de Sucesso ou Erro",
+          "format": "Toast ou notificação com resultado da operação",
+          "destination": "Interface do navegador"
+        },
+        {
+          "id": 57,
+          "name": "Requisição HTTP de Ativação/Desativação",
+          "format": "HTTP PATCH com identificação do tenant e ação solicitada",
+          "destination": "Backend API"
+        },
+        {
+          "id": 58,
+          "name": "Requisição HTTP de Provisionamento",
+          "format": "HTTP POST com dados do novo tenant (nome e slug)",
+          "destination": "Backend API"
+        }
+      ],
+      "processing": [
+        {
+          "id": 39,
+          "step": "Validar autenticação e autorização do administrador",
+          "description": "Verifica se o usuário está autenticado, é administrador da plataforma e tem acesso à funcionalidade de gerenciamento de tenants."
+        },
+        {
+          "id": 40,
+          "step": "Carregar lista de tenants da plataforma",
+          "description": "Consulta o banco de dados para obter todos os tenants cadastrados, incluindo nome, slug, status e data de criação."
+        },
+        {
+          "id": 41,
+          "step": "Renderizar listagem tabular de tenants",
+          "description": "Exibe a tabela com colunas de nome, identificador, status e data de criação, com indicação visual clara do status de ativação."
+        },
+        {
+          "id": 42,
+          "step": "Processar seleção de tenant",
+          "description": "Carrega detalhes do tenant selecionado e exibe painel de visualização com opções de ativação ou desativação."
+        },
+        {
+          "id": 43,
+          "step": "Exibir modal de confirmação de ativação",
+          "description": "Apresenta modal solicitando confirmação antes de ativar um tenant inativo, informando o impacto da ação."
+        },
+        {
+          "id": 44,
+          "step": "Exibir modal de confirmação de desativação",
+          "description": "Apresenta modal solicitando confirmação antes de desativar um tenant ativo, informando que bloqueará acesso de todos os usuários da organização."
+        },
+        {
+          "id": 45,
+          "step": "Validar dados de ativação/desativação",
+          "description": "Verifica que o tenant existe, está no estado correto para a operação e que o administrador tem permissão para executar a ação."
+        },
+        {
+          "id": 46,
+          "step": "Persistir alteração de status do tenant",
+          "description": "Atualiza o status do tenant no banco de dados e registra timestamp da operação e identificação do administrador executor."
+        },
+        {
+          "id": 47,
+          "step": "Invalidar sessões de usuários do tenant desativado",
+          "description": "Se desativando, revoga imediatamente todas as sessões ativas dos usuários pertencentes ao tenant para impedir uso continuado."
+        },
+        {
+          "id": 48,
+          "step": "Registrar entrada de auditoria",
+          "description": "Registra em log de auditoria a operação de ativação ou desativação com identificação do administrador, timestamp e dados do tenant."
+        },
+        {
+          "id": 49,
+          "step": "Exibir formulário de provisionamento de tenant",
+          "description": "Apresenta formulário com campos obrigatórios de nome da organização e identificador único (slug) do tenant."
+        },
+        {
+          "id": 50,
+          "step": "Validar dados de provisionamento",
+          "description": "Verifica preenchimento de campos obrigatórios, formato do slug (apenas letras minúsculas, números e hífens) e unicidade do slug na plataforma."
+        },
+        {
+          "id": 51,
+          "step": "Criar novo tenant e estrutura de dados isolada",
+          "description": "Persiste novo tenant no banco de dados com status inicial ativo e cria estrutura de dados segregada para garantir isolamento completo."
+        },
+        {
+          "id": 52,
+          "step": "Atualizar interface com novo tenant",
+          "description": "Recarrega a listagem de tenants para exibir o novo tenant provisionado com sucesso."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 59,
+        "category": "authorization",
+        "description": "Apenas usuários com perfil de administrador da plataforma podem acessar a funcionalidade de gerenciamento de tenants, incluindo visualização de listagem, ativação e desativação.",
+        "enforcement": "code",
+        "verification": "Validação de perfil do usuário autenticado no middleware de rota e em cada operação de API; rejeição com status 403 se não autorizado."
+      },
+      {
+        "id": 60,
+        "category": "authorization",
+        "description": "Administradores de tenant e colaboradores não podem acessar ou executar operações de gerenciamento de tenants; funcionalidade é exclusiva de administradores internos da plataforma.",
+        "enforcement": "code",
+        "verification": "Verificação de perfil do usuário em cada requisição; redirecionamento para /tasks se perfil não for administrador_plataforma."
+      },
+      {
+        "id": 61,
+        "category": "validation",
+        "description": "O identificador único do tenant (slug) deve conter apenas letras minúsculas, números e hífens, sem espaços ou caracteres especiais, e ter comprimento entre 3 e 50 caracteres.",
+        "enforcement": "code",
+        "verification": "Validação de formato com regex ^[a-z0-9-]{3,50}$ no cliente e servidor; rejeição com mensagem de erro específica se violado."
+      },
+      {
+        "id": 62,
+        "category": "invariant",
+        "description": "O slug do tenant deve ser único na plataforma; não é permitido provisionar dois tenants com o mesmo identificador.",
+        "enforcement": "db_constraint",
+        "verification": "Constraint UNIQUE sobre coluna slug na tabela tenants; tentativa de inserção duplicada resulta em erro 409 CONFLICT com detalhes do conflito."
+      },
+      {
+        "id": 63,
+        "category": "validation",
+        "description": "O nome da organização (tenant) é obrigatório e não pode estar em branco; deve conter ao menos 1 caractere e no máximo 255 caracteres.",
+        "enforcement": "code",
+        "verification": "Validação de preenchimento e comprimento no cliente e servidor; rejeição com mensagem de erro específica se violado."
+      },
+      {
+        "id": 64,
+        "category": "invariant",
+        "description": "Cada tenant deve possuir estrutura de dados isolada e segregada; nenhum dado de um tenant pode ser acessível ou visível para outro tenant.",
+        "enforcement": "code",
+        "verification": "Todas as consultas ao banco de dados incluem filtro WHERE tenant_id = :tenant_id_do_usuario; testes de isolamento verificam que usuário de tenant A não consegue acessar dados de tenant B."
+      },
+      {
+        "id": 65,
+        "category": "invariant",
+        "description": "Quando um tenant é desativado, todas as sessões ativas dos usuários pertencentes àquele tenant devem ser invalidadas imediatamente, impedindo uso continuado da plataforma.",
+        "enforcement": "code",
+        "verification": "Após persistência de desativação, sistema revoga todos os tokens JWT ativos para usuários do tenant; tentativa de uso de token revogado resulta em erro 401 UNAUTHORIZED."
+      },
+      {
+        "id": 66,
+        "category": "compliance",
+        "description": "Toda operação de provisionamento, ativação ou desativação de tenant deve ser registrada em log de auditoria com identificação do administrador executor, timestamp, identificação do tenant e dados da operação, em conformidade com requisitos de rastreabilidade.",
+        "enforcement": "code",
+        "verification": "Entrada de auditoria é criada para cada operação; logs são consultáveis e imutáveis; auditoria inclui campos: admin_id, timestamp, tenant_id, operacao, dados_alterados."
+      },
+      {
+        "id": 67,
+        "category": "observability",
+        "description": "Operações de ativação e desativação de tenants devem emitir eventos de auditoria para conformidade com LGPD e rastreabilidade de ciclo de vida de organizações.",
+        "enforcement": "code",
+        "verification": "Evento de auditoria é emitido após cada operação bem-sucedida; evento inclui tipo de operação, identificação do tenant, administrador executor e timestamp."
+      },
+      {
+        "id": 68,
+        "category": "validation",
+        "description": "Antes de exibir a listagem de tenants, o sistema deve validar que o usuário autenticado é administrador da plataforma e está ativo; usuários inativos ou de outros perfis não devem acessar a página.",
+        "enforcement": "code",
+        "verification": "Guarda de rota valida perfil e status do usuário; redirecionamento para /login se validação falhar; status 403 em requisições de API se não autorizado."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "A Página de Gerenciamento de Tenants é uma superfície de interface administrativa especializada que permite ao administrador interno da plataforma visualizar, ativar e desativar organizações (tenants) cadastradas, controlando o ciclo de vida completo de acesso das empresas clientes. Compõe-se de uma listagem tabular de tenants com colunas de nome, identificador, status de ativação e data de criação, modais de confirmação para ativação e desativação com impacto em todas as sessões de usuários afetados, e mecanismos de isolamento de dados que garantem que apenas administradores internos autenticados acessem esta funcionalidade. Integra-se ao fluxo de provisionamento e gerenciamento de tenants, aplicando regras de controle de acesso restrito, validações de negócio, rastreabilidade completa de auditoria, e invalidação imediata de sessões quando um tenant é desativado. Funciona como o ponto de entrada para operações administrativas de ciclo de vida de organizações, permitindo que operadores internos habilitem ou bloqueiem o acesso de clientes à plataforma de forma segura e auditável."
+    },
+    "definition": {
+      "route": "/tenants",
+      "renders": [
+        {
+          "id": 2,
+          "kind": "table",
+          "name": "Listagem de Tenants",
+          "source": "tenants_list_component"
+        },
+        {
+          "id": 3,
+          "kind": "panel",
+          "name": "Painel de Detalhes do Tenant",
+          "source": "tenant_detail_panel"
+        },
+        {
+          "id": 4,
+          "kind": "interactive_surface",
+          "name": "Modal de Confirmação de Ativação",
+          "source": "activation_confirmation_modal"
+        },
+        {
+          "id": 5,
+          "kind": "interactive_surface",
+          "name": "Modal de Confirmação de Desativação",
+          "source": "deactivation_confirmation_modal"
+        },
+        {
+          "id": 6,
+          "kind": "form",
+          "name": "Formulário de Provisionamento de Tenant",
+          "source": "tenant_provisioning_form_component"
+        }
+      ],
+      "state_machine": {
+        "states": [
+          {
+            "id": 7,
+            "name": "Listagem Carregada",
+            "description": "Estado inicial onde a lista de tenants foi carregada e exibida com sucesso."
+          },
+          {
+            "id": 8,
+            "name": "Tenant Selecionado",
+            "description": "Um tenant foi selecionado na listagem para visualização de detalhes ou operação de ativação/desativação."
+          },
+          {
+            "id": 9,
+            "name": "Confirmação de Ativação Exibida",
+            "description": "Modal de confirmação foi exibido antes de ativar um tenant inativo."
+          },
+          {
+            "id": 10,
+            "name": "Confirmação de Desativação Exibida",
+            "description": "Modal de confirmação foi exibido antes de desativar um tenant ativo, informando o impacto em usuários."
+          },
+          {
+            "id": 11,
+            "name": "Ativação/Desativação Persistida",
+            "description": "A alteração de status do tenant foi persistida e sessões de usuários foram invalidadas se necessário."
+          },
+          {
+            "id": 12,
+            "name": "Formulário de Provisionamento Aberto",
+            "description": "O formulário de provisionamento de novo tenant foi aberto para entrada de dados."
+          },
+          {
+            "id": 13,
+            "name": "Validando Provisionamento",
+            "description": "Os dados do formulário de provisionamento estão sendo validados no cliente e servidor."
+          },
+          {
+            "id": 14,
+            "name": "Provisionamento Persistido",
+            "description": "O novo tenant foi provisionado com sucesso e estrutura de dados isolada foi criada."
+          },
+          {
+            "id": 15,
+            "name": "Erro de Validação",
+            "description": "Validação falhou e mensagem de erro foi exibida ao administrador."
+          },
+          {
+            "id": 16,
+            "name": "Erro de Persistência",
+            "description": "Falha ao persistir alterações no banco de dados; mensagem de erro foi exibida."
+          }
+        ],
+        "transitions": [
+          {
+            "id": 17,
+            "to": "Tenant Selecionado",
+            "from": "Listagem Carregada",
+            "trigger": "Administrador clica em linha da tabela para visualizar detalhes do tenant"
+          },
+          {
+            "id": 18,
+            "to": "Confirmação de Ativação Exibida",
+            "from": "Tenant Selecionado",
+            "guard": "tenant_status == 'inativo'",
+            "trigger": "Administrador clica em botão 'Ativar' para um tenant inativo"
+          },
+          {
+            "id": 19,
+            "to": "Ativação/Desativação Persistida",
+            "from": "Confirmação de Ativação Exibida",
+            "trigger": "Administrador confirma a ativação no modal"
+          },
+          {
+            "id": 20,
+            "to": "Tenant Selecionado",
+            "from": "Confirmação de Ativação Exibida",
+            "trigger": "Administrador cancela a ativação no modal"
+          },
+          {
+            "id": 21,
+            "to": "Confirmação de Desativação Exibida",
+            "from": "Tenant Selecionado",
+            "guard": "tenant_status == 'ativo'",
+            "trigger": "Administrador clica em botão 'Desativar' para um tenant ativo"
+          },
+          {
+            "id": 22,
+            "to": "Ativação/Desativação Persistida",
+            "from": "Confirmação de Desativação Exibida",
+            "trigger": "Administrador confirma a desativação no modal"
+          },
+          {
+            "id": 23,
+            "to": "Tenant Selecionado",
+            "from": "Confirmação de Desativação Exibida",
+            "trigger": "Administrador cancela a desativação no modal"
+          },
+          {
+            "id": 24,
+            "to": "Listagem Carregada",
+            "from": "Ativação/Desativação Persistida",
+            "trigger": "Página é recarregada ou administrador retorna à listagem"
+          },
+          {
+            "id": 25,
+            "to": "Formulário de Provisionamento Aberto",
+            "from": "Listagem Carregada",
+            "trigger": "Administrador clica em botão 'Provisionar Novo Tenant'"
+          },
+          {
+            "id": 26,
+            "to": "Validando Provisionamento",
+            "from": "Formulário de Provisionamento Aberto",
+            "trigger": "Administrador submete o formulário com dados do novo tenant"
+          },
+          {
+            "id": 27,
+            "to": "Provisionamento Persistido",
+            "from": "Validando Provisionamento",
+            "guard": "validacao_passou AND persistencia_sucesso",
+            "trigger": "Todas as validações passaram e novo tenant foi criado com sucesso"
+          },
+          {
+            "id": 28,
+            "to": "Erro de Validação",
+            "from": "Validando Provisionamento",
+            "guard": "validacao_falhou",
+            "trigger": "Validação falhou em um ou mais campos"
+          },
+          {
+            "id": 29,
+            "to": "Listagem Carregada",
+            "from": "Provisionamento Persistido",
+            "trigger": "Página é recarregada ou administrador retorna à listagem"
+          },
+          {
+            "id": 30,
+            "to": "Listagem Carregada",
+            "from": "Formulário de Provisionamento Aberto",
+            "trigger": "Administrador cancela o provisionamento"
+          },
+          {
+            "id": 31,
+            "to": "Formulário de Provisionamento Aberto",
+            "from": "Erro de Validação",
+            "trigger": "Administrador corrige os erros e resubmete o formulário"
+          },
+          {
+            "id": 32,
+            "to": "Erro de Persistência",
+            "from": "Validando Provisionamento",
+            "guard": "persistencia_falhou",
+            "trigger": "Falha ao persistir novo tenant no banco de dados"
+          },
+          {
+            "id": 33,
+            "to": "Formulário de Provisionamento Aberto",
+            "from": "Erro de Persistência",
+            "trigger": "Administrador tenta novamente após erro de persistência"
+          }
+        ]
+      }
+    },
+    "pendencies": [
+      {
+        "id": 90,
+        "section": "definition",
+        "description": "Definir quais são os níveis de prioridade exatos para tarefas (ex: Baixa, Média, Alta, Urgente) e se esses valores são fixos ou configuráveis por tenant. Atualmente, o sistema assume status fixos, mas a feature de prioridade não especifica os valores exatos.",
+        "resolutionOptions": [
+          {
+            "id": 91,
+            "text": "Definir 4 níveis fixos de prioridade: Baixa, Média, Alta, Urgente, aplicáveis a todos os tenants, sem possibilidade de customização nesta versão."
+          },
+          {
+            "id": 92,
+            "text": "Definir 5 níveis fixos: Muito Baixa, Baixa, Média, Alta, Crítica, com mapeamento visual em cores padronizadas."
+          },
+          {
+            "id": 93,
+            "text": "Implementar prioridades configuráveis por tenant desde o início, permitindo que cada organização defina seus próprios níveis."
+          }
+        ],
+        "recommendedOptionId": 91
+      },
+      {
+        "id": 94,
+        "section": "definition",
+        "description": "Confirmar se a página de gerenciamento de tenants deve incluir funcionalidade de edição de dados do tenant (nome, slug) ou se apenas ativação/desativação são suportadas nesta versão.",
+        "resolutionOptions": [
+          {
+            "id": 95,
+            "text": "Apenas ativação e desativação são suportadas; edição de dados do tenant não é incluída nesta versão."
+          },
+          {
+            "id": 96,
+            "text": "Incluir formulário de edição de nome do tenant, mas slug permanece imutável após criação."
+          },
+          {
+            "id": 97,
+            "text": "Incluir edição completa de nome e slug, com validação de unicidade de slug e impacto em URLs."
+          }
+        ],
+        "recommendedOptionId": 95
+      },
+      {
+        "id": 98,
+        "section": "rules",
+        "description": "Definir o tempo máximo de bloqueio após múltiplas tentativas de login falhadas (mencionado na feature de autenticação como 'mecanismo de proteção') e quantas tentativas disparam o bloqueio.",
+        "resolutionOptions": [
+          {
+            "id": 99,
+            "text": "5 tentativas falhadas consecutivas disparam bloqueio de 15 minutos por endereço IP e e-mail."
+          },
+          {
+            "id": 100,
+            "text": "3 tentativas falhadas disparam bloqueio de 30 minutos; bloqueio aumenta exponencialmente em tentativas subsequentes."
+          },
+          {
+            "id": 101,
+            "text": "10 tentativas falhadas disparam bloqueio de 1 hora; sem escalada exponencial."
+          }
+        ],
+        "recommendedOptionId": 99
+      },
+      {
+        "id": 102,
+        "section": "non_functional_requirements",
+        "description": "Especificar o algoritmo exato de hash para armazenamento de senhas (mencionado como 'bcrypt ou argon2id') e os parâmetros de configuração (custo, iterações, memória).",
+        "resolutionOptions": [
+          {
+            "id": 103,
+            "text": "Usar bcrypt com cost factor = 12 (padrão recomendado para 2024)."
+          },
+          {
+            "id": 104,
+            "text": "Usar argon2id com m=64MiB, t=3, p=4 (parâmetros OWASP recomendados)."
+          },
+          {
+            "id": 105,
+            "text": "Usar PBKDF2 com SHA-256, 600.000 iterações (padrão NIST)."
+          }
+        ],
+        "recommendedOptionId": 104
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 78,
+        "then": "Novo tenant é criado com status ativo, estrutura de dados isolada é criada, mensagem de sucesso é exibida, e novo tenant aparece na listagem",
+        "type": "integration",
+        "when": "Administrador preenche formulário com nome 'Empresa XYZ' e slug 'empresa-xyz', e clica em 'Provisionar'",
+        "given": "Administrador está autenticado e acessou a página de gerenciamento de tenants",
+        "scenario": "Administrador da plataforma provisiona novo tenant com dados válidos",
+        "target_section": "definition"
+      },
+      {
+        "id": 79,
+        "then": "Validação falha, mensagem de erro 'Identificador do tenant já existe' é exibida, e nenhum novo tenant é criado",
+        "type": "contract",
+        "when": "Administrador tenta provisionar novo tenant com o mesmo slug 'empresa-xyz'",
+        "given": "Tenant com slug 'empresa-xyz' já existe na plataforma",
+        "scenario": "Validação rejeita slug duplicado durante provisionamento",
+        "target_section": "rules"
+      },
+      {
+        "id": 80,
+        "then": "Validação falha, mensagem de erro 'Identificador deve conter apenas letras minúsculas, números e hífens' é exibida",
+        "type": "contract",
+        "when": "Administrador tenta provisionar tenant com slug 'Empresa XYZ!' (contendo maiúsculas e caracteres especiais)",
+        "given": "Administrador está no formulário de provisionamento",
+        "scenario": "Validação rejeita slug com formato inválido",
+        "target_section": "rules"
+      },
+      {
+        "id": 81,
+        "then": "Status do tenant é alterado para ativo, usuários da organização conseguem fazer login, mensagem de sucesso é exibida, operação é registrada em auditoria",
+        "type": "integration",
+        "when": "Administrador seleciona o tenant, clica em 'Ativar', confirma a ativação no modal",
+        "given": "Tenant 'empresa-xyz' existe com status inativo; administrador está autenticado",
+        "scenario": "Administrador ativa tenant inativo com sucesso",
+        "target_section": "definition"
+      },
+      {
+        "id": 82,
+        "then": "Status do tenant é alterado para inativo, todas as 5 sessões ativas são invalidadas imediatamente, usuários recebem erro 401 ao tentar usar a plataforma, operação é registrada em auditoria",
+        "type": "integration",
+        "when": "Administrador seleciona o tenant, clica em 'Desativar', confirma a desativação no modal",
+        "given": "Tenant 'empresa-xyz' existe com status ativo; 5 usuários da organização têm sessões ativas",
+        "scenario": "Administrador desativa tenant ativo e sessões de usuários são invalidadas",
+        "target_section": "definition"
+      },
+      {
+        "id": 83,
+        "then": "Acesso é negado com status 403 FORBIDDEN; usuário é redirecionado para /tasks; operação é registrada em auditoria como tentativa de acesso não autorizado",
+        "type": "security",
+        "when": "Usuário tenta acessar rota /tenants ou fazer requisição para /api/tenants",
+        "given": "Usuário colaborador está autenticado no tenant 'empresa-xyz'",
+        "scenario": "Usuário não administrador é impedido de acessar página de gerenciamento de tenants",
+        "target_section": "rules"
+      },
+      {
+        "id": 84,
+        "then": "Acesso é negado; usuário é redirecionado para /login; token é invalidado",
+        "type": "security",
+        "when": "Administrador tenta acessar rota /tenants com token JWT válido",
+        "given": "Administrador da plataforma foi desativado",
+        "scenario": "Administrador inativo não consegue acessar funcionalidade de gerenciamento de tenants",
+        "target_section": "rules"
+      },
+      {
+        "id": 85,
+        "then": "Listagem exibe todos os 3 tenants com indicação visual diferenciada (cor, ícone ou rótulo) para status ativo vs inativo",
+        "type": "integration",
+        "when": "Administrador acessa página de gerenciamento de tenants",
+        "given": "Plataforma possui 3 tenants: 2 ativos e 1 inativo",
+        "scenario": "Listagem de tenants exibe status de ativação com indicação visual clara",
+        "target_section": "definition"
+      },
+      {
+        "id": 86,
+        "then": "Modal de confirmação é exibido com mensagem clara informando que 'Todos os 10 usuários desta organização perderão acesso imediatamente'",
+        "type": "integration",
+        "when": "Administrador clica em 'Desativar' para o tenant",
+        "given": "Tenant 'empresa-xyz' está ativo com 10 usuários ativos",
+        "scenario": "Modal de confirmação de desativação informa impacto em usuários",
+        "target_section": "definition"
+      },
+      {
+        "id": 87,
+        "then": "Listagem é carregada e renderizada em menos de 500ms (p95); interface é responsiva e interativa",
+        "type": "performance",
+        "when": "Administrador acessa página de gerenciamento de tenants",
+        "given": "Plataforma possui 50 tenants cadastrados",
+        "scenario": "Listagem de tenants carrega em tempo adequado com 50 tenants",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 88,
+        "then": "API retorna status 200 OK com corpo contendo id, nome, slug, status='ativo', data_ultima_ativacao com timestamp atual",
+        "type": "contract",
+        "when": "Requisição PATCH /api/tenants/abc-123/activate é enviada com autenticação válida",
+        "given": "Tenant com id 'abc-123' existe com status inativo",
+        "scenario": "API de ativação retorna resposta estruturada com dados do tenant atualizado",
+        "target_section": "flow"
+      },
+      {
+        "id": 89,
+        "then": "API retorna status 409 CONFLICT com corpo { error: { code: 'CONFLICT', message: '...', details: { field: 'slug_tenant', reason: 'Identificador já existe' } } }",
+        "type": "contract",
+        "when": "Requisição POST /api/tenants é enviada com { nome_organizacao: 'Outra Empresa', slug_tenant: 'empresa-xyz' }",
+        "given": "Tenant com slug 'empresa-xyz' já existe",
+        "scenario": "API de provisionamento retorna erro 409 CONFLICT para slug duplicado",
+        "target_section": "flow"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 69,
+        "target": "p95 <= 500ms para carregamento inicial da listagem; p99 <= 1000ms",
+        "category": "performance",
+        "requirement": "Carregamento e renderização da listagem de tenants deve ocorrer em tempo adequado, mesmo com até 50 tenants cadastrados na plataforma.",
+        "verification": "Testes de performance com 50 tenants; monitoramento de tempo de resposta da API /api/tenants em produção; alertas se p95 > 500ms."
+      },
+      {
+        "id": 70,
+        "target": "p95 <= 1000ms para persistência e invalidação de sessões; p99 <= 2000ms",
+        "category": "performance",
+        "requirement": "Operações de ativação e desativação de tenant devem ser concluídas e confirmadas ao administrador em tempo adequado.",
+        "verification": "Testes de performance para operações de ativação/desativação; monitoramento de tempo de resposta das APIs PATCH em produção."
+      },
+      {
+        "id": 71,
+        "target": "p95 <= 2000ms para provisionamento completo; p99 <= 4000ms",
+        "category": "performance",
+        "requirement": "Operação de provisionamento de novo tenant deve ser concluída em tempo adequado, incluindo criação de estrutura de dados isolada.",
+        "verification": "Testes de performance para operação POST /api/tenants; monitoramento de tempo de resposta em produção; alertas se p95 > 2000ms."
+      },
+      {
+        "id": 72,
+        "target": "99.9% de disponibilidade (máximo 43 minutos de downtime por mês)",
+        "category": "availability",
+        "requirement": "A funcionalidade de gerenciamento de tenants deve estar disponível com alta disponibilidade, dado que sua indisponibilidade impede o administrador interno de habilitar organizações bloqueadas e de revogar acessos indevidos.",
+        "verification": "Monitoramento contínuo de disponibilidade da rota /tenants e APIs de ativação/desativação; alertas se disponibilidade cair abaixo de 99.9%; SLA de 99.9% com compensação se violado."
+      },
+      {
+        "id": 73,
+        "target": "100% das requisições via HTTPS; TLS 1.2 ou superior",
+        "category": "security",
+        "requirement": "Todas as comunicações da funcionalidade de gerenciamento de tenants devem ser transmitidas exclusivamente por HTTPS, garantindo confidencialidade e integridade dos dados administrativos.",
+        "verification": "Configuração de servidor web com redirecionamento HTTP → HTTPS; testes de segurança verificam que HTTP não é aceito; certificado SSL válido e atualizado."
+      },
+      {
+        "id": 74,
+        "target": "JWT com algoritmo RS256 ou superior; token expiration: 60 minutos; refresh token: 7 dias",
+        "category": "security",
+        "requirement": "Autenticação de administrador deve ser validada via JWT com assinatura criptográfica; tokens devem ter tempo de expiração configurado e ser invalidados quando o administrador é desativado.",
+        "verification": "Validação de assinatura JWT em cada requisição; testes verificam que tokens expirados são rejeitados; invalidação de tokens ao desativar administrador."
+      },
+      {
+        "id": 75,
+        "target": "Logs estruturados em JSON com campos: timestamp, admin_id, operacao, tenant_id, resultado, ip_origem",
+        "category": "observability",
+        "requirement": "Página deve registrar em logs estruturados todas as operações de administrador, incluindo tentativas de acesso não autorizado, para fins de auditoria e detecção de anomalias.",
+        "verification": "Logs são gerados para cada operação; logs são consultáveis em sistema de observabilidade; alertas para operações suspeitas ou falhas de autorização."
+      },
+      {
+        "id": 76,
+        "target": "Suporte para até 1000 tenants com desempenho aceitável; índices de banco de dados otimizados para escalabilidade",
+        "category": "scalability",
+        "requirement": "Arquitetura deve suportar crescimento progressivo de tenants de 50 no primeiro ano para potencialmente centenas em anos subsequentes, sem necessidade de reestruturação significativa.",
+        "verification": "Testes de carga com 1000 tenants; análise de planos de execução de queries; índices sobre slug e status garantem O(log n) para buscas."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 15,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T07:23:27.245Z",
+  "updatedAt": null
+}

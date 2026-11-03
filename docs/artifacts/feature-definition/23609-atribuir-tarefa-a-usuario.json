@@ -1,0 +1,281 @@
+{
+  "id": 23609,
+  "projectId": 4118,
+  "type": "feature_definition",
+  "content": {
+    "pendencies": [
+      {
+        "id": 34,
+        "section": "functional",
+        "description": "Quem pode reatribuir o responsável de uma tarefa existente? Qualquer usuário autenticado do tenant pode reatribuir qualquer tarefa, ou apenas o criador da tarefa e o responsável atual têm permissão para alterar o responsável?",
+        "resolutionOptions": [
+          {
+            "id": 35,
+            "text": "Qualquer usuário autenticado e ativo do tenant pode reatribuir o responsável de qualquer tarefa, independentemente de ser o criador ou o responsável atual."
+          },
+          {
+            "id": 36,
+            "text": "Apenas o criador da tarefa ou o responsável atual podem reatribuir o responsável; outros colaboradores não têm permissão para alterar esse campo."
+          },
+          {
+            "id": 37,
+            "text": "Apenas o criador da tarefa pode reatribuir o responsável; o responsável atual não tem permissão para transferir a tarefa a outro colaborador."
+          }
+        ],
+        "recommendedOptionId": 35
+      },
+      {
+        "id": 38,
+        "section": "functional",
+        "description": "Uma tarefa pode existir sem responsável atribuído (tarefa não atribuída)? Se sim, o campo de responsável é opcional tanto na criação quanto na reatribuição, e como a tarefa sem responsável deve ser exibida nas visualizações de lista e Kanban?",
+        "resolutionOptions": [
+          {
+            "id": 39,
+            "text": "O responsável é obrigatório; toda tarefa deve ter um colaborador atribuído tanto na criação quanto em qualquer reatribuição posterior."
+          },
+          {
+            "id": 40,
+            "text": "O responsável é opcional; a tarefa pode existir sem responsável atribuído, exibindo indicação visual de 'Sem responsável' nas visualizações de lista e Kanban."
+          },
+          {
+            "id": 41,
+            "text": "O responsável é obrigatório na criação, mas pode ser removido posteriormente por meio de reatribuição explícita, deixando a tarefa sem responsável."
+          }
+        ],
+        "recommendedOptionId": 39
+      },
+      {
+        "id": 42,
+        "section": "functional",
+        "description": "Quando o responsável atribuído a uma tarefa é desativado no tenant, qual deve ser o comportamento do sistema em relação à atribuição existente? A tarefa permanece atribuída ao colaborador desativado, é automaticamente desatribuída ou o sistema exige reatribuição manual?",
+        "resolutionOptions": [
+          {
+            "id": 43,
+            "text": "A tarefa permanece atribuída ao colaborador desativado; o criador da tarefa ou outro usuário autorizado deve reatribuí-la manualmente quando necessário."
+          },
+          {
+            "id": 44,
+            "text": "O sistema remove automaticamente a atribuição quando o responsável é desativado, deixando a tarefa sem responsável até que seja reatribuída manualmente."
+          },
+          {
+            "id": 45,
+            "text": "O sistema exibe alerta ao administrador no momento da desativação do colaborador listando as tarefas abertas atribuídas a ele, solicitando reatribuição antes de confirmar a desativação."
+          }
+        ],
+        "recommendedOptionId": 43
+      },
+      {
+        "id": 46,
+        "section": "functional",
+        "description": "O sistema deve notificar o colaborador quando uma tarefa lhe é atribuída ou reatribuída? Considerando que notificações automáticas estão fora do escopo desta versão, deve haver ao menos algum indicador visual ou badge na interface do responsável recém-atribuído?",
+        "resolutionOptions": [
+          {
+            "id": 47,
+            "text": "Não implementar nenhuma notificação nem indicador visual de nova atribuição nesta versão; o colaborador visualiza as tarefas atribuídas a ele nas telas de lista e Kanban normalmente."
+          },
+          {
+            "id": 48,
+            "text": "Exibir badge ou indicador visual na interface do colaborador recém-atribuído sinalizando tarefas novas ou recém-atribuídas, sem envio de notificação por e-mail."
+          }
+        ],
+        "recommendedOptionId": 47
+      },
+      {
+        "id": 49,
+        "section": "non-functional",
+        "description": "A lista de colaboradores disponíveis para atribuição deve ser carregada de forma estática (carregada uma única vez ao abrir o campo) ou dinâmica com busca em tempo real no servidor à medida que o usuário digita? Considerando tenants com até 100 usuários, qual abordagem é mais adequada?",
+        "resolutionOptions": [
+          {
+            "id": 50,
+            "text": "Carregar a lista completa de colaboradores ativos de uma única vez ao abrir o campo de seleção, com filtragem local no cliente à medida que o usuário digita; adequado para até 100 usuários por tenant."
+          },
+          {
+            "id": 51,
+            "text": "Implementar busca dinâmica com requisição ao servidor a cada digitação do usuário, retornando apenas os colaboradores que correspondem ao texto informado."
+          }
+        ],
+        "recommendedOptionId": 50
+      }
+    ],
+    "functional_requirements": [
+      {
+        "group": {
+          "id": 1,
+          "name": "Seleção de Responsável",
+          "items": [
+            {
+              "id": 2,
+              "description": "Exibir campo de seleção de responsável pela tarefa, listando exclusivamente os colaboradores ativos pertencentes ao mesmo tenant do usuário que está realizando a atribuição."
+            },
+            {
+              "id": 3,
+              "description": "Permitir a atribuição da tarefa a qualquer colaborador ativo do tenant, independentemente do nível hierárquico do criador da tarefa ou do colaborador selecionado como responsável."
+            },
+            {
+              "id": 4,
+              "description": "Permitir que o usuário que está realizando a atribuição selecione a si mesmo como responsável pela tarefa, sem nenhuma restrição adicional."
+            },
+            {
+              "id": 5,
+              "description": "Excluir da lista de opções de responsável os colaboradores com status inativo no tenant, impedindo a atribuição de tarefas a usuários sem acesso ativo à plataforma."
+            },
+            {
+              "id": 6,
+              "description": "Excluir da lista de opções de responsável os colaboradores pertencentes a outros tenants, garantindo o isolamento de dados entre organizações."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 7,
+          "name": "Atribuição no Contexto de Criação de Tarefa",
+          "items": [
+            {
+              "id": 8,
+              "description": "Integrar o campo de seleção de responsável ao formulário de criação de tarefa, permitindo que a atribuição seja realizada no mesmo fluxo de registro da nova atividade."
+            },
+            {
+              "id": 9,
+              "description": "Validar que o responsável selecionado no formulário de criação é um colaborador ativo do tenant antes de persistir a tarefa, exibindo mensagem de erro específica caso a validação falhe."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 10,
+          "name": "Reatribuição de Tarefa Existente",
+          "items": [
+            {
+              "id": 11,
+              "description": "Permitir a alteração do responsável de uma tarefa já existente, substituindo o colaborador atualmente atribuído por outro colaborador ativo do tenant."
+            },
+            {
+              "id": 12,
+              "description": "Exibir o nome do responsável atualmente atribuído à tarefa como valor pré-selecionado no campo de seleção durante a edição, facilitando a identificação do estado atual antes da reatribuição."
+            },
+            {
+              "id": 13,
+              "description": "Validar que o novo responsável selecionado na reatribuição é um colaborador ativo do tenant antes de persistir a alteração, exibindo mensagem de erro específica caso a validação falhe."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 14,
+          "name": "Persistência e Confirmação da Atribuição",
+          "items": [
+            {
+              "id": 15,
+              "description": "Persistir a atribuição do responsável vinculada ao tenant do criador da tarefa, garantindo que a informação de responsável esteja associada ao registro correto e isolada de outros tenants."
+            },
+            {
+              "id": 16,
+              "description": "Registrar automaticamente a data e hora da atribuição ou reatribuição do responsável no momento da persistência, sem necessidade de intervenção do usuário."
+            },
+            {
+              "id": 17,
+              "description": "Exibir mensagem de confirmação de sucesso ao usuário após a atribuição ou reatribuição do responsável ser concluída com êxito."
+            },
+            {
+              "id": 18,
+              "description": "Exibir mensagem de erro clara e descritiva ao usuário quando a atribuição ou reatribuição não puder ser concluída por falha de validação ou erro do sistema."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 19,
+          "name": "Controle de Acesso à Atribuição",
+          "items": [
+            {
+              "id": 20,
+              "description": "Permitir que qualquer usuário autenticado e ativo do tenant, independentemente do nível hierárquico, realize a atribuição ou reatribuição de responsável em tarefas."
+            },
+            {
+              "id": 21,
+              "description": "Impedir que usuários não autenticados ou pertencentes a tenants inativos acessem ou executem operações de atribuição de responsável em tarefas."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 22,
+          "name": "Exibição do Responsável",
+          "items": [
+            {
+              "id": 23,
+              "description": "Exibir o nome do responsável atribuído à tarefa nas visualizações de lista e Kanban, permitindo a identificação imediata de quem é o responsável por cada atividade."
+            },
+            {
+              "id": 24,
+              "description": "Exibir o nome do responsável atribuído na visualização detalhada da tarefa, junto aos demais atributos como título, descrição, prioridade, status e prazo."
+            }
+          ]
+        }
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "group": {
+          "id": 25,
+          "name": "Segurança e Conformidade",
+          "items": [
+            {
+              "id": 26,
+              "description": "Registrar em log de auditoria toda operação de atribuição ou reatribuição de responsável em tarefa, incluindo identificação do usuário executor, tenant, timestamp, identificação da tarefa e do responsável anterior e novo, em conformidade com os requisitos de rastreabilidade da plataforma."
+            },
+            {
+              "id": 27,
+              "description": "Garantir que a atribuição de responsável em uma tarefa de um tenant não seja visível, acessível ou interferente nos dados de nenhum outro tenant, respeitando o isolamento multi-tenant."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 28,
+          "name": "Usabilidade e Responsividade",
+          "items": [
+            {
+              "id": 29,
+              "description": "Renderizar o campo de seleção de responsável e os fluxos de atribuição de forma responsiva e adaptativa, garantindo usabilidade adequada em dispositivos móveis (smartphones e tablets) e em desktops."
+            },
+            {
+              "id": 30,
+              "description": "Suportar busca ou filtragem textual dentro da lista de colaboradores disponíveis para atribuição, facilitando a localização do responsável desejado em tenants com grande número de usuários."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 31,
+          "name": "Desempenho",
+          "items": [
+            {
+              "id": 32,
+              "description": "Carregar a lista de colaboradores ativos disponíveis para atribuição em tempo adequado, mesmo em tenants com até 100 usuários ativos, sem degradação perceptível na experiência do usuário."
+            },
+            {
+              "id": 33,
+              "description": "Concluir a operação de persistência da atribuição ou reatribuição de responsável e retornar a confirmação ao usuário em tempo adequado, mesmo sob carga de até 5.000 usuários ativos e 10.000 tarefas por tenant na plataforma."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 9,
+  "sourceType": "feature",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-10T21:03:03.449Z",
+  "updatedAt": null
+}

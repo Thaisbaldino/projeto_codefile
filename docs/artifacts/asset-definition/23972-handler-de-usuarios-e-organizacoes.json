@@ -1,0 +1,1329 @@
+{
+  "id": 23972,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 99,
+          "name": "Requisição HTTP com Token JWT",
+          "format": "HTTP request com header Authorization: Bearer <token_jwt>",
+          "origin": "Cliente autenticado (navegador ou aplicação)",
+          "trigger": "Ação do usuário (clique em botão, submissão de formulário)"
+        },
+        {
+          "id": 100,
+          "name": "Payload de Entrada (Corpo da Requisição)",
+          "format": "JSON com campos: nome_completo, email, nivel_hierarquico_id, nome (para níveis), slug (para tenants)",
+          "origin": "Formulário de cadastro/edição de usuário, nível hierárquico ou tenant",
+          "trigger": "Submissão de formulário pelo usuário"
+        },
+        {
+          "id": 101,
+          "name": "Parâmetros de Rota",
+          "format": "UUID do usuário, nível hierárquico ou tenant (ex: /api/users/:id)",
+          "origin": "URL da requisição",
+          "trigger": "Navegação ou ação do usuário"
+        },
+        {
+          "id": 102,
+          "name": "Contexto de Autenticação",
+          "format": "{ user_id: uuid, tenant_id: uuid, perfil: enum[colaborador|gestor|administrador_tenant|administrador_plataforma], email: string }",
+          "origin": "Token JWT decodificado",
+          "trigger": "Validação de token no middleware de autenticação"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 125,
+          "name": "Resposta HTTP de Sucesso",
+          "format": "HTTP response com status 201/200, body JSON contendo DTO da entidade (usuário, nível hierárquico ou tenant) e headers Content-Type: application/json",
+          "destination": "Cliente autenticado (navegador ou aplicação)"
+        },
+        {
+          "id": 126,
+          "name": "Resposta HTTP de Erro de Validação",
+          "format": "HTTP response com status 400, body JSON contendo { error: string, field?: string, message: string }",
+          "destination": "Cliente autenticado"
+        },
+        {
+          "id": 127,
+          "name": "Resposta HTTP de Erro de Autenticação",
+          "format": "HTTP response com status 401, body JSON contendo { error: 'Unauthorized', message: 'Token inválido ou expirado' }",
+          "destination": "Cliente autenticado"
+        },
+        {
+          "id": 128,
+          "name": "Resposta HTTP de Erro de Autorização",
+          "format": "HTTP response com status 403, body JSON contendo { error: 'Forbidden', message: string }",
+          "destination": "Cliente autenticado"
+        },
+        {
+          "id": 129,
+          "name": "Resposta HTTP de Erro de Servidor",
+          "format": "HTTP response com status 500, body JSON contendo { error: 'Internal Server Error', message: string }",
+          "destination": "Cliente autenticado"
+        },
+        {
+          "id": 130,
+          "name": "Evento de Auditoria",
+          "format": "Evento estruturado com id, tenant_id, event_type, resource_type, operation, status, timestamp, severity, user_id, ip_address, data_before, data_after",
+          "destination": "Trilha de Auditoria de Ações (audit_log table)"
+        },
+        {
+          "id": 131,
+          "name": "Invalidação de Sessões",
+          "format": "Comando de invalidação com user_id ou tenant_id afetado",
+          "destination": "Serviço de Gerenciamento de Sessão"
+        }
+      ],
+      "processing": [
+        {
+          "id": 103,
+          "step": "Validar Autenticação e Token JWT",
+          "description": "Extrair e validar token JWT do header Authorization, verificando assinatura (RS256), expiração (3600 segundos) e presença de claims obrigatórios (user_id, tenant_id, perfil)."
+        },
+        {
+          "id": 104,
+          "step": "Validar Status de Ativação do Usuário Executor",
+          "description": "Consultar repositório para verificar que o usuário executor está com status 'ativo'; bloquear operação se inativo."
+        },
+        {
+          "id": 105,
+          "step": "Validar Status de Ativação do Tenant Executor",
+          "description": "Consultar repositório para verificar que o tenant do executor está com status 'ativo'; bloquear operação se inativo."
+        },
+        {
+          "id": 106,
+          "step": "Validar Preenchimento de Campos Obrigatórios",
+          "description": "Verificar que todos os campos obrigatórios (nome_completo, email, nivel_hierarquico_id para usuários; nome para níveis; nome e slug para tenants) estão presentes e não estão em branco."
+        },
+        {
+          "id": 107,
+          "step": "Validar Formato de E-mail",
+          "description": "Validar que o endereço de e-mail segue padrão RFC 5322 (regex: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$); rejeitar se malformado."
+        },
+        {
+          "id": 108,
+          "step": "Validar Formato de Slug de Tenant",
+          "description": "Validar que o slug respeita padrão permitido (regex: ^[a-z0-9-]{3,50}$); rejeitar se não conformar."
+        },
+        {
+          "id": 109,
+          "step": "Validar Unicidade de E-mail por Tenant",
+          "description": "Consultar repositório para verificar que o e-mail não está duplicado em outro usuário do mesmo tenant (excluindo o usuário sendo editado); rejeitar com erro 409 se duplicado."
+        },
+        {
+          "id": 110,
+          "step": "Validar Unicidade de Slug de Tenant",
+          "description": "Consultar repositório para verificar que o slug não está duplicado em outro tenant da plataforma; rejeitar com erro 409 se duplicado."
+        },
+        {
+          "id": 111,
+          "step": "Validar Referência ao Nível Hierárquico",
+          "description": "Consultar repositório para verificar que o nível hierárquico selecionado existe e pertence ao tenant do executor; rejeitar se referência inválida."
+        },
+        {
+          "id": 112,
+          "step": "Aplicar Regras de Controle de Acesso por Perfil",
+          "description": "Executar regras de controle de acesso: operações de cadastro/edição/exclusão de usuários requerem perfil administrador_tenant; operações de provisionamento/ativação/desativação de tenant requerem perfil administrador_plataforma; rejeitar com erro 403 se perfil insuficiente."
+        },
+        {
+          "id": 113,
+          "step": "Aplicar Regra de Isolamento Multi-tenant",
+          "description": "Validar que o recurso alvo (usuário, nível hierárquico, tenant) pertence ao tenant do executor; rejeitar com erro 403 se isolamento violado."
+        },
+        {
+          "id": 114,
+          "step": "Validar Restrição de Auto-desativação",
+          "description": "Se operação é desativação de usuário, verificar que o executor não está tentando desativar a si mesmo quando é o único administrador ativo no tenant; rejeitar com erro 409 se violado."
+        },
+        {
+          "id": 115,
+          "step": "Gerar Identificador Único (UUID)",
+          "description": "Para operações de criação (usuário, nível hierárquico, tenant), gerar um UUID v4 único que será utilizado como identificador primário."
+        },
+        {
+          "id": 116,
+          "step": "Persistir Dados no Repositório",
+          "description": "Invocar operação apropriada do repositório (criarUsuário, atualizarUsuário, desativarUsuário, ativarUsuário, criarTenant, ativarTenant, desativarTenant) com dados validados; registrar data/hora e identificação do executor para auditoria."
+        },
+        {
+          "id": 117,
+          "step": "Invalidar Sessões Ativas (se Desativação)",
+          "description": "Se operação é desativação de usuário ou tenant, invocar serviço de sessão para invalidar imediatamente todas as sessões ativas do usuário/tenant afetado."
+        },
+        {
+          "id": 118,
+          "step": "Emitir Evento de Auditoria",
+          "description": "Registrar evento de auditoria com tipo de operação (user_created, user_updated, user_activated, user_deactivated, tenant_provisioned, tenant_activated, tenant_deactivated), identificação do executor, timestamp, endereço IP, tenant afetado e dados principais."
+        },
+        {
+          "id": 119,
+          "step": "Transformar Resposta para DTO",
+          "description": "Invocar transformadores de DTO (transformUserToDTO, transformTaskToDTO) para converter entidade de domínio para representação de API, removendo dados sensíveis (password_hash) e formatando datas conforme localização."
+        },
+        {
+          "id": 120,
+          "step": "Retornar Resposta de Sucesso",
+          "description": "Retornar resposta HTTP com status 201 (criação) ou 200 (leitura/atualização), corpo contendo DTO da entidade criada/atualizada e headers apropriados (Content-Type: application/json)."
+        },
+        {
+          "id": 121,
+          "step": "Capturar Erro de Validação",
+          "description": "Interceptar exceções de validação (campos obrigatórios, formato, unicidade, referência, acesso, isolamento) e retornar resposta HTTP 400 com mensagem de erro específica indicando qual campo ou critério falhou."
+        },
+        {
+          "id": 122,
+          "step": "Capturar Erro de Persistência",
+          "description": "Interceptar exceções de banco de dados ou falhas de persistência e retornar resposta HTTP 500 com mensagem de erro genérica sem expor detalhes técnicos; registrar erro completo em log de erro."
+        },
+        {
+          "id": 123,
+          "step": "Capturar Erro de Autenticação",
+          "description": "Interceptar exceções de validação de token (token inválido, expirado, ausente) e retornar resposta HTTP 401 Unauthorized com mensagem genérica."
+        },
+        {
+          "id": 124,
+          "step": "Capturar Erro de Autorização",
+          "description": "Interceptar exceções de controle de acesso (perfil insuficiente, isolamento violado) e retornar resposta HTTP 403 Forbidden com mensagem de erro específica."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 132,
+        "category": "authorization",
+        "description": "Apenas usuários com perfil de administrador do tenant podem cadastrar, editar, ativar ou desativar usuários dentro daquele tenant.",
+        "enforcement": "code",
+        "verification": "Validar claim 'perfil' do JWT contra enum[administrador_tenant]; rejeitar com erro 403 se perfil insuficiente. Teste: tentar cadastrar usuário com perfil 'colaborador' deve retornar 403 Forbidden."
+      },
+      {
+        "id": 133,
+        "category": "authorization",
+        "description": "Apenas usuários com perfil de administrador da plataforma podem provisionar, ativar ou desativar tenants.",
+        "enforcement": "code",
+        "verification": "Validar claim 'perfil' do JWT contra enum[administrador_plataforma]; rejeitar com erro 403 se perfil insuficiente. Teste: tentar provisionar tenant com perfil 'administrador_tenant' deve retornar 403 Forbidden."
+      },
+      {
+        "id": 134,
+        "category": "authorization",
+        "description": "Apenas usuários com perfil de administrador do tenant podem gerenciar níveis hierárquicos (criar, editar, excluir) dentro daquele tenant.",
+        "enforcement": "code",
+        "verification": "Validar claim 'perfil' do JWT contra enum[administrador_tenant]; rejeitar com erro 403 se perfil insuficiente. Teste: tentar criar nível hierárquico com perfil 'gestor' deve retornar 403 Forbidden."
+      },
+      {
+        "id": 135,
+        "category": "validation",
+        "description": "Todos os campos obrigatórios (nome_completo, email, nivel_hierarquico_id para usuários; nome para níveis; nome e slug para tenants) devem estar preenchidos e não podem estar em branco.",
+        "enforcement": "code",
+        "verification": "Validar presença e não-vazio de cada campo obrigatório antes de persistência; retornar erro 400 com indicação do campo faltante. Teste: submeter formulário de cadastro de usuário sem nome deve retornar 400 Bad Request com field='nome_completo'."
+      },
+      {
+        "id": 136,
+        "category": "validation",
+        "description": "O endereço de e-mail deve estar em formato válido conforme padrão RFC 5322.",
+        "enforcement": "code",
+        "verification": "Aplicar regex ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$ antes de persistência; retornar erro 400 se não conformar. Teste: submeter email 'invalido@' deve retornar 400 Bad Request."
+      },
+      {
+        "id": 137,
+        "category": "validation",
+        "description": "O slug de tenant deve estar em formato válido (apenas letras minúsculas, números e hífens, 3-50 caracteres).",
+        "enforcement": "code",
+        "verification": "Aplicar regex ^[a-z0-9-]{3,50}$ antes de persistência; retornar erro 400 se não conformar. Teste: submeter slug 'MAIUSCULA' deve retornar 400 Bad Request."
+      },
+      {
+        "id": 138,
+        "category": "invariant",
+        "description": "O endereço de e-mail deve ser único dentro de cada tenant; dois usuários do mesmo tenant não podem compartilhar o mesmo e-mail.",
+        "enforcement": "db_constraint",
+        "verification": "Aplicar constraint UNIQUE(tenant_id, email) na tabela usuarios; validar unicidade em código antes de persistência; retornar erro 409 Conflict se duplicado. Teste: cadastrar dois usuários com mesmo email no mesmo tenant deve retornar 409 Conflict na segunda tentativa."
+      },
+      {
+        "id": 139,
+        "category": "invariant",
+        "description": "O slug de tenant deve ser único na plataforma; dois tenants não podem compartilhar o mesmo slug.",
+        "enforcement": "db_constraint",
+        "verification": "Aplicar constraint UNIQUE(slug) na tabela tenants; validar unicidade em código antes de persistência; retornar erro 409 Conflict se duplicado. Teste: provisionar dois tenants com mesmo slug deve retornar 409 Conflict na segunda tentativa."
+      },
+      {
+        "id": 140,
+        "category": "invariant",
+        "description": "O nome de nível hierárquico deve ser único dentro de cada tenant; dois níveis do mesmo tenant não podem compartilhar o mesmo nome.",
+        "enforcement": "db_constraint",
+        "verification": "Aplicar constraint UNIQUE(tenant_id, nome) na tabela hierarchy_levels; validar unicidade em código antes de persistência; retornar erro 409 Conflict se duplicado. Teste: criar dois níveis com mesmo nome no mesmo tenant deve retornar 409 Conflict na segunda tentativa."
+      },
+      {
+        "id": 141,
+        "category": "invariant",
+        "description": "Cada usuário deve estar vinculado a um tenant válido e ativo; usuários de tenants inativos não podem executar operações.",
+        "enforcement": "code",
+        "verification": "Validar que tenant_id do usuário existe e status='ativo' antes de permitir operação; retornar erro 403 se tenant inativo. Teste: tentar executar operação com usuário de tenant desativado deve retornar 403 Forbidden."
+      },
+      {
+        "id": 142,
+        "category": "invariant",
+        "description": "Cada usuário deve estar com status 'ativo' para executar operações; usuários inativos não podem autenticar ou executar ações.",
+        "enforcement": "code",
+        "verification": "Validar que status='ativo' para usuário executor antes de permitir operação; retornar erro 403 se inativo. Teste: tentar executar operação com usuário desativado deve retornar 403 Forbidden."
+      },
+      {
+        "id": 143,
+        "category": "invariant",
+        "description": "Dados de um tenant nunca podem ser acessados por usuários de outro tenant; isolamento multi-tenant é obrigatório em todas as operações.",
+        "enforcement": "code",
+        "verification": "Validar que tenant_id do recurso alvo == tenant_id do executor antes de permitir acesso; retornar erro 403 se isolamento violado. Teste: tentar acessar usuário de outro tenant deve retornar 403 Forbidden."
+      },
+      {
+        "id": 144,
+        "category": "invariant",
+        "description": "Um nível hierárquico não pode ser excluído se possui usuários vinculados a ele.",
+        "enforcement": "code",
+        "verification": "Consultar repositório para verificar se existem usuários com nivel_hierarquico_id antes de permitir exclusão; retornar erro 409 Conflict se existirem. Teste: tentar excluir nível com usuários vinculados deve retornar 409 Conflict."
+      },
+      {
+        "id": 145,
+        "category": "invariant",
+        "description": "Um administrador do tenant não pode desativar a si mesmo se for o único administrador ativo no tenant.",
+        "enforcement": "code",
+        "verification": "Antes de desativar usuário, verificar se é administrador e se é o único ativo no tenant; retornar erro 409 Conflict se ambas condições forem verdadeiras. Teste: tentar desativar único administrador ativo deve retornar 409 Conflict."
+      },
+      {
+        "id": 146,
+        "category": "compliance",
+        "description": "Todas as operações críticas (cadastro, edição, ativação, desativação de usuários; provisionamento, ativação, desativação de tenants) devem ser registradas em auditoria com identificação do executor, timestamp, endereço IP, tenant afetado e dados principais.",
+        "enforcement": "code",
+        "verification": "Emitir evento de auditoria para cada operação crítica; verificar que evento contém todos os campos obrigatórios (id, tenant_id, event_type, resource_type, operation, status, timestamp, severity, user_id, ip_address). Teste: cadastrar usuário deve gerar evento audit com event_type='user_created'."
+      },
+      {
+        "id": 147,
+        "category": "compliance",
+        "description": "Dados pessoais de usuários (nome, e-mail) devem ser tratados em conformidade com LGPD, aplicando princípios de minimização de dados e proteção de informações pessoais.",
+        "enforcement": "code",
+        "verification": "Não armazenar dados pessoais além do necessário; não expor dados pessoais em logs ou mensagens de erro; criptografar dados em trânsito (HTTPS); aplicar retenção de 7 anos em auditoria. Teste: verificar que password_hash não é retornado em respostas de API."
+      },
+      {
+        "id": 148,
+        "category": "idempotency",
+        "description": "Operações de criação de usuário, nível hierárquico e tenant devem ser idempotentes; requisições duplicadas com mesmos dados devem retornar mesmo resultado sem criar duplicatas.",
+        "enforcement": "code",
+        "verification": "Implementar chave de idempotência baseada em tenant_id + email (usuários) ou tenant_id + slug (tenants); retornar resultado anterior se chave já foi processada. Teste: submeter duas requisições idênticas de cadastro deve retornar 201 na primeira e 409 ou 200 na segunda (conforme implementação)."
+      },
+      {
+        "id": 149,
+        "category": "observability",
+        "description": "Todas as requisições devem ser registradas em log com identificação do usuário, tenant, endpoint, método HTTP, status de resposta, tempo de execução e qualquer erro ocorrido.",
+        "enforcement": "code",
+        "verification": "Emitir log estruturado para cada requisição com campos: user_id, tenant_id, method, path, status_code, duration_ms, error (se aplicável). Teste: verificar que logs contêm informações de rastreabilidade para cada requisição."
+      },
+      {
+        "id": 150,
+        "category": "rate_limit",
+        "description": "Operações de cadastro de usuário devem estar limitadas a 100 requisições por minuto por tenant para prevenir abuso.",
+        "enforcement": "network",
+        "verification": "Implementar rate limiting no API gateway ou middleware; retornar erro 429 Too Many Requests se limite excedido. Teste: submeter 101 requisições de cadastro em 1 minuto deve retornar 429 na 101ª requisição."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "O Handler de Usuários e Organizações é um componente de processamento de requisições HTTP que orquestra operações de negócio relacionadas ao gerenciamento de usuários, níveis hierárquicos e tenants na plataforma multi-tenant. Recebe requisições autenticadas via JWT, valida entrada conforme regras de negócio (preenchimento obrigatório, formato de e-mail, unicidade por tenant), aplica controle de acesso baseado em perfil (apenas administradores podem cadastrar/editar usuários e tenants), coordena persistência no repositório de usuários e tenants, registra auditoria completa de operações críticas, e retorna respostas estruturadas com confirmação ou erro específico. Implementa isolamento rigoroso de dados por tenant em todas as operações, garantindo que usuários de uma organização nunca acessem dados de outra. Funciona em ciclo síncrono de requisição-resposta, bloqueando até conclusão da operação antes de retornar ao cliente."
+    },
+    "definition": {
+      "endpoints": [
+        {
+          "id": 2,
+          "auth": "bearer",
+          "path": "/api/users",
+          "method": "POST",
+          "responses": [
+            {
+              "id": 3,
+              "body": "{ id: uuid, tenant_id: uuid, nome_completo: string, email: string, nivel_hierarquico_id: uuid, status: 'ativo', data_criacao: timestamp }",
+              "status_code": 201
+            },
+            {
+              "id": 4,
+              "body": "{ error: string, field?: string, message: string }",
+              "status_code": 400
+            },
+            {
+              "id": 5,
+              "body": "{ error: 'Unauthorized', message: 'Token inválido ou expirado' }",
+              "status_code": 401
+            },
+            {
+              "id": 6,
+              "body": "{ error: 'Forbidden', message: 'Acesso negado. Apenas administradores do tenant podem cadastrar usuários' }",
+              "status_code": 403
+            },
+            {
+              "id": 7,
+              "body": "{ error: 'Conflict', message: 'E-mail já cadastrado neste tenant' }",
+              "status_code": 409
+            },
+            {
+              "id": 8,
+              "body": "{ error: 'Internal Server Error', message: 'Falha ao persistir usuário' }",
+              "status_code": 500
+            }
+          ],
+          "description": "Cadastra um novo colaborador no tenant do administrador autenticado, validando dados de entrada, verificando unicidade de e-mail por tenant, aplicando controle de acesso, persistindo no repositório e registrando auditoria.",
+          "request_body": "{ nome_completo: string, email: string, nivel_hierarquico_id: uuid }"
+        },
+        {
+          "id": 9,
+          "auth": "bearer",
+          "path": "/api/users",
+          "method": "GET",
+          "responses": [
+            {
+              "id": 10,
+              "body": "{ users: [{ id: uuid, nome_completo: string, email: string, nivel_hierarquico_id: uuid, status: enum[ativo|inativo], data_criacao: timestamp }], total: integer, page: integer, limit: integer }",
+              "status_code": 200
+            },
+            {
+              "id": 11,
+              "body": "{ error: 'Unauthorized', message: 'Token inválido ou expirado' }",
+              "status_code": 401
+            },
+            {
+              "id": 12,
+              "body": "{ error: 'Internal Server Error', message: 'Falha ao listar usuários' }",
+              "status_code": 500
+            }
+          ],
+          "description": "Lista todos os usuários do tenant autenticado com suporte a paginação, filtragem por status e ordenação, respeitando isolamento multi-tenant."
+        },
+        {
+          "id": 13,
+          "auth": "bearer",
+          "path": "/api/users/:id",
+          "method": "GET",
+          "responses": [
+            {
+              "id": 14,
+              "body": "{ id: uuid, tenant_id: uuid, nome_completo: string, email: string, nivel_hierarquico_id: uuid, status: enum[ativo|inativo], data_criacao: timestamp, data_ultima_edicao?: timestamp }",
+              "status_code": 200
+            },
+            {
+              "id": 15,
+              "body": "{ error: 'Unauthorized', message: 'Token inválido ou expirado' }",
+              "status_code": 401
+            },
+            {
+              "id": 16,
+              "body": "{ error: 'Not Found', message: 'Usuário não encontrado' }",
+              "status_code": 404
+            },
+            {
+              "id": 17,
+              "body": "{ error: 'Internal Server Error', message: 'Falha ao buscar usuário' }",
+              "status_code": 500
+            }
+          ],
+          "description": "Recupera os detalhes de um usuário específico do tenant autenticado, validando que o usuário pertence ao tenant correto."
+        },
+        {
+          "id": 18,
+          "auth": "bearer",
+          "path": "/api/users/:id",
+          "method": "PUT",
+          "responses": [
+            {
+              "id": 19,
+              "body": "{ id: uuid, tenant_id: uuid, nome_completo: string, email: string, nivel_hierarquico_id: uuid, status: enum[ativo|inativo], data_ultima_edicao: timestamp }",
+              "status_code": 200
+            },
+            {
+              "id": 20,
+              "body": "{ error: string, field?: string, message: string }",
+              "status_code": 400
+            },
+            {
+              "id": 21,
+              "body": "{ error: 'Unauthorized', message: 'Token inválido ou expirado' }",
+              "status_code": 401
+            },
+            {
+              "id": 22,
+              "body": "{ error: 'Forbidden', message: 'Acesso negado. Apenas administradores podem editar perfis de outros usuários' }",
+              "status_code": 403
+            },
+            {
+              "id": 23,
+              "body": "{ error: 'Not Found', message: 'Usuário não encontrado' }",
+              "status_code": 404
+            },
+            {
+              "id": 24,
+              "body": "{ error: 'Conflict', message: 'E-mail já cadastrado neste tenant' }",
+              "status_code": 409
+            },
+            {
+              "id": 25,
+              "body": "{ error: 'Internal Server Error', message: 'Falha ao atualizar usuário' }",
+              "status_code": 500
+            }
+          ],
+          "description": "Edita dados cadastrais de um usuário existente (nome, e-mail, nível hierárquico), validando unicidade de e-mail por tenant, aplicando controle de acesso e registrando auditoria.",
+          "request_body": "{ nome_completo?: string, email?: string, nivel_hierarquico_id?: uuid }"
+        },
+        {
+          "id": 26,
+          "auth": "bearer",
+          "path": "/api/users/:id/activate",
+          "method": "POST",
+          "responses": [
+            {
+              "id": 27,
+              "body": "{ id: uuid, status: 'ativo', data_ultima_ativacao: timestamp }",
+              "status_code": 200
+            },
+            {
+              "id": 28,
+              "body": "{ error: 'Unauthorized', message: 'Token inválido ou expirado' }",
+              "status_code": 401
+            },
+            {
+              "id": 29,
+              "body": "{ error: 'Forbidden', message: 'Acesso negado. Apenas administradores do tenant podem ativar usuários' }",
+              "status_code": 403
+            },
+            {
+              "id": 30,
+              "body": "{ error: 'Not Found', message: 'Usuário não encontrado' }",
+              "status_code": 404
+            },
+            {
+              "id": 31,
+              "body": "{ error: 'Internal Server Error', message: 'Falha ao ativar usuário' }",
+              "status_code": 500
+            }
+          ],
+          "description": "Ativa um usuário previamente desativado, restaurando seu acesso à plataforma e registrando auditoria da operação."
+        },
+        {
+          "id": 32,
+          "auth": "bearer",
+          "path": "/api/users/:id/deactivate",
+          "method": "POST",
+          "responses": [
+            {
+              "id": 33,
+              "body": "{ id: uuid, status: 'inativo', data_ultima_desativacao: timestamp }",
+              "status_code": 200
+            },
+            {
+              "id": 34,
+              "body": "{ error: 'Unauthorized', message: 'Token inválido ou expirado' }",
+              "status_code": 401
+            },
+            {
+              "id": 35,
+              "body": "{ error: 'Forbidden', message: 'Acesso negado. Apenas administradores do tenant podem desativar usuários' }",
+              "status_code": 403
+            },
+            {
+              "id": 36,
+              "body": "{ error: 'Not Found', message: 'Usuário não encontrado' }",
+              "status_code": 404
+            },
+            {
+              "id": 37,
+              "body": "{ error: 'Conflict', message: 'Não é permitido desativar o próprio perfil de administrador quando é o único ativo' }",
+              "status_code": 409
+            },
+            {
+              "id": 38,
+              "body": "{ error: 'Internal Server Error', message: 'Falha ao desativar usuário' }",
+              "status_code": 500
+            }
+          ],
+          "description": "Desativa um usuário ativo, revogando seu acesso à plataforma, invalidando suas sessões ativas e registrando auditoria."
+        },
+        {
+          "id": 39,
+          "auth": "bearer",
+          "path": "/api/hierarchy-levels",
+          "method": "POST",
+          "responses": [
+            {
+              "id": 40,
+              "body": "{ id: uuid, tenant_id: uuid, nome: string, data_criacao: timestamp }",
+              "status_code": 201
+            },
+            {
+              "id": 41,
+              "body": "{ error: string, field?: string, message: string }",
+              "status_code": 400
+            },
+            {
+              "id": 42,
+              "body": "{ error: 'Unauthorized', message: 'Token inválido ou expirado' }",
+              "status_code": 401
+            },
+            {
+              "id": 43,
+              "body": "{ error: 'Forbidden', message: 'Acesso negado. Apenas administradores do tenant podem criar níveis hierárquicos' }",
+              "status_code": 403
+            },
+            {
+              "id": 44,
+              "body": "{ error: 'Conflict', message: 'Nível hierárquico com este nome já existe neste tenant' }",
+              "status_code": 409
+            },
+            {
+              "id": 45,
+              "body": "{ error: 'Internal Server Error', message: 'Falha ao criar nível hierárquico' }",
+              "status_code": 500
+            }
+          ],
+          "description": "Cria um novo nível hierárquico no tenant autenticado, validando unicidade de nome por tenant e aplicando controle de acesso.",
+          "request_body": "{ nome: string }"
+        },
+        {
+          "id": 46,
+          "auth": "bearer",
+          "path": "/api/hierarchy-levels",
+          "method": "GET",
+          "responses": [
+            {
+              "id": 47,
+              "body": "{ levels: [{ id: uuid, tenant_id: uuid, nome: string, ordem?: integer, data_criacao: timestamp }] }",
+              "status_code": 200
+            },
+            {
+              "id": 48,
+              "body": "{ error: 'Unauthorized', message: 'Token inválido ou expirado' }",
+              "status_code": 401
+            },
+            {
+              "id": 49,
+              "body": "{ error: 'Internal Server Error', message: 'Falha ao listar níveis hierárquicos' }",
+              "status_code": 500
+            }
+          ],
+          "description": "Lista todos os níveis hierárquicos do tenant autenticado, ordenados por posição, respeitando isolamento multi-tenant."
+        },
+        {
+          "id": 50,
+          "auth": "bearer",
+          "path": "/api/hierarchy-levels/:id",
+          "method": "PUT",
+          "responses": [
+            {
+              "id": 51,
+              "body": "{ id: uuid, tenant_id: uuid, nome: string, ordem?: integer, data_ultima_edicao: timestamp }",
+              "status_code": 200
+            },
+            {
+              "id": 52,
+              "body": "{ error: string, field?: string, message: string }",
+              "status_code": 400
+            },
+            {
+              "id": 53,
+              "body": "{ error: 'Unauthorized', message: 'Token inválido ou expirado' }",
+              "status_code": 401
+            },
+            {
+              "id": 54,
+              "body": "{ error: 'Forbidden', message: 'Acesso negado. Apenas administradores do tenant podem editar níveis hierárquicos' }",
+              "status_code": 403
+            },
+            {
+              "id": 55,
+              "body": "{ error: 'Not Found', message: 'Nível hierárquico não encontrado' }",
+              "status_code": 404
+            },
+            {
+              "id": 56,
+              "body": "{ error: 'Conflict', message: 'Nível hierárquico com este nome já existe neste tenant' }",
+              "status_code": 409
+            },
+            {
+              "id": 57,
+              "body": "{ error: 'Internal Server Error', message: 'Falha ao atualizar nível hierárquico' }",
+              "status_code": 500
+            }
+          ],
+          "description": "Edita um nível hierárquico existente (nome e/ou ordem), validando unicidade de nome por tenant e aplicando controle de acesso.",
+          "request_body": "{ nome?: string, ordem?: integer }"
+        },
+        {
+          "id": 58,
+          "auth": "bearer",
+          "path": "/api/hierarchy-levels/:id",
+          "method": "DELETE",
+          "responses": [
+            {
+              "id": 59,
+              "status_code": 204
+            },
+            {
+              "id": 60,
+              "body": "{ error: 'Unauthorized', message: 'Token inválido ou expirado' }",
+              "status_code": 401
+            },
+            {
+              "id": 61,
+              "body": "{ error: 'Forbidden', message: 'Acesso negado. Apenas administradores do tenant podem excluir níveis hierárquicos' }",
+              "status_code": 403
+            },
+            {
+              "id": 62,
+              "body": "{ error: 'Not Found', message: 'Nível hierárquico não encontrado' }",
+              "status_code": 404
+            },
+            {
+              "id": 63,
+              "body": "{ error: 'Conflict', message: 'Não é possível excluir nível hierárquico que possui usuários vinculados' }",
+              "status_code": 409
+            },
+            {
+              "id": 64,
+              "body": "{ error: 'Internal Server Error', message: 'Falha ao excluir nível hierárquico' }",
+              "status_code": 500
+            }
+          ],
+          "description": "Exclui um nível hierárquico do tenant autenticado, validando que nenhum usuário está vinculado a ele e aplicando controle de acesso."
+        },
+        {
+          "id": 65,
+          "auth": "bearer",
+          "path": "/api/tenants",
+          "method": "POST",
+          "responses": [
+            {
+              "id": 66,
+              "body": "{ id: uuid, nome: string, slug: string, status: 'ativo', data_criacao: timestamp }",
+              "status_code": 201
+            },
+            {
+              "id": 67,
+              "body": "{ error: string, field?: string, message: string }",
+              "status_code": 400
+            },
+            {
+              "id": 68,
+              "body": "{ error: 'Unauthorized', message: 'Token inválido ou expirado' }",
+              "status_code": 401
+            },
+            {
+              "id": 69,
+              "body": "{ error: 'Forbidden', message: 'Acesso negado. Apenas administradores internos da plataforma podem provisionar tenants' }",
+              "status_code": 403
+            },
+            {
+              "id": 70,
+              "body": "{ error: 'Conflict', message: 'Slug de tenant já existe na plataforma' }",
+              "status_code": 409
+            },
+            {
+              "id": 71,
+              "body": "{ error: 'Internal Server Error', message: 'Falha ao provisionar tenant' }",
+              "status_code": 500
+            }
+          ],
+          "description": "Provisiona um novo tenant na plataforma (exclusivo para administradores internos), validando dados de entrada, verificando unicidade de slug, criando estrutura isolada de dados e registrando auditoria.",
+          "request_body": "{ nome: string, slug: string }"
+        },
+        {
+          "id": 72,
+          "auth": "bearer",
+          "path": "/api/tenants",
+          "method": "GET",
+          "responses": [
+            {
+              "id": 73,
+              "body": "{ tenants: [{ id: uuid, nome: string, slug: string, status: enum[ativo|inativo], data_criacao: timestamp }], total: integer, page: integer, limit: integer }",
+              "status_code": 200
+            },
+            {
+              "id": 74,
+              "body": "{ error: 'Unauthorized', message: 'Token inválido ou expirado' }",
+              "status_code": 401
+            },
+            {
+              "id": 75,
+              "body": "{ error: 'Forbidden', message: 'Acesso negado. Apenas administradores internos podem listar tenants' }",
+              "status_code": 403
+            },
+            {
+              "id": 76,
+              "body": "{ error: 'Internal Server Error', message: 'Falha ao listar tenants' }",
+              "status_code": 500
+            }
+          ],
+          "description": "Lista todos os tenants da plataforma com suporte a filtragem por status e paginação (exclusivo para administradores internos)."
+        },
+        {
+          "id": 77,
+          "auth": "bearer",
+          "path": "/api/tenants/:id",
+          "method": "GET",
+          "responses": [
+            {
+              "id": 78,
+              "body": "{ id: uuid, nome: string, slug: string, status: enum[ativo|inativo], data_criacao: timestamp }",
+              "status_code": 200
+            },
+            {
+              "id": 79,
+              "body": "{ error: 'Unauthorized', message: 'Token inválido ou expirado' }",
+              "status_code": 401
+            },
+            {
+              "id": 80,
+              "body": "{ error: 'Forbidden', message: 'Acesso negado. Apenas administradores internos podem visualizar detalhes de tenants' }",
+              "status_code": 403
+            },
+            {
+              "id": 81,
+              "body": "{ error: 'Not Found', message: 'Tenant não encontrado' }",
+              "status_code": 404
+            },
+            {
+              "id": 82,
+              "body": "{ error: 'Internal Server Error', message: 'Falha ao buscar tenant' }",
+              "status_code": 500
+            }
+          ],
+          "description": "Recupera os detalhes de um tenant específico (exclusivo para administradores internos)."
+        },
+        {
+          "id": 83,
+          "auth": "bearer",
+          "path": "/api/tenants/:id/activate",
+          "method": "POST",
+          "responses": [
+            {
+              "id": 84,
+              "body": "{ id: uuid, status: 'ativo', data_ultima_ativacao: timestamp }",
+              "status_code": 200
+            },
+            {
+              "id": 85,
+              "body": "{ error: 'Unauthorized', message: 'Token inválido ou expirado' }",
+              "status_code": 401
+            },
+            {
+              "id": 86,
+              "body": "{ error: 'Forbidden', message: 'Acesso negado. Apenas administradores internos da plataforma podem ativar tenants' }",
+              "status_code": 403
+            },
+            {
+              "id": 87,
+              "body": "{ error: 'Not Found', message: 'Tenant não encontrado' }",
+              "status_code": 404
+            },
+            {
+              "id": 88,
+              "body": "{ error: 'Internal Server Error', message: 'Falha ao ativar tenant' }",
+              "status_code": 500
+            }
+          ],
+          "description": "Ativa um tenant previamente desativado, restaurando acesso de seus usuários (exclusivo para administradores internos)."
+        },
+        {
+          "id": 89,
+          "auth": "bearer",
+          "path": "/api/tenants/:id/deactivate",
+          "method": "POST",
+          "responses": [
+            {
+              "id": 90,
+              "body": "{ id: uuid, status: 'inativo', data_ultima_desativacao: timestamp }",
+              "status_code": 200
+            },
+            {
+              "id": 91,
+              "body": "{ error: 'Unauthorized', message: 'Token inválido ou expirado' }",
+              "status_code": 401
+            },
+            {
+              "id": 92,
+              "body": "{ error: 'Forbidden', message: 'Acesso negado. Apenas administradores internos da plataforma podem desativar tenants' }",
+              "status_code": 403
+            },
+            {
+              "id": 93,
+              "body": "{ error: 'Not Found', message: 'Tenant não encontrado' }",
+              "status_code": 404
+            },
+            {
+              "id": 94,
+              "body": "{ error: 'Internal Server Error', message: 'Falha ao desativar tenant' }",
+              "status_code": 500
+            }
+          ],
+          "description": "Desativa um tenant ativo, revogando acesso de todos seus usuários, invalidando suas sessões ativas (exclusivo para administradores internos)."
+        }
+      ],
+      "external_calls": [
+        {
+          "id": 95,
+          "auth": "none",
+          "name": "Consultar Repositório de Usuários e Tenants",
+          "endpoint": "internal://repository/users-tenants",
+          "fallback": "Retornar erro 500 com mensagem genérica ao usuário; registrar erro em auditoria",
+          "timeout_ms": 5000
+        },
+        {
+          "id": 96,
+          "auth": "none",
+          "name": "Emitir Evento de Auditoria",
+          "endpoint": "internal://audit/emit-event",
+          "fallback": "Registrar falha em log de erro; continuar processamento (auditoria é best-effort)",
+          "timeout_ms": 2000
+        },
+        {
+          "id": 97,
+          "auth": "none",
+          "name": "Invalidar Sessões de Usuário",
+          "endpoint": "internal://session/invalidate-user-sessions",
+          "fallback": "Registrar falha em auditoria; retornar erro 500 ao usuário",
+          "timeout_ms": 3000
+        },
+        {
+          "id": 98,
+          "auth": "none",
+          "name": "Validar Token JWT",
+          "endpoint": "internal://auth/validate-token",
+          "fallback": "Retornar erro 401 Unauthorized ao usuário",
+          "timeout_ms": 1000
+        }
+      ]
+    },
+    "pendencies": [
+      {
+        "id": 181,
+        "section": "definition",
+        "description": "Falta especificação de quais campos são retornados na listagem de usuários (GET /api/users). A feature de gerenciamento de perfil menciona 'nome completo, e-mail, nível hierárquico e status de ativação', mas não está claro se data_criacao e outros metadados devem ser incluídos.",
+        "resolutionOptions": [
+          {
+            "id": 182,
+            "text": "Retornar apenas campos essenciais: id, nome_completo, email, nivel_hierarquico_id, status, data_criacao (sem data_ultima_edicao, ultimo_editor_id)"
+          },
+          {
+            "id": 183,
+            "text": "Retornar todos os campos do usuário exceto password_hash: id, tenant_id, nome_completo, email, nivel_hierarquico_id, status, data_criacao, criador_id, data_ultima_edicao, ultimo_editor_id"
+          },
+          {
+            "id": 184,
+            "text": "Permitir cliente especificar quais campos retornar via query parameter 'fields' (ex: GET /api/users?fields=id,nome_completo,email)"
+          }
+        ],
+        "recommendedOptionId": 182
+      },
+      {
+        "id": 185,
+        "section": "definition",
+        "description": "Falta especificação de paginação para endpoints de listagem (GET /api/users, GET /api/hierarchy-levels, GET /api/tenants). Não está claro qual é o tamanho padrão de página, limite máximo e como o cliente especifica offset/limit.",
+        "resolutionOptions": [
+          {
+            "id": 186,
+            "text": "Implementar paginação com query parameters: limit (padrão 20, máximo 100) e offset (padrão 0); retornar total de registros na resposta"
+          },
+          {
+            "id": 187,
+            "text": "Implementar paginação baseada em cursor (cursor-based pagination) para melhor desempenho com grandes volumes"
+          },
+          {
+            "id": 188,
+            "text": "Implementar paginação com query parameters: page (padrão 1) e per_page (padrão 20, máximo 100)"
+          }
+        ],
+        "recommendedOptionId": 186
+      },
+      {
+        "id": 189,
+        "section": "definition",
+        "description": "Falta especificação de ordenação para endpoints de listagem. Não está claro quais campos podem ser usados para ordenação e qual é a ordem padrão.",
+        "resolutionOptions": [
+          {
+            "id": 190,
+            "text": "Implementar ordenação via query parameter 'sort' (ex: GET /api/users?sort=nome_completo:asc,data_criacao:desc); ordem padrão é data_criacao:desc"
+          },
+          {
+            "id": 191,
+            "text": "Implementar ordenação via query parameters 'sort_by' e 'sort_order' (ex: GET /api/users?sort_by=nome_completo&sort_order=asc)"
+          },
+          {
+            "id": 192,
+            "text": "Não implementar ordenação customizável; retornar sempre ordenado por data_criacao:desc"
+          }
+        ],
+        "recommendedOptionId": 190
+      },
+      {
+        "id": 193,
+        "section": "definition",
+        "description": "Falta especificação de filtros para endpoints de listagem de usuários. A feature menciona 'filtros por status', mas não está claro se há outros filtros (por nível hierárquico, por criador, etc.).",
+        "resolutionOptions": [
+          {
+            "id": 194,
+            "text": "Implementar apenas filtro por status (ativo/inativo) via query parameter 'status'"
+          },
+          {
+            "id": 195,
+            "text": "Implementar filtros por status, nivel_hierarquico_id, criador_id via query parameters"
+          },
+          {
+            "id": 196,
+            "text": "Implementar filtros genéricos via query parameter 'filter' com sintaxe (ex: GET /api/users?filter=status:ativo,nivel_hierarquico_id:uuid)"
+          }
+        ],
+        "recommendedOptionId": 194
+      },
+      {
+        "id": 197,
+        "section": "definition",
+        "description": "Falta especificação de como o handler identifica o tenant do administrador que está provisionando um novo tenant. Não está claro se o tenant_id vem do JWT ou se há um contexto de 'plataforma' separado.",
+        "resolutionOptions": [
+          {
+            "id": 198,
+            "text": "Administrador da plataforma não pertence a nenhum tenant específico; seu JWT contém perfil='administrador_plataforma' e tenant_id=null ou tenant_id='plataforma'"
+          },
+          {
+            "id": 199,
+            "text": "Administrador da plataforma pertence a um tenant especial 'admin' com tenant_id fixo; seu JWT contém perfil='administrador_plataforma' e tenant_id='admin-tenant-id'"
+          }
+        ],
+        "recommendedOptionId": 198
+      },
+      {
+        "id": 200,
+        "section": "flow",
+        "description": "Falta especificação de como o handler lida com requisições de desativação de tenant quando há usuários com sessões ativas. Não está claro se a invalidação de sessões é síncrona ou assíncrona.",
+        "resolutionOptions": [
+          {
+            "id": 201,
+            "text": "Invalidação de sessões é síncrona; handler aguarda conclusão antes de retornar resposta (pode aumentar latência)"
+          },
+          {
+            "id": 202,
+            "text": "Invalidação de sessões é assíncrona; handler enfileira tarefa de invalidação e retorna resposta imediatamente"
+          }
+        ],
+        "recommendedOptionId": 201
+      },
+      {
+        "id": 203,
+        "section": "rules",
+        "description": "Falta especificação de qual é o número máximo de tentativas de login falhadas antes de bloqueio. A feature menciona 'mecanismo de proteção', mas não especifica o número exato.",
+        "resolutionOptions": [
+          {
+            "id": 204,
+            "text": "Bloquear após 5 tentativas falhadas em 15 minutos (conforme padrão OWASP)"
+          },
+          {
+            "id": 205,
+            "text": "Bloquear após 3 tentativas falhadas em 10 minutos (mais restritivo)"
+          },
+          {
+            "id": 206,
+            "text": "Bloquear após 10 tentativas falhadas em 30 minutos (menos restritivo)"
+          }
+        ],
+        "recommendedOptionId": 204
+      },
+      {
+        "id": 207,
+        "section": "rules",
+        "description": "Falta especificação de qual é a duração do bloqueio temporário após atingir limite de tentativas de login. Não está claro se é 15 minutos, 1 hora, ou outro período.",
+        "resolutionOptions": [
+          {
+            "id": 208,
+            "text": "Bloqueio de 15 minutos (900 segundos) após atingir limite de tentativas"
+          },
+          {
+            "id": 209,
+            "text": "Bloqueio de 1 hora (3600 segundos) após atingir limite de tentativas"
+          },
+          {
+            "id": 210,
+            "text": "Bloqueio progressivo: 15 min na 1ª vez, 1 hora na 2ª vez, 24 horas na 3ª vez"
+          }
+        ],
+        "recommendedOptionId": 208
+      },
+      {
+        "id": 211,
+        "section": "non_functional_requirements",
+        "description": "Falta especificação de qual é o timeout máximo para operações de persistência no banco de dados. Não está claro se é 5 segundos, 10 segundos, ou outro valor.",
+        "resolutionOptions": [
+          {
+            "id": 212,
+            "text": "Timeout de 10 segundos para operações de banco de dados (conforme parâmetro database_query_timeout_seconds=10)"
+          },
+          {
+            "id": 213,
+            "text": "Timeout de 5 segundos para operações de banco de dados (mais agressivo)"
+          },
+          {
+            "id": 214,
+            "text": "Timeout de 30 segundos para operações de banco de dados (mais tolerante)"
+          }
+        ],
+        "recommendedOptionId": 212
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 165,
+        "then": "O handler retorna erro 400 Bad Request com mensagem indicando que o formato de e-mail é inválido",
+        "type": "unit",
+        "when": "O usuário submete um e-mail em formato inválido (ex: 'invalido@')",
+        "given": "Um formulário de cadastro de usuário com campo de e-mail",
+        "scenario": "Validação de formato de e-mail",
+        "target_section": "definition"
+      },
+      {
+        "id": 166,
+        "then": "O handler retorna erro 409 Conflict com mensagem indicando que o e-mail já está cadastrado",
+        "type": "unit",
+        "when": "Tenta-se cadastrar outro usuário no mesmo tenant com o mesmo e-mail",
+        "given": "Um tenant com um usuário já cadastrado com e-mail 'usuario@example.com'",
+        "scenario": "Validação de unicidade de e-mail por tenant",
+        "target_section": "definition"
+      },
+      {
+        "id": 167,
+        "then": "O handler retorna erro 403 Forbidden com mensagem indicando que apenas administradores podem cadastrar usuários",
+        "type": "unit",
+        "when": "Tenta-se cadastrar um novo usuário via POST /api/users",
+        "given": "Um usuário com perfil 'colaborador' autenticado",
+        "scenario": "Validação de controle de acesso para cadastro de usuário",
+        "target_section": "definition"
+      },
+      {
+        "id": 168,
+        "then": "O handler retorna erro 403 Forbidden com mensagem genérica indicando que o usuário não foi encontrado",
+        "type": "unit",
+        "when": "Tenta-se acessar um usuário que pertence ao tenant B via GET /api/users/:id",
+        "given": "Um usuário autenticado no tenant A",
+        "scenario": "Validação de isolamento multi-tenant",
+        "target_section": "definition"
+      },
+      {
+        "id": 169,
+        "then": "O handler persiste o usuário no repositório, registra auditoria, e retorna 201 Created com dados do usuário criado",
+        "type": "integration",
+        "when": "Submete um formulário de cadastro com dados válidos (nome, e-mail, nível hierárquico)",
+        "given": "Um administrador do tenant autenticado com token JWT válido",
+        "scenario": "Fluxo completo de cadastro de usuário",
+        "target_section": "flow"
+      },
+      {
+        "id": 170,
+        "then": "O handler atualiza o usuário no repositório, registra auditoria, e retorna 200 OK com dados do usuário atualizado",
+        "type": "integration",
+        "when": "Submete um formulário de edição com dados válidos (nome e/ou e-mail e/ou nível hierárquico)",
+        "given": "Um administrador do tenant autenticado com token JWT válido; um usuário já cadastrado no tenant",
+        "scenario": "Fluxo completo de edição de usuário",
+        "target_section": "flow"
+      },
+      {
+        "id": 171,
+        "then": "O handler marca o usuário como inativo, invalida suas sessões ativas, registra auditoria, e retorna 200 OK",
+        "type": "integration",
+        "when": "Submete uma requisição de desativação via POST /api/users/:id/deactivate",
+        "given": "Um administrador do tenant autenticado; um usuário ativo no tenant; o usuário não é o único administrador ativo",
+        "scenario": "Fluxo completo de desativação de usuário",
+        "target_section": "flow"
+      },
+      {
+        "id": 172,
+        "then": "O handler cria o tenant, cria estrutura isolada de dados, registra auditoria, e retorna 201 Created com dados do tenant criado",
+        "type": "integration",
+        "when": "Submete um formulário de provisionamento com dados válidos (nome, slug)",
+        "given": "Um administrador da plataforma autenticado com token JWT válido",
+        "scenario": "Fluxo completo de provisionamento de tenant",
+        "target_section": "flow"
+      },
+      {
+        "id": 173,
+        "then": "O handler retorna erro 401 Unauthorized com mensagem indicando que o token é inválido ou expirado",
+        "type": "security",
+        "when": "Submete uma requisição com este token no header Authorization",
+        "given": "Um token JWT com expiração de 3600 segundos que já expirou",
+        "scenario": "Validação de token JWT expirado",
+        "target_section": "definition"
+      },
+      {
+        "id": 174,
+        "then": "O handler retorna erro 401 Unauthorized com mensagem indicando que o token é inválido",
+        "type": "security",
+        "when": "Submete uma requisição com este token no header Authorization",
+        "given": "Um token JWT com assinatura RS256 inválida ou manipulada",
+        "scenario": "Validação de token JWT com assinatura inválida",
+        "target_section": "definition"
+      },
+      {
+        "id": 175,
+        "then": "O handler valida o formato de e-mail, rejeita a entrada como malformada, e retorna erro 400 Bad Request",
+        "type": "security",
+        "when": "Submete um e-mail contendo caracteres de injeção SQL (ex: \"'; DROP TABLE usuarios; --\")",
+        "given": "Um formulário de cadastro de usuário",
+        "scenario": "Proteção contra injeção SQL em campo de e-mail",
+        "target_section": "definition"
+      },
+      {
+        "id": 176,
+        "then": "O handler retorna 200 OK com 20 usuários em tempo p99 <= 300ms",
+        "type": "performance",
+        "when": "Submete uma requisição GET /api/users com paginação (limit=20, offset=0)",
+        "given": "Um tenant com 100 usuários cadastrados",
+        "scenario": "Desempenho de listagem de usuários com 100 registros",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 177,
+        "then": "O handler processa todas as requisições com p99 <= 500ms e taxa de erro < 1%",
+        "type": "performance",
+        "when": "Submete 500 requisições simultâneas de cadastro de usuário",
+        "given": "Um tenant com 5.000 usuários já cadastrados; 500 requisições concorrentes de cadastro",
+        "scenario": "Desempenho de cadastro de usuário sob carga",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 178,
+        "then": "O handler retorna 201 Created com body contendo { id: uuid, tenant_id: uuid, nome_completo: string, email: string, nivel_hierarquico_id: uuid, status: 'ativo', data_criacao: timestamp }",
+        "type": "contract",
+        "when": "Submete um formulário de cadastro com dados válidos",
+        "given": "Um administrador do tenant autenticado",
+        "scenario": "Contrato de resposta de sucesso para cadastro de usuário",
+        "target_section": "definition"
+      },
+      {
+        "id": 179,
+        "then": "O handler retorna 400 Bad Request com body contendo { error: string, field: 'nome_completo', message: string }",
+        "type": "contract",
+        "when": "Submete o formulário sem preencher o campo 'nome_completo'",
+        "given": "Um formulário de cadastro de usuário",
+        "scenario": "Contrato de resposta de erro para validação de campo obrigatório",
+        "target_section": "definition"
+      },
+      {
+        "id": 180,
+        "then": "Cada operação retorna sucesso; auditoria registra todas as operações; usuário desativado não consegue autenticar",
+        "type": "e2e",
+        "when": "Executa sequência: (1) cadastra novo usuário, (2) edita dados do usuário, (3) desativa o usuário",
+        "given": "Um administrador do tenant autenticado",
+        "scenario": "Fluxo completo de gerenciamento de usuário (cadastro, edição, desativação)",
+        "target_section": "flow"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 151,
+        "target": "p99 <= 500ms para operações de usuário; p99 <= 1000ms para operações de tenant; mesmo sob carga de 5.000 usuários ativos e 50 tenants",
+        "category": "performance",
+        "requirement": "Operações de cadastro, edição, ativação e desativação de usuários devem ser concluídas e retornar resposta ao cliente em tempo adequado.",
+        "verification": "Medir tempo de resposta (latência) de cada endpoint em ambiente de teste com carga simulada; registrar p50, p95, p99; validar que p99 não excede target."
+      },
+      {
+        "id": 152,
+        "target": "p99 <= 300ms para listar até 100 usuários por tenant; p99 <= 500ms para listar até 50 níveis hierárquicos",
+        "category": "performance",
+        "requirement": "Listagem de usuários e níveis hierárquicos deve ser rápida mesmo em tenants com grande número de registros.",
+        "verification": "Implementar paginação (limit/offset); medir tempo de resposta com diferentes tamanhos de página; validar que p99 não excede target."
+      },
+      {
+        "id": 153,
+        "target": "Suportar até 50 tenants com até 100 usuários cada (5.000 usuários totais) com p99 <= 500ms",
+        "category": "scalability",
+        "requirement": "Handler deve suportar múltiplos tenants simultâneos sem degradação de desempenho.",
+        "verification": "Executar teste de carga com múltiplos tenants simultâneos; medir tempo de resposta e taxa de erro; validar que sistema mantém SLA mesmo com carga distribuída."
+      },
+      {
+        "id": 154,
+        "target": "Suportar até 500 requisições concorrentes com p99 <= 1000ms",
+        "category": "scalability",
+        "requirement": "Handler deve suportar múltiplas requisições concorrentes sem deadlock ou contenção excessiva.",
+        "verification": "Executar teste de carga com múltiplas requisições simultâneas; medir tempo de resposta e taxa de erro; validar que sistema não apresenta deadlock ou contenção."
+      },
+      {
+        "id": 155,
+        "target": "100% das requisições devem validar token; rejeitar requisições com token inválido, expirado ou ausente com erro 401",
+        "category": "security",
+        "requirement": "Todas as requisições devem ser autenticadas via JWT com validação de assinatura (RS256) e expiração (3600 segundos).",
+        "verification": "Testar requisições sem token, com token inválido, com token expirado; validar que todas retornam 401 Unauthorized."
+      },
+      {
+        "id": 156,
+        "target": "Utilizar argon2id com m=64MiB, t=3, p=4; nunca armazenar senhas em texto simples ou formato reversível",
+        "category": "security",
+        "requirement": "Senhas de usuários devem ser armazenadas em hash seguro utilizando algoritmo resistente a ataques de força bruta.",
+        "verification": "Verificar que campo password_hash na tabela usuarios contém hash argon2id; tentar descriptografar deve falhar; testar que comparação de senha utiliza timing-safe comparison."
+      },
+      {
+        "id": 157,
+        "target": "100% das requisições devem utilizar HTTPS; rejeitar requisições HTTP não criptografadas",
+        "category": "security",
+        "requirement": "Todas as comunicações devem ser criptografadas em trânsito utilizando HTTPS com TLS 1.2 ou superior.",
+        "verification": "Testar que endpoints retornam erro ou redirecionam requisições HTTP para HTTPS; validar certificado TLS é válido e versão >= 1.2."
+      },
+      {
+        "id": 158,
+        "target": "100% das respostas devem omitir campos sensíveis; 100% dos logs devem redactar dados sensíveis",
+        "category": "security",
+        "requirement": "Dados sensíveis (password_hash, refresh_token_hash) não devem ser expostos em respostas de API ou logs.",
+        "verification": "Inspecionar respostas de API para verificar ausência de password_hash; inspecionar logs para verificar redação de dados sensíveis."
+      },
+      {
+        "id": 159,
+        "target": "100% das operações devem validar isolamento; rejeitar requisições que violam isolamento com erro 403",
+        "category": "security",
+        "requirement": "Isolamento de dados por tenant deve ser rigorosamente aplicado; usuários de um tenant nunca devem acessar dados de outro tenant.",
+        "verification": "Testar que usuário de tenant A não consegue acessar/modificar dados de tenant B; validar que todas as consultas filtram por tenant_id do executor."
+      },
+      {
+        "id": 160,
+        "target": "99.9% uptime (máximo 43 minutos de downtime por mês); p99 <= 500ms mesmo durante falhas de dependências",
+        "category": "availability",
+        "requirement": "Handler deve estar disponível com alta disponibilidade para suportar operações críticas de gerenciamento de usuários.",
+        "verification": "Implementar circuit breaker para falhas de repositório; implementar retry com backoff exponencial; medir uptime em produção."
+      },
+      {
+        "id": 161,
+        "target": "Falha de auditoria não deve bloquear operação (best-effort); falha de repositório deve retornar erro 500; falha de sessão deve registrar erro mas continuar",
+        "category": "availability",
+        "requirement": "Handler deve ser resiliente a falhas de dependências (repositório, auditoria, sessão) sem impactar disponibilidade.",
+        "verification": "Testar comportamento quando repositório está indisponível; validar que handler retorna erro apropriado; testar que auditoria falha gracefully."
+      },
+      {
+        "id": 162,
+        "target": "100% das operações devem gerar log estruturado com user_id, tenant_id, operation, status, timestamp, duration_ms; 100% das operações críticas devem gerar evento de auditoria",
+        "category": "observability",
+        "requirement": "Todas as operações devem ser rastreáveis através de logs estruturados e auditoria.",
+        "verification": "Verificar que logs contêm campos obrigatórios; verificar que auditoria registra todas as operações críticas com dados completos."
+      },
+      {
+        "id": 163,
+        "target": "100% dos erros devem incluir stack trace em log interno; 100% das respostas de erro devem ser genéricas sem expor detalhes técnicos",
+        "category": "observability",
+        "requirement": "Erros devem ser registrados com contexto suficiente para investigação sem expor dados sensíveis.",
+        "verification": "Verificar que logs internos contêm stack trace; verificar que respostas de erro ao cliente não expõem detalhes técnicos."
+      },
+      {
+        "id": 164,
+        "target": "Tempo de resposta p99 <= 500ms com pool de conexão de 20; cache de nível de aplicação para consultas frequentes",
+        "category": "cost",
+        "requirement": "Handler deve ser otimizado para minimizar uso de recursos (CPU, memória, I/O de banco de dados).",
+        "verification": "Medir uso de CPU, memória e I/O durante teste de carga; validar que recursos não excedem limites; implementar cache para reduzir I/O."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 35,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T16:01:39.595Z",
+  "updatedAt": null
+}

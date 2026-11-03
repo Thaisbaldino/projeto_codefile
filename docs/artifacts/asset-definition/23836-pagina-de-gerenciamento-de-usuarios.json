@@ -1,0 +1,698 @@
+{
+  "id": 23836,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 33,
+          "name": "Contexto de Autenticação do Usuário",
+          "format": "JWT Token com identificação de usuário, tenant e perfil",
+          "origin": "Sessão do Navegador",
+          "trigger": "Carregamento da página"
+        },
+        {
+          "id": 34,
+          "name": "Parâmetros de Rota",
+          "format": "string — /users",
+          "origin": "URL da Página",
+          "trigger": "Navegação para a página de gerenciamento de usuários"
+        },
+        {
+          "id": 35,
+          "name": "Dados de Usuários do Tenant",
+          "format": "JSON array de objetos usuário com id, nome, email, nivel_hierarquico, status",
+          "origin": "API Interna — GET /api/v1/users",
+          "trigger": "Carregamento inicial da página ou recarregamento da listagem"
+        },
+        {
+          "id": 36,
+          "name": "Dados de Níveis Hierárquicos",
+          "format": "JSON array de objetos nível hierárquico com id, nome, ordem",
+          "origin": "API Interna — GET /api/v1/hierarchy-levels",
+          "trigger": "Carregamento do formulário de edição"
+        },
+        {
+          "id": 37,
+          "name": "Dados do Usuário Selecionado",
+          "format": "JSON objeto usuário com todos os campos cadastrais",
+          "origin": "API Interna — GET /api/v1/users/:id",
+          "trigger": "Seleção de usuário na listagem para visualização de detalhes"
+        },
+        {
+          "id": 38,
+          "name": "Dados de Edição do Formulário",
+          "format": "JSON objeto com campos editáveis: nome_completo, email, nivel_hierarquico_id",
+          "origin": "Entrada do Usuário",
+          "trigger": "Submissão do formulário de edição"
+        },
+        {
+          "id": 39,
+          "name": "Confirmação de Ativação/Desativação",
+          "format": "boolean — true para confirmar, false para cancelar",
+          "origin": "Entrada do Usuário",
+          "trigger": "Clique em botão de confirmação no modal"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 54,
+          "name": "Listagem de Usuários Renderizada",
+          "format": "HTML/CSS/JavaScript — tabela responsiva com linhas de usuários",
+          "destination": "Navegador do Administrador"
+        },
+        {
+          "id": 55,
+          "name": "Painel de Detalhes do Usuário",
+          "format": "HTML/CSS/JavaScript — painel lateral ou modal com informações completas do usuário selecionado",
+          "destination": "Navegador do Administrador"
+        },
+        {
+          "id": 56,
+          "name": "Formulário de Edição de Perfil",
+          "format": "HTML/CSS/JavaScript — formulário com campos editáveis e validação em tempo real",
+          "destination": "Navegador do Administrador"
+        },
+        {
+          "id": 57,
+          "name": "Mensagem de Confirmação de Sucesso",
+          "format": "Toast/Alert — mensagem textual confirmando conclusão de operação",
+          "destination": "Navegador do Administrador"
+        },
+        {
+          "id": 58,
+          "name": "Mensagem de Erro",
+          "format": "Toast/Alert — mensagem textual descrevendo falha de validação ou persistência",
+          "destination": "Navegador do Administrador"
+        },
+        {
+          "id": 59,
+          "name": "Modal de Confirmação",
+          "format": "HTML/CSS/JavaScript — modal com botões de confirmação e cancelamento",
+          "destination": "Navegador do Administrador"
+        },
+        {
+          "id": 60,
+          "name": "Evento de Auditoria",
+          "format": "JSON — { usuario_executor, tenant_id, timestamp, operacao, usuario_alvo, dados_alterados }",
+          "destination": "Sistema de Auditoria"
+        }
+      ],
+      "processing": [
+        {
+          "id": 40,
+          "step": "Validar Autenticação e Autorização",
+          "description": "Verificar que o usuário está autenticado, ativo, é administrador do tenant e que o tenant está ativo; redirecionar para login se não autorizado."
+        },
+        {
+          "id": 41,
+          "step": "Carregar Lista de Usuários do Tenant",
+          "description": "Buscar na API todos os usuários cadastrados no tenant do administrador autenticado, aplicando isolamento de dados."
+        },
+        {
+          "id": 42,
+          "step": "Renderizar Listagem Tabular",
+          "description": "Exibir tabela com colunas de nome, e-mail, nível hierárquico, status e ações (editar, ativar/desativar)."
+        },
+        {
+          "id": 43,
+          "step": "Processar Seleção de Usuário",
+          "description": "Quando usuário clica em linha da tabela, carregar dados completos do usuário selecionado e exibir painel de detalhes."
+        },
+        {
+          "id": 44,
+          "step": "Abrir Formulário de Edição",
+          "description": "Carregar níveis hierárquicos disponíveis e pré-preencher formulário com dados atuais do usuário selecionado."
+        },
+        {
+          "id": 45,
+          "step": "Validar Campos do Formulário",
+          "description": "Validar no cliente: campos obrigatórios preenchidos, formato de e-mail válido, comprimento máximo de título respeitado."
+        },
+        {
+          "id": 46,
+          "step": "Submeter Dados de Edição à API",
+          "description": "Enviar PUT request para /api/v1/users/:id com dados editados; API valida unicidade de e-mail, referência de nível hierárquico e isolamento de tenant."
+        },
+        {
+          "id": 47,
+          "step": "Processar Resposta de Edição",
+          "description": "Se sucesso, exibir mensagem de confirmação e recarregar listagem; se erro, exibir mensagem de erro específica."
+        },
+        {
+          "id": 48,
+          "step": "Exibir Modal de Confirmação de Ativação",
+          "description": "Quando usuário clica em 'Ativar' para usuário inativo, exibir modal com confirmação de ação."
+        },
+        {
+          "id": 49,
+          "step": "Exibir Modal de Confirmação de Desativação",
+          "description": "Quando usuário clica em 'Desativar' para usuário ativo, exibir modal com aviso de impacto e confirmação."
+        },
+        {
+          "id": 50,
+          "step": "Validar Restrição de Auto-desativação",
+          "description": "Impedir que administrador desative seu próprio perfil se for o único administrador ativo; exibir mensagem de erro."
+        },
+        {
+          "id": 51,
+          "step": "Submeter Alteração de Status à API",
+          "description": "Enviar PATCH request para /api/v1/users/:id/status com novo status (ativo ou inativo); API persiste alteração e invalida sessões se desativação."
+        },
+        {
+          "id": 52,
+          "step": "Processar Resposta de Ativação/Desativação",
+          "description": "Se sucesso, exibir mensagem de confirmação e recarregar listagem; se erro, exibir mensagem de erro específica."
+        },
+        {
+          "id": 53,
+          "step": "Aplicar Isolamento de Dados por Tenant",
+          "description": "Garantir que todas as requisições à API incluem contexto de tenant e que respostas contêm apenas dados do tenant autenticado."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 61,
+        "category": "authorization",
+        "description": "Apenas usuários com perfil de administrador do tenant podem acessar a página de gerenciamento de usuários e executar operações de edição, ativação e desativação.",
+        "enforcement": "code",
+        "verification": "Validar no middleware de rota que user.perfil === 'administrador_tenant' antes de renderizar a página; redirecionar para /tasks se não autorizado."
+      },
+      {
+        "id": 62,
+        "category": "authorization",
+        "description": "Apenas o administrador do tenant pode editar perfis de outros usuários; um usuário não pode editar seu próprio perfil através desta página.",
+        "enforcement": "code",
+        "verification": "Validar no handler de edição que user.id !== target_user.id ou que user.perfil === 'administrador_tenant'; retornar erro 403 se violado."
+      },
+      {
+        "id": 63,
+        "category": "authorization",
+        "description": "Um administrador não pode desativar seu próprio perfil se for o único administrador ativo no tenant.",
+        "enforcement": "code",
+        "verification": "Antes de permitir desativação, contar administradores ativos no tenant; se count === 1 e user.id === target_user.id, retornar erro 400 com mensagem específica."
+      },
+      {
+        "id": 64,
+        "category": "validation",
+        "description": "O campo de nome completo é obrigatório e não pode estar em branco.",
+        "enforcement": "code",
+        "verification": "Validar no cliente e servidor que nome_completo.trim().length > 0; exibir mensagem de erro 'Nome completo é obrigatório' se vazio."
+      },
+      {
+        "id": 65,
+        "category": "validation",
+        "description": "O campo de e-mail é obrigatório e deve estar em formato válido conforme RFC 5322.",
+        "enforcement": "code",
+        "verification": "Validar no cliente com regex /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/ e no servidor com validação RFC 5322; exibir mensagem de erro se formato inválido."
+      },
+      {
+        "id": 66,
+        "category": "validation",
+        "description": "O e-mail deve ser único dentro do tenant; não é permitido registrar dois usuários com o mesmo e-mail na mesma organização.",
+        "enforcement": "db_constraint",
+        "verification": "Índice único composto (tenant_id, email) na tabela usuarios; tentativa de inserção duplicada resultará em erro de constraint violation que será capturado e exibido como mensagem de erro ao usuário."
+      },
+      {
+        "id": 67,
+        "category": "validation",
+        "description": "O nível hierárquico selecionado deve existir e pertencer ao tenant do administrador.",
+        "enforcement": "code",
+        "verification": "Validar no handler que nivel_hierarquico_id existe em niveis_hierarquicos com tenant_id === user.tenant_id; retornar erro 400 se não encontrado."
+      },
+      {
+        "id": 68,
+        "category": "invariant",
+        "description": "Dados de usuários de um tenant nunca são visíveis ou acessíveis por usuários de outro tenant.",
+        "enforcement": "code",
+        "verification": "Todas as queries de usuários incluem filtro WHERE tenant_id = :tenant_id; validar no handler que user.tenant_id === target_user.tenant_id antes de qualquer operação."
+      },
+      {
+        "id": 69,
+        "category": "invariant",
+        "description": "Quando um usuário é desativado, todas as suas sessões ativas são invalidadas imediatamente, bloqueando acesso à plataforma.",
+        "enforcement": "code",
+        "verification": "No handler de desativação, após persistir status = 'inativo', invocar serviço de sessão para invalidar todos os tokens do usuário; verificar que login subsequente retorna erro de acesso bloqueado."
+      },
+      {
+        "id": 70,
+        "category": "compliance",
+        "description": "Toda operação de edição, ativação ou desativação de usuário deve ser registrada em log de auditoria com identificação do executor, timestamp, identificação do usuário alvo e dados alterados.",
+        "enforcement": "code",
+        "verification": "Após cada operação bem-sucedida, registrar entrada em tabela de auditoria com user_executor_id, tenant_id, timestamp, operacao, usuario_alvo_id, dados_alterados; verificar que log contém entrada correspondente."
+      },
+      {
+        "id": 71,
+        "category": "compliance",
+        "description": "Dados pessoais de usuários (nome e e-mail) devem ser tratados em conformidade com LGPD, aplicando princípios de minimização de dados e proteção de informações pessoais.",
+        "enforcement": "code",
+        "verification": "Dados pessoais são armazenados apenas quando necessário para autenticação e comunicação; não são compartilhados com terceiros; usuários podem solicitar exclusão de dados conforme política de retenção."
+      },
+      {
+        "id": 72,
+        "category": "observability",
+        "description": "Erros de validação e persistência devem ser registrados em logs de aplicação com contexto suficiente para diagnóstico.",
+        "enforcement": "code",
+        "verification": "Cada erro capturado é registrado com stack trace, contexto de tenant, identificação do usuário executor e dados da requisição; logs são acessíveis para troubleshooting."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "A Página de Gerenciamento de Usuários é uma superfície de interface especializada que permite ao administrador do tenant visualizar, editar, ativar e desativar colaboradores cadastrados na organização. Compõe-se de uma listagem tabular de usuários com colunas de nome, e-mail, nível hierárquico e status de ativação, formulários de edição de perfil com validação de campos obrigatórios e unicidade de e-mail por tenant, controles de ativação e desativação com confirmação prévia, e mecanismos de isolamento de dados que garantem que apenas usuários do tenant do administrador sejam visíveis e editáveis. Integra-se ao fluxo de gerenciamento de perfil de usuário, aplicando regras de controle de acesso por perfil, validações de negócio, rastreabilidade de auditoria, e invalidação de sessões quando um usuário é desativado. Funciona como o ponto de entrada para operações administrativas de gestão de colaboradores, permitindo que administradores de tenant mantenham o controle sobre quem tem acesso ativo à plataforma."
+    },
+    "definition": {
+      "route": "/users",
+      "renders": [
+        {
+          "id": 2,
+          "kind": "table",
+          "name": "Listagem de Usuários",
+          "source": "users_list_component"
+        },
+        {
+          "id": 3,
+          "kind": "form",
+          "name": "Formulário de Edição de Usuário",
+          "source": "user_edit_form_component"
+        },
+        {
+          "id": 4,
+          "kind": "interactive_surface",
+          "name": "Modal de Confirmação de Ativação",
+          "source": "activation_confirmation_modal"
+        },
+        {
+          "id": 5,
+          "kind": "interactive_surface",
+          "name": "Modal de Confirmação de Desativação",
+          "source": "deactivation_confirmation_modal"
+        },
+        {
+          "id": 6,
+          "kind": "panel",
+          "name": "Painel de Detalhes do Usuário",
+          "source": "user_detail_panel"
+        }
+      ],
+      "state_machine": {
+        "states": [
+          {
+            "id": 7,
+            "name": "Listagem Carregada",
+            "description": "Estado inicial onde a lista de usuários do tenant foi carregada e exibida com sucesso."
+          },
+          {
+            "id": 8,
+            "name": "Usuário Selecionado",
+            "description": "Um usuário foi selecionado na listagem para visualização de detalhes ou edição."
+          },
+          {
+            "id": 9,
+            "name": "Formulário de Edição Aberto",
+            "description": "O formulário de edição de perfil foi aberto com os dados atuais do usuário pré-preenchidos."
+          },
+          {
+            "id": 10,
+            "name": "Validando Edição",
+            "description": "Os dados do formulário de edição estão sendo validados no cliente e servidor."
+          },
+          {
+            "id": 11,
+            "name": "Edição Persistida",
+            "description": "As alterações do usuário foram persistidas com sucesso no banco de dados."
+          },
+          {
+            "id": 12,
+            "name": "Confirmação de Ativação Exibida",
+            "description": "Modal de confirmação foi exibido antes de ativar um usuário inativo."
+          },
+          {
+            "id": 13,
+            "name": "Confirmação de Desativação Exibida",
+            "description": "Modal de confirmação foi exibido antes de desativar um usuário ativo."
+          },
+          {
+            "id": 14,
+            "name": "Ativação/Desativação Persistida",
+            "description": "A alteração de status do usuário foi persistida e sessões foram invalidadas se necessário."
+          },
+          {
+            "id": 15,
+            "name": "Erro de Validação",
+            "description": "Validação falhou e mensagem de erro foi exibida ao administrador."
+          },
+          {
+            "id": 16,
+            "name": "Erro de Persistência",
+            "description": "Falha ao persistir alterações no banco de dados; mensagem de erro foi exibida."
+          }
+        ],
+        "transitions": [
+          {
+            "id": 17,
+            "to": "Usuário Selecionado",
+            "from": "Listagem Carregada",
+            "trigger": "Usuário clica em linha da tabela para visualizar detalhes"
+          },
+          {
+            "id": 18,
+            "to": "Formulário de Edição Aberto",
+            "from": "Usuário Selecionado",
+            "trigger": "Usuário clica em botão 'Editar' no painel de detalhes"
+          },
+          {
+            "id": 19,
+            "to": "Validando Edição",
+            "from": "Formulário de Edição Aberto",
+            "trigger": "Usuário submete o formulário com dados modificados"
+          },
+          {
+            "id": 20,
+            "to": "Edição Persistida",
+            "from": "Validando Edição",
+            "guard": "validacao_passou AND persistencia_sucesso",
+            "trigger": "Todas as validações passaram e dados foram persistidos com sucesso"
+          },
+          {
+            "id": 21,
+            "to": "Erro de Validação",
+            "from": "Validando Edição",
+            "guard": "validacao_falhou",
+            "trigger": "Validação falhou em um ou mais campos"
+          },
+          {
+            "id": 22,
+            "to": "Listagem Carregada",
+            "from": "Edição Persistida",
+            "trigger": "Página é recarregada ou usuário retorna à listagem"
+          },
+          {
+            "id": 23,
+            "to": "Confirmação de Ativação Exibida",
+            "from": "Usuário Selecionado",
+            "guard": "usuario_status == 'inativo'",
+            "trigger": "Usuário clica em botão 'Ativar' para um usuário inativo"
+          },
+          {
+            "id": 24,
+            "to": "Ativação/Desativação Persistida",
+            "from": "Confirmação de Ativação Exibida",
+            "trigger": "Usuário confirma a ativação no modal"
+          },
+          {
+            "id": 25,
+            "to": "Confirmação de Desativação Exibida",
+            "from": "Usuário Selecionado",
+            "guard": "usuario_status == 'ativo' AND NOT eh_unico_admin",
+            "trigger": "Usuário clica em botão 'Desativar' para um usuário ativo"
+          },
+          {
+            "id": 26,
+            "to": "Ativação/Desativação Persistida",
+            "from": "Confirmação de Desativação Exibida",
+            "trigger": "Usuário confirma a desativação no modal"
+          },
+          {
+            "id": 27,
+            "to": "Listagem Carregada",
+            "from": "Ativação/Desativação Persistida",
+            "trigger": "Página é recarregada ou usuário retorna à listagem"
+          },
+          {
+            "id": 28,
+            "to": "Usuário Selecionado",
+            "from": "Confirmação de Ativação Exibida",
+            "trigger": "Usuário cancela a ativação no modal"
+          },
+          {
+            "id": 29,
+            "to": "Usuário Selecionado",
+            "from": "Confirmação de Desativação Exibida",
+            "trigger": "Usuário cancela a desativação no modal"
+          },
+          {
+            "id": 30,
+            "to": "Erro de Persistência",
+            "from": "Validando Edição",
+            "guard": "persistencia_falhou",
+            "trigger": "Falha ao persistir dados no banco de dados"
+          },
+          {
+            "id": 31,
+            "to": "Formulário de Edição Aberto",
+            "from": "Erro de Validação",
+            "trigger": "Usuário corrige os erros e resubmete o formulário"
+          },
+          {
+            "id": 32,
+            "to": "Formulário de Edição Aberto",
+            "from": "Erro de Persistência",
+            "trigger": "Usuário tenta novamente após erro de persistência"
+          }
+        ]
+      }
+    },
+    "pendencies": [
+      {
+        "id": 91,
+        "section": "definition",
+        "description": "Falta definição clara de quais campos além de nome, e-mail e nível hierárquico podem ser editados pelo administrador. A feature define apenas esses três, mas a página pode precisar suportar edição de outros atributos (ex: telefone, departamento) em versões futuras.",
+        "resolutionOptions": [
+          {
+            "id": 92,
+            "text": "Limitar edição aos três campos definidos (nome, e-mail, nível hierárquico) e documentar que expansão futura requer mudança de feature e schema."
+          },
+          {
+            "id": 93,
+            "text": "Estender a feature para incluir campos adicionais editáveis e atualizar schema de usuário para suportá-los."
+          },
+          {
+            "id": 94,
+            "text": "Implementar sistema de campos customizáveis por tenant que permite administrador definir quais campos são editáveis."
+          }
+        ],
+        "recommendedOptionId": 92
+      },
+      {
+        "id": 95,
+        "section": "flow",
+        "description": "A feature de gerenciamento de perfil menciona que administrador pode editar 'dados cadastrais', mas não especifica se há limite de caracteres para nome completo ou se há validações adicionais além de formato de e-mail.",
+        "resolutionOptions": [
+          {
+            "id": 96,
+            "text": "Definir limite máximo de 255 caracteres para nome completo e validar no cliente e servidor."
+          },
+          {
+            "id": 97,
+            "text": "Definir limite máximo de 100 caracteres para nome completo (mais restritivo) para otimizar exibição em interfaces."
+          },
+          {
+            "id": 98,
+            "text": "Não impor limite de caracteres além do que o banco de dados suporta (ex: VARCHAR(1000))."
+          }
+        ],
+        "recommendedOptionId": 96
+      },
+      {
+        "id": 99,
+        "section": "rules",
+        "description": "A regra de isolamento multi-tenant é crítica, mas não está claro se há validação adicional no nível de banco de dados (ex: row-level security) ou se a validação é apenas em nível de aplicação.",
+        "resolutionOptions": [
+          {
+            "id": 100,
+            "text": "Implementar validação apenas em nível de aplicação (código) com filtros WHERE tenant_id em todas as queries."
+          },
+          {
+            "id": 101,
+            "text": "Implementar row-level security (RLS) no banco de dados PostgreSQL para garantir isolamento em nível de storage."
+          },
+          {
+            "id": 102,
+            "text": "Implementar ambos: validação em nível de aplicação como primeira linha de defesa e RLS como segunda linha de defesa."
+          }
+        ],
+        "recommendedOptionId": 102
+      },
+      {
+        "id": 103,
+        "section": "non_functional_requirements",
+        "description": "O requisito de performance menciona p95 <= 500ms para carregamento da listagem, mas não especifica se isso inclui tempo de renderização no navegador ou apenas tempo de resposta da API.",
+        "resolutionOptions": [
+          {
+            "id": 104,
+            "text": "Definir p95 <= 500ms como tempo total end-to-end (API + renderização no navegador)."
+          },
+          {
+            "id": 105,
+            "text": "Definir p95 <= 300ms para resposta da API e p95 <= 200ms para renderização no navegador (total 500ms)."
+          },
+          {
+            "id": 106,
+            "text": "Definir apenas tempo de resposta da API (p95 <= 500ms) e deixar renderização como responsabilidade do frontend."
+          }
+        ],
+        "recommendedOptionId": 104
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 81,
+        "then": "O formulário exibe mensagem de erro 'Formato de e-mail inválido' e não permite submissão",
+        "type": "unit",
+        "when": "O administrador insere um e-mail em formato inválido (ex: 'usuario@' ou 'usuario.com')",
+        "given": "Um administrador está editando o perfil de um usuário",
+        "scenario": "Validação de formato de e-mail no formulário de edição",
+        "target_section": "definition"
+      },
+      {
+        "id": 82,
+        "then": "A API retorna erro 400 'E-mail já existe neste tenant' e a edição não é persistida",
+        "type": "unit",
+        "when": "O administrador tenta editar usuario2 alterando seu e-mail para usuario1@example.com",
+        "given": "Um tenant possui dois usuários: usuario1@example.com e usuario2@example.com",
+        "scenario": "Validação de unicidade de e-mail por tenant",
+        "target_section": "definition"
+      },
+      {
+        "id": 83,
+        "then": "A edição é persistida, mensagem de sucesso é exibida, listagem é recarregada com dados atualizados, e entrada de auditoria é registrada",
+        "type": "integration",
+        "when": "O administrador seleciona um usuário, clica em 'Editar', modifica o nome e e-mail, e submete o formulário",
+        "given": "Um administrador está autenticado e visualizando a listagem de usuários do tenant",
+        "scenario": "Fluxo completo de edição de usuário",
+        "target_section": "flow"
+      },
+      {
+        "id": 84,
+        "then": "O status do usuário muda para inativo, suas sessões ativas são invalidadas, próxima tentativa de login retorna erro 'Acesso bloqueado', e entrada de auditoria é registrada",
+        "type": "integration",
+        "when": "O administrador clica em 'Desativar', confirma no modal, e a operação é concluída",
+        "given": "Um usuário está autenticado e ativo; um administrador está visualizando seu perfil",
+        "scenario": "Fluxo de desativação de usuário com invalidação de sessão",
+        "target_section": "flow"
+      },
+      {
+        "id": 85,
+        "then": "O middleware de rota valida que user.perfil !== 'administrador_tenant' e redireciona para /tasks com mensagem de acesso negado",
+        "type": "security",
+        "when": "O navegador carrega a página de gerenciamento de usuários",
+        "given": "Um usuário com perfil de colaborador tenta acessar /users",
+        "scenario": "Restrição de acesso para não-administradores",
+        "target_section": "rules"
+      },
+      {
+        "id": 86,
+        "then": "O botão 'Desativar' está desabilitado ou clique exibe mensagem de erro 'Não é possível desativar o único administrador ativo'",
+        "type": "security",
+        "when": "O administrador tenta desativar seu próprio perfil",
+        "given": "Um administrador é o único administrador ativo no tenant",
+        "scenario": "Prevenção de auto-desativação de único administrador",
+        "target_section": "rules"
+      },
+      {
+        "id": 87,
+        "then": "A API valida que user.tenant_id === target_user.tenant_id e retorna erro 403 'Acesso negado'; usuários do Tenant B não são visíveis",
+        "type": "security",
+        "when": "Um administrador do Tenant A tenta acessar usuários do Tenant B manipulando parâmetros de requisição",
+        "given": "Dois tenants (Tenant A e Tenant B) possuem usuários cadastrados",
+        "scenario": "Isolamento de dados entre tenants",
+        "target_section": "rules"
+      },
+      {
+        "id": 88,
+        "then": "A listagem é carregada e renderizada em p95 <= 500ms; tabela é responsiva e navegável sem lag",
+        "type": "performance",
+        "when": "Um administrador acessa a página de gerenciamento de usuários",
+        "given": "Um tenant possui 100 usuários cadastrados",
+        "scenario": "Carregamento de listagem com 100 usuários",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 89,
+        "then": "O status do usuário muda para ativo, mensagem de sucesso é exibida, usuário pode fazer login novamente, e entrada de auditoria é registrada",
+        "type": "e2e",
+        "when": "O administrador clica em 'Ativar', confirma no modal, e a operação é concluída",
+        "given": "Um usuário está com status inativo; um administrador está visualizando seu perfil",
+        "scenario": "Fluxo de ativação de usuário desativado",
+        "target_section": "flow"
+      },
+      {
+        "id": 90,
+        "then": "A API retorna 200 OK com corpo { id, nome_completo, email, nivel_hierarquico_id, status, data_ultima_edicao }; se dados inválidos, retorna 400 com erro específico",
+        "type": "contract",
+        "when": "A API processa a requisição com dados válidos",
+        "given": "Um cliente envia PUT /api/v1/users/:id com corpo { nome_completo, email, nivel_hierarquico_id }",
+        "scenario": "Contrato de API para edição de usuário",
+        "target_section": "definition"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 73,
+        "target": "p95 <= 500ms para carregamento inicial da listagem; p95 <= 200ms para recarregamento após edição",
+        "category": "performance",
+        "requirement": "Carregamento da listagem de usuários deve ser rápido mesmo em tenants com até 100 usuários ativos.",
+        "verification": "Medir tempo de resposta da API GET /api/v1/users com 100 usuários; implementar paginação ou lazy loading se necessário; monitorar p95 em produção."
+      },
+      {
+        "id": 74,
+        "target": "p95 <= 1000ms para persistência de edição; p95 <= 500ms para ativação/desativação",
+        "category": "performance",
+        "requirement": "Operações de edição, ativação e desativação devem ser concluídas e confirmadas ao usuário em tempo adequado.",
+        "verification": "Medir tempo de resposta da API PUT /api/v1/users/:id e PATCH /api/v1/users/:id/status; monitorar p95 em produção sob carga de até 5.000 usuários ativos."
+      },
+      {
+        "id": 75,
+        "target": "Breakpoints: mobile 320px, tablet 768px, desktop 1024px; interface totalmente funcional em todos os tamanhos",
+        "category": "scalability",
+        "requirement": "A página deve suportar renderização responsiva e adaptativa em dispositivos móveis, tablets e desktops.",
+        "verification": "Testar em dispositivos reais ou emuladores com resoluções 320px, 768px, 1024px; verificar que todos os controles são acessíveis e utilizáveis em toque."
+      },
+      {
+        "id": 76,
+        "target": "100% das requisições via HTTPS; TLS 1.2 ou superior",
+        "category": "security",
+        "requirement": "Todas as comunicações entre navegador e API devem ser criptografadas com HTTPS.",
+        "verification": "Configurar servidor para aceitar apenas HTTPS; verificar que requisições HTTP são redirecionadas para HTTPS; testar com ferramentas de análise de segurança."
+      },
+      {
+        "id": 77,
+        "target": "100% dos campos de entrada validados; sanitização de dados antes de renderização",
+        "category": "security",
+        "requirement": "Validação de entrada deve ser aplicada no cliente e no servidor para prevenir injeção de código e XSS.",
+        "verification": "Testar com payloads de XSS e SQL injection; verificar que dados maliciosos são rejeitados ou escapados; usar Content Security Policy (CSP) headers."
+      },
+      {
+        "id": 78,
+        "target": "99.5% uptime; RTO <= 5 minutos em caso de falha",
+        "category": "availability",
+        "requirement": "A página deve estar disponível com alta disponibilidade, dado que sua indisponibilidade impede administradores de gerenciar usuários.",
+        "verification": "Implementar health checks; monitorar disponibilidade em produção; ter plano de recuperação de desastres documentado."
+      },
+      {
+        "id": 79,
+        "target": "100% de operações de edição, ativação e desativação registradas em auditoria; erros registrados com stack trace",
+        "category": "observability",
+        "requirement": "Erros e eventos importantes devem ser registrados e monitoráveis para diagnóstico e auditoria.",
+        "verification": "Verificar que logs de auditoria contêm todas as operações; implementar alertas para erros críticos; revisar logs regularmente."
+      },
+      {
+        "id": 80,
+        "target": "Requisições à API <= 2 por operação de usuário; cache de dados estáticos por até 5 minutos",
+        "category": "cost",
+        "requirement": "Otimizar uso de recursos de rede e computação para manter custos operacionais baixos.",
+        "verification": "Monitorar número de requisições por operação; implementar cache em nível de aplicação; revisar custos de infraestrutura mensalmente."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 14,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T06:43:40.502Z",
+  "updatedAt": null
+}

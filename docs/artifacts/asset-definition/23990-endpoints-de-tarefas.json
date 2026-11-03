@@ -1,0 +1,480 @@
+{
+  "id": 23990,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 10,
+          "name": "Requisição HTTP POST com payload de criação de tarefa",
+          "format": "application/json",
+          "origin": "Cliente autenticado (frontend web, aplicação móvel)",
+          "trigger": "Usuário submete formulário de criação de tarefa"
+        },
+        {
+          "id": 11,
+          "name": "Token JWT de autenticação",
+          "format": "JWT (RS256)",
+          "origin": "Header Authorization: Bearer <token>"
+        },
+        {
+          "id": 12,
+          "name": "Contexto de tenant do usuário autenticado",
+          "format": "uuid",
+          "origin": "Claim tenant_id extraído do JWT"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 22,
+          "name": "Resposta HTTP 201 com dados da tarefa criada",
+          "format": "application/json",
+          "destination": "Cliente autenticado (frontend web, aplicação móvel)"
+        },
+        {
+          "id": 23,
+          "name": "Evento de domínio TarefaCriada",
+          "format": "JSON com schema definido",
+          "destination": "Sistema de eventos (message broker, event store)"
+        },
+        {
+          "id": 24,
+          "name": "Entrada de auditoria registrada",
+          "format": "Registro estruturado com timestamp, user_id, tenant_id, ação, dados",
+          "destination": "Trilha de auditoria (banco de dados ou log centralizado)"
+        }
+      ],
+      "processing": [
+        {
+          "id": 13,
+          "step": "Validar autenticação e extrair contexto de tenant",
+          "description": "Valida presença e assinatura do token JWT, extrai claims (user_id, tenant_id, email, perfil), verifica expiração e autoriza acesso ao endpoint"
+        },
+        {
+          "id": 14,
+          "step": "Validar preenchimento de campos obrigatórios",
+          "description": "Verifica se titulo, responsavel_id e prioridade foram fornecidos no payload, rejeitando requisição com erro 400 se algum campo obrigatório estiver ausente"
+        },
+        {
+          "id": 15,
+          "step": "Validar formato e limites de entrada",
+          "description": "Valida que titulo não está vazio, não excede 255 caracteres, responsavel_id é UUID válido, prioridade é um dos valores permitidos (baixa, media, alta, urgente), data_limite (se fornecida) é data válida e não retroativa"
+        },
+        {
+          "id": 16,
+          "step": "Consultar responsável no repositório de usuários",
+          "description": "Busca registro do usuário responsável selecionado no repositório, validando que usuário existe, pertence ao mesmo tenant do criador, e possui status ativo; retorna erro 409 se responsável inativo ou não encontrado"
+        },
+        {
+          "id": 17,
+          "step": "Invocar regra de negócio de prioridade e prazo",
+          "description": "Executa Regras de Prioridade e Prazo de Tarefas para validar combinação de prioridade e prazo, garantir isolamento multi-tenant, confirmar responsável ativo no tenant, e determinar elegibilidade para destaque de criticidade"
+        },
+        {
+          "id": 18,
+          "step": "Persistir tarefa no repositório",
+          "description": "Invoca repositório de tarefas para criar novo registro com dados validados, gerando UUID único, registrando tenant_id do criador, data_criacao, criador_id, status inicial (a_fazer se não fornecido), e retornando tarefa criada"
+        },
+        {
+          "id": 19,
+          "step": "Registrar evento de criação em trilha de auditoria",
+          "description": "Registra operação de criação de tarefa na trilha de auditoria, incluindo identificação do usuário criador, tenant, timestamp, dados principais da tarefa criada, em conformidade com requisitos de rastreabilidade LGPD"
+        },
+        {
+          "id": 20,
+          "step": "Emitir evento de sucesso",
+          "description": "Emite evento de domínio TarefaCriada contendo identificadores e dados principais da tarefa recém-criada, permitindo que outros componentes reajam à criação"
+        },
+        {
+          "id": 21,
+          "step": "Retornar resposta de sucesso ao cliente",
+          "description": "Retorna status 201 Created com envelope de sucesso contendo dados completos da tarefa criada, timestamp, request_id para rastreamento"
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 25,
+        "category": "validation",
+        "description": "Título da tarefa é obrigatório, não pode estar vazio, não pode exceder 255 caracteres e deve conter apenas caracteres permitidos (alfanuméricos, espaços, pontuação básica)",
+        "enforcement": "code",
+        "verification": "Validação executada no handler de requisição antes de persistência; testes unitários verificam rejeição de títulos vazios, com mais de 255 caracteres e com caracteres inválidos"
+      },
+      {
+        "id": 26,
+        "category": "validation",
+        "description": "Responsável da tarefa é obrigatório e deve ser um UUID válido de um usuário ativo pertencente ao mesmo tenant do criador",
+        "enforcement": "code",
+        "verification": "Validação executada através de consulta ao repositório de usuários; testes de integração verificam rejeição de UUIDs inválidos, usuários inativos e usuários de outros tenants"
+      },
+      {
+        "id": 27,
+        "category": "validation",
+        "description": "Prioridade da tarefa é obrigatória e deve ser um dos valores permitidos: baixa, media, alta, urgente",
+        "enforcement": "code",
+        "verification": "Validação executada no handler de requisição; testes unitários verificam rejeição de valores fora do conjunto permitido"
+      },
+      {
+        "id": 28,
+        "category": "validation",
+        "description": "Data limite da tarefa, quando fornecida, deve ser uma data válida no calendário e não pode ser anterior à data atual (retroativa)",
+        "enforcement": "code",
+        "verification": "Validação executada no handler de requisição; testes unitários verificam rejeição de datas inválidas e retroativas; testes de integração verificam comportamento com diferentes fusos horários"
+      },
+      {
+        "id": 29,
+        "category": "authorization",
+        "description": "Apenas usuários autenticados e ativos pertencentes ao tenant podem criar tarefas; usuários inativos ou de tenants inativos são bloqueados",
+        "enforcement": "code",
+        "verification": "Validação executada no middleware de autenticação e no handler de requisição; testes de integração verificam bloqueio de usuários inativos e tenants inativos"
+      },
+      {
+        "id": 30,
+        "category": "invariant",
+        "description": "Tarefa criada é sempre isolada ao tenant do usuário criador; nenhuma tarefa de um tenant pode ser acessada por usuários de outro tenant",
+        "enforcement": "code",
+        "verification": "Validação executada no handler de requisição através de verificação de tenant_id; testes de integração verificam que consultas de tarefas retornam apenas tarefas do tenant autenticado"
+      },
+      {
+        "id": 31,
+        "category": "compliance",
+        "description": "Operação de criação de tarefa é registrada em trilha de auditoria com identificação do usuário, tenant, timestamp e dados principais da tarefa, em conformidade com requisitos de rastreabilidade LGPD",
+        "enforcement": "code",
+        "verification": "Auditoria registrada em banco de dados ou log centralizado; testes de integração verificam que cada criação de tarefa gera entrada de auditoria com campos obrigatórios preenchidos"
+      },
+      {
+        "id": 32,
+        "category": "idempotency",
+        "description": "Criação de tarefa não é idempotente; múltiplas requisições idênticas resultam em múltiplas tarefas criadas (comportamento esperado para operação POST)",
+        "enforcement": "code",
+        "verification": "Testes de integração verificam que duas requisições POST idênticas resultam em duas tarefas distintas com IDs diferentes"
+      },
+      {
+        "id": 33,
+        "category": "validation",
+        "description": "Responsável selecionado deve estar ativo no momento da criação da tarefa; se responsável for desativado após criação, tarefa permanece com referência ao usuário inativo (histórico preservado)",
+        "enforcement": "code",
+        "verification": "Validação executada através de consulta ao status do usuário no momento da criação; testes de integração verificam que desativação posterior do responsável não afeta tarefas já criadas"
+      },
+      {
+        "id": 34,
+        "category": "validation",
+        "description": "Descrição da tarefa é opcional; quando fornecida, não pode exceder 2000 caracteres",
+        "enforcement": "code",
+        "verification": "Validação executada no handler de requisição; testes unitários verificam rejeição de descrições com mais de 2000 caracteres"
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "Endpoints de Tarefas expõe operações HTTP especializadas para criação de tarefas dentro de um tenant, permitindo que usuários autenticados registrem novas atividades com título, descrição, responsável, prioridade, status inicial e data limite. Implementa validação rigorosa de entrada (campos obrigatórios, formatos, limites de caracteres), autenticação via JWT, isolamento completo de dados por tenant, controle de acesso granular (qualquer usuário ativo pode criar tarefas), tratamento de erros padronizado, e rastreabilidade completa de ações em logs de auditoria, garantindo conformidade com LGPD e isolamento multi-tenant em todas as operações."
+    },
+    "definition": {
+      "endpoint": {
+        "id": 2,
+        "auth": "bearer",
+        "path": "/api/tasks",
+        "method": "POST",
+        "responses": [
+          {
+            "id": 3,
+            "body": "{ id: uuid, titulo: string, descricao?: string, responsavel_id: uuid, responsavel_nome: string, prioridade: enum[baixa|media|alta|urgente], status: enum[a_fazer|em_andamento|concluido], data_limite?: date, data_criacao: timestamp, criador_id: uuid, tenant_id: uuid }",
+            "status_code": 201
+          },
+          {
+            "id": 4,
+            "body": "{ error: { code: string, message: string, details?: { field: string, reason: string }[] } }",
+            "status_code": 400
+          },
+          {
+            "id": 5,
+            "body": "{ error: { code: \"UNAUTHORIZED\", message: string } }",
+            "status_code": 401
+          },
+          {
+            "id": 6,
+            "body": "{ error: { code: \"FORBIDDEN\", message: string } }",
+            "status_code": 403
+          },
+          {
+            "id": 7,
+            "body": "{ error: { code: \"CONFLICT\", message: string, details?: { field: string, reason: string } } }",
+            "status_code": 409
+          }
+        ],
+        "request_body": "{ titulo: string, descricao?: string, responsavel_id: uuid, prioridade: enum[baixa|media|alta|urgente], status?: enum[a_fazer|em_andamento|concluido], data_limite?: date }",
+        "side_effects": [
+          {
+            "id": 8,
+            "description": "Registra entrada de auditoria com identificação do usuário criador, tenant_id, timestamp, dados principais da tarefa criada (id, titulo, responsavel_id, prioridade, data_limite) em conformidade com requisitos de rastreabilidade LGPD"
+          },
+          {
+            "id": 9,
+            "description": "Emite evento de domínio TarefaCriada contendo identificadores e dados principais da tarefa recém-criada, permitindo que outros componentes (visualizações, notificações futuras) reajam à criação"
+          }
+        ]
+      }
+    },
+    "pendencies": [
+      {
+        "id": 56,
+        "section": "definition",
+        "description": "Endpoints de Tarefas deve incluir operações adicionais (GET /api/tasks, GET /api/tasks/:id, PUT /api/tasks/:id, PATCH /api/tasks/:id/status, PATCH /api/tasks/:id/complete, GET /api/tasks/kanban/board) além da operação POST de criação. Estas operações estão definidas na API Interna da Plataforma (asset_definition 23702) mas não foram detalhadas neste asset_definition focado em criação. Necessário definir se este asset cobre apenas criação ou todo o ciclo de vida de tarefas.",
+        "resolutionOptions": [
+          {
+            "id": 57,
+            "text": "Expandir este asset_definition para incluir todas as operações CRUD de tarefas (POST, GET, PUT, PATCH) com detalhes completos de cada endpoint, validações, fluxos e testes"
+          },
+          {
+            "id": 58,
+            "text": "Manter este asset_definition focado apenas em criação de tarefa (POST /api/tasks) e criar assets_definition separados para operações de leitura (GET), atualização (PUT), alteração de status (PATCH) e visualização Kanban"
+          },
+          {
+            "id": 59,
+            "text": "Referenciar a definição completa de Endpoints de Tarefas na API Interna da Plataforma (asset 5) e detalhar neste asset apenas as operações específicas de criação e atribuição"
+          }
+        ],
+        "recommendedOptionId": 57
+      },
+      {
+        "id": 60,
+        "section": "definition",
+        "description": "Validação de responsável ativo no tenant durante criação de tarefa depende de consulta ao Repositório de Usuários e Tenants (asset 48), mas este asset não foi fornecido com assetDefinition. Necessário confirmar contrato de interface do repositório (quais campos retorna, como valida status ativo, como garante isolamento de tenant).",
+        "resolutionOptions": [
+          {
+            "id": 61,
+            "text": "Obter assetDefinition do Repositório de Usuários e Tenants (asset 48) para confirmar contrato de interface de consulta de usuário por ID e validação de status ativo"
+          },
+          {
+            "id": 62,
+            "text": "Documentar no asset_definition de Endpoints de Tarefas o contrato esperado do repositório (assinatura de método, parâmetros, retorno, validações) como interface esperada"
+          }
+        ],
+        "recommendedOptionId": 61
+      },
+      {
+        "id": 63,
+        "section": "flow",
+        "description": "Fluxo de criação de tarefa invoca Regras de Prioridade e Prazo de Tarefas (asset 33) para validação, mas este asset não foi fornecido com assetDefinition. Necessário confirmar quais validações a regra executa, quais são os critérios de elegibilidade para destaque de criticidade, e como a regra garante isolamento multi-tenant.",
+        "resolutionOptions": [
+          {
+            "id": 64,
+            "text": "Obter assetDefinition de Regras de Prioridade e Prazo de Tarefas (asset 33) para confirmar validações executadas, critérios de destaque e garantias de isolamento"
+          },
+          {
+            "id": 65,
+            "text": "Documentar no asset_definition de Endpoints de Tarefas o contrato esperado da regra de negócio (inputs, outputs, validações, efeitos colaterais) como interface esperada"
+          }
+        ],
+        "recommendedOptionId": 64
+      },
+      {
+        "id": 66,
+        "section": "non_functional_requirements",
+        "description": "Requisito de desempenho especifica p95 <= 500ms e p99 <= 1000ms para criação de tarefa em tenant com até 10.000 tarefas existentes, mas não especifica configuração de infraestrutura (CPU, memória, tipo de banco de dados, índices) que suporta este SLA. Necessário confirmar se estes targets são realistas dado o stack de tecnologia do projeto.",
+        "resolutionOptions": [
+          {
+            "id": 67,
+            "text": "Realizar testes de carga com infraestrutura planejada para validar se targets de desempenho (p95 <= 500ms, p99 <= 1000ms) são alcançáveis; ajustar targets se necessário"
+          },
+          {
+            "id": 68,
+            "text": "Documentar configuração de infraestrutura esperada (CPU, memória, tipo de banco de dados, índices, cache) que suporta os targets de desempenho especificados"
+          },
+          {
+            "id": 69,
+            "text": "Revisar targets de desempenho com stakeholders técnicos e de negócio para confirmar realismo e alinhamento com SLA esperado"
+          }
+        ],
+        "recommendedOptionId": 67
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 42,
+        "then": "Resposta 400 Bad Request é retornada com erro indicando que titulo é obrigatório",
+        "type": "unit",
+        "when": "Requisição POST /api/tasks é enviada",
+        "given": "Usuário autenticado com payload de criação de tarefa sem campo titulo",
+        "scenario": "Validação de título obrigatório na criação de tarefa",
+        "target_section": "definition"
+      },
+      {
+        "id": 43,
+        "then": "Resposta 400 Bad Request é retornada com erro indicando que titulo excede limite máximo",
+        "type": "unit",
+        "when": "Requisição POST /api/tasks é enviada",
+        "given": "Usuário autenticado com payload contendo titulo com 256 caracteres (acima do limite de 255)",
+        "scenario": "Validação de limite de caracteres do título",
+        "target_section": "definition"
+      },
+      {
+        "id": 44,
+        "then": "Resposta 400 Bad Request é retornada com erro indicando que prioridade é obrigatória",
+        "type": "unit",
+        "when": "Requisição POST /api/tasks é enviada",
+        "given": "Usuário autenticado com payload de criação de tarefa sem campo prioridade",
+        "scenario": "Validação de prioridade obrigatória",
+        "target_section": "definition"
+      },
+      {
+        "id": 45,
+        "then": "Resposta 400 Bad Request é retornada com erro indicando que prioridade deve ser um dos valores permitidos",
+        "type": "unit",
+        "when": "Requisição POST /api/tasks é enviada",
+        "given": "Usuário autenticado com payload contendo prioridade com valor 'critica' (não permitido)",
+        "scenario": "Validação de valor de prioridade inválido",
+        "target_section": "definition"
+      },
+      {
+        "id": 46,
+        "then": "Resposta 201 Created é retornada com dados completos da tarefa criada, incluindo id gerado, data_criacao, criador_id, tenant_id do tenant A",
+        "type": "integration",
+        "when": "Requisição POST /api/tasks é enviada",
+        "given": "Usuário autenticado do tenant A com payload válido contendo titulo, responsavel_id (usuário ativo do tenant A), prioridade",
+        "scenario": "Criação bem-sucedida de tarefa com todos os campos obrigatórios",
+        "target_section": "flow"
+      },
+      {
+        "id": 47,
+        "then": "Resposta 409 Conflict é retornada com erro indicando que responsável está inativo",
+        "type": "integration",
+        "when": "Requisição POST /api/tasks é enviada",
+        "given": "Usuário autenticado do tenant A com payload contendo responsavel_id de usuário inativo do tenant A",
+        "scenario": "Criação de tarefa com responsável inativo",
+        "target_section": "flow"
+      },
+      {
+        "id": 48,
+        "then": "Resposta 409 Conflict é retornada com erro indicando que responsável não pertence ao tenant",
+        "type": "integration",
+        "when": "Requisição POST /api/tasks é enviada",
+        "given": "Usuário autenticado do tenant A com payload contendo responsavel_id de usuário ativo do tenant B",
+        "scenario": "Criação de tarefa com responsável de outro tenant",
+        "target_section": "flow"
+      },
+      {
+        "id": 49,
+        "then": "Resposta 401 Unauthorized é retornada com erro indicando que token é obrigatório",
+        "type": "security",
+        "when": "Requisição é enviada",
+        "given": "Requisição POST /api/tasks sem header Authorization",
+        "scenario": "Criação de tarefa sem token de autenticação",
+        "target_section": "flow"
+      },
+      {
+        "id": 50,
+        "then": "Resposta 401 Unauthorized é retornada com erro indicando que token está expirado",
+        "type": "security",
+        "when": "Requisição é enviada",
+        "given": "Requisição POST /api/tasks com header Authorization contendo token JWT expirado",
+        "scenario": "Criação de tarefa com token expirado",
+        "target_section": "flow"
+      },
+      {
+        "id": 51,
+        "then": "Tarefa é criada com tenant_id do tenant A (do usuário autenticado), ignorando valor manipulado no payload; isolamento é garantido",
+        "type": "security",
+        "when": "Requisição POST /api/tasks é enviada com tenant_id manipulado",
+        "given": "Usuário autenticado do tenant A tenta criar tarefa com tenant_id do tenant B no payload (manipulação de parâmetro)",
+        "scenario": "Isolamento multi-tenant na criação de tarefa",
+        "target_section": "rules"
+      },
+      {
+        "id": 52,
+        "then": "Entrada de auditoria é registrada com user_id do criador, tenant_id, timestamp, dados principais da tarefa (id, titulo, responsavel_id, prioridade, data_limite)",
+        "type": "integration",
+        "when": "Requisição POST /api/tasks é enviada e concluída",
+        "given": "Usuário autenticado do tenant A cria tarefa com sucesso",
+        "scenario": "Auditoria de criação de tarefa",
+        "target_section": "rules"
+      },
+      {
+        "id": 53,
+        "then": "p95 de latência <= 500ms, p99 <= 1000ms; taxa de sucesso >= 99.9%; nenhuma tarefa é perdida ou duplicada",
+        "type": "performance",
+        "when": "Requisições POST /api/tasks são enviadas em paralelo",
+        "given": "100 usuários simultâneos de tenants diferentes criando tarefas",
+        "scenario": "Desempenho de criação de tarefa sob carga",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 54,
+        "then": "Resposta 201 Created é retornada com tarefa criada contendo data_limite persistida corretamente",
+        "type": "integration",
+        "when": "Requisição POST /api/tasks é enviada",
+        "given": "Usuário autenticado com payload contendo data_limite como data futura válida (ex: 2025-12-31)",
+        "scenario": "Criação de tarefa com data limite válida",
+        "target_section": "flow"
+      },
+      {
+        "id": 55,
+        "then": "Resposta 400 Bad Request é retornada com erro indicando que data_limite não pode ser anterior à data atual",
+        "type": "unit",
+        "when": "Requisição POST /api/tasks é enviada",
+        "given": "Usuário autenticado com payload contendo data_limite como data passada (ex: 2020-01-01)",
+        "scenario": "Validação de data limite retroativa",
+        "target_section": "definition"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 35,
+        "target": "p95 <= 500ms, p99 <= 1000ms para requisição POST /api/tasks em tenant com até 10.000 tarefas existentes",
+        "category": "performance",
+        "requirement": "Operação de criação de tarefa deve ser concluída e retornar resposta ao cliente em tempo adequado, mesmo sob carga de múltiplos usuários simultâneos",
+        "verification": "Testes de carga com k6 ou Apache JMeter simulando 100 usuários simultâneos criando tarefas; monitoramento de latência em produção via APM (Application Performance Monitoring)"
+      },
+      {
+        "id": 36,
+        "target": "100% das requisições sem token válido são rejeitadas; zero requisições não autenticadas chegam à lógica de negócio",
+        "category": "security",
+        "requirement": "Todas as requisições ao endpoint de criação de tarefa devem ser autenticadas via JWT válido e autorizado; requisições sem token ou com token inválido/expirado são rejeitadas com status 401",
+        "verification": "Testes de segurança verificam rejeição de requisições sem token, com token inválido, com token expirado; testes de integração verificam que contexto de tenant é sempre extraído do token"
+      },
+      {
+        "id": 37,
+        "target": "100% das operações de criação de tarefa validam que tenant_id do criador corresponde ao tenant_id da tarefa persistida",
+        "category": "security",
+        "requirement": "Isolamento de dados por tenant é garantido; usuários de um tenant não podem criar, visualizar ou modificar tarefas de outro tenant",
+        "verification": "Testes de integração multi-tenant verificam que usuário do tenant A não consegue criar tarefa no tenant B; testes de segurança tentam manipular tenant_id em payload e verificam rejeição"
+      },
+      {
+        "id": 38,
+        "target": "Disponibilidade >= 99.9% (SLA de 43.2 segundos de downtime por mês); tempo de recuperação após falha <= 5 minutos",
+        "category": "availability",
+        "requirement": "Endpoint de criação de tarefa deve estar disponível com alta disponibilidade, dado que sua indisponibilidade impede que usuários criem novas atividades",
+        "verification": "Monitoramento contínuo de disponibilidade via health checks; alertas configurados para downtime > 1 minuto; testes de failover verificam recuperação automática"
+      },
+      {
+        "id": 39,
+        "target": "100% das requisições geram entrada de log com campos obrigatórios; logs são centralizados e consultáveis por tenant_id, user_id, timestamp",
+        "category": "observability",
+        "requirement": "Todas as operações de criação de tarefa são registradas em logs estruturados com identificação de usuário, tenant, timestamp, payload da requisição (sanitizado) e resultado (sucesso/erro)",
+        "verification": "Testes de integração verificam que cada criação de tarefa gera entrada de log; consultas em log centralizado (ELK, Datadog, etc.) verificam presença de logs para operações conhecidas"
+      },
+      {
+        "id": 40,
+        "target": "Dados pessoais são coletados apenas quando necessário (responsável da tarefa); são armazenados de forma segura (criptografados em repouso); direito de acesso e exclusão são implementados",
+        "category": "security",
+        "requirement": "Dados pessoais do usuário responsável (nome, e-mail) tratados no contexto de criação de tarefa estão em conformidade com LGPD, aplicando princípios de minimização de dados e proteção das informações pessoais",
+        "verification": "Auditoria de conformidade LGPD verifica que dados pessoais são minimizados; testes de integração verificam que requisições de exclusão de usuário removem referências em tarefas ou anonimizam dados"
+      },
+      {
+        "id": 41,
+        "target": "Suporte a até 5.000 usuários ativos simultâneos criando tarefas; suporte a até 10.000 tarefas por tenant sem impacto em latência de criação",
+        "category": "scalability",
+        "requirement": "Endpoint de criação de tarefa deve escalar horizontalmente para suportar crescimento de usuários e tarefas sem degradação de desempenho",
+        "verification": "Testes de carga progressivos com k6 escalando de 10 para 5.000 usuários simultâneos; monitoramento de latência, CPU, memória e I/O de banco de dados durante testes"
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 41,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T17:43:35.639Z",
+  "updatedAt": null
+}

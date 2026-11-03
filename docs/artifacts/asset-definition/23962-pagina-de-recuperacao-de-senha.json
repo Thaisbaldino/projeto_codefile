@@ -1,0 +1,742 @@
+{
+  "id": 23962,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 42,
+          "name": "Solicitação de Recuperação de Senha",
+          "format": "Formulário HTML com campo de e-mail",
+          "origin": "Usuário autenticado ou não autenticado",
+          "trigger": "Usuário clica em link 'Esqueci minha senha' ou acessa rota /password-recovery"
+        },
+        {
+          "id": 43,
+          "name": "Link de Redefinição de Senha",
+          "format": "URL com token de recuperação embutido como parâmetro de query",
+          "origin": "E-mail transacional enviado pelo serviço de e-mail",
+          "trigger": "Usuário clica no link de redefinição recebido no e-mail"
+        },
+        {
+          "id": 44,
+          "name": "Submissão de Nova Senha",
+          "format": "Formulário HTML com campos de nova senha e confirmação",
+          "origin": "Usuário acessando link de redefinição válido",
+          "trigger": "Usuário submete o formulário de redefinição com nova credencial"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 59,
+          "name": "Confirmação de Solicitação de Recuperação",
+          "format": "Mensagem genérica de confirmação exibida na página",
+          "destination": "Interface do usuário"
+        },
+        {
+          "id": 60,
+          "name": "E-mail de Recuperação de Senha",
+          "format": "E-mail transacional contendo link com token de recuperação",
+          "destination": "Caixa de entrada do usuário"
+        },
+        {
+          "id": 61,
+          "name": "Formulário de Redefinição de Senha",
+          "format": "Página HTML com formulário de redefinição pré-carregado",
+          "destination": "Interface do usuário"
+        },
+        {
+          "id": 62,
+          "name": "Confirmação de Redefinição de Senha",
+          "format": "Mensagem de sucesso exibida na página orientando o usuário a fazer login com a nova senha",
+          "destination": "Interface do usuário"
+        },
+        {
+          "id": 63,
+          "name": "Mensagem de Erro de Token Inválido",
+          "format": "Mensagem de erro informativa orientando o usuário a solicitar novo link",
+          "destination": "Interface do usuário"
+        },
+        {
+          "id": 64,
+          "name": "Registro de Auditoria",
+          "format": "Entrada estruturada em log contendo identificação do usuário, tenant, timestamp e resultado da operação",
+          "destination": "Sistema de logging de auditoria"
+        }
+      ],
+      "processing": [
+        {
+          "id": 45,
+          "step": "Validar formato de e-mail informado",
+          "description": "Validar que o endereço de e-mail está em formato válido antes de processar a solicitação, rejeitando entradas malformadas."
+        },
+        {
+          "id": 46,
+          "step": "Verificar limite de requisições (rate limiting)",
+          "description": "Verificar se o e-mail ou IP atingiu o limite de requisições de recuperação em 15 minutos, bloqueando temporariamente se necessário."
+        },
+        {
+          "id": 47,
+          "step": "Gerar token de recuperação criptograficamente seguro",
+          "description": "Gerar token único, seguro e de uso único com entropia suficiente para resistir a ataques de força bruta."
+        },
+        {
+          "id": 48,
+          "step": "Armazenar token em hash no banco de dados",
+          "description": "Persistir o hash do token no banco de dados associado ao usuário, nunca em texto simples, com prazo de expiração configurável (ex: 1 hora)."
+        },
+        {
+          "id": 49,
+          "step": "Invalidar tokens anteriores ainda ativos",
+          "description": "Invalidar qualquer token de recuperação anterior ainda válido para o mesmo usuário, garantindo que apenas o link mais recente seja válido."
+        },
+        {
+          "id": 50,
+          "step": "Enviar e-mail transacional com link de redefinição",
+          "description": "Enfileirar e-mail transacional contendo link de redefinição com token embutido através do serviço de e-mail integrado (integração crítica)."
+        },
+        {
+          "id": 51,
+          "step": "Exibir mensagem genérica de confirmação",
+          "description": "Exibir mensagem de confirmação genérica ao usuário, sem discriminar se o e-mail existe ou não na base, prevenindo enumeração de usuários."
+        },
+        {
+          "id": 52,
+          "step": "Validar token de recuperação no link acessado",
+          "description": "Validar que o token presente no link é válido, pertence ao tenant correto, não está expirado e não foi já utilizado."
+        },
+        {
+          "id": 53,
+          "step": "Validar complexidade da nova senha",
+          "description": "Aplicar regras de complexidade mínima à nova senha (ex: mínimo 8 caracteres, combinação de maiúsculas, minúsculas, números e símbolos)."
+        },
+        {
+          "id": 54,
+          "step": "Validar correspondência entre nova senha e confirmação",
+          "description": "Verificar que os campos de nova senha e confirmação de senha são idênticos antes de processar a redefinição."
+        },
+        {
+          "id": 55,
+          "step": "Persistir nova senha em hash seguro",
+          "description": "Persistir a nova senha em formato de hash seguro (ex: argon2id com m=64MiB, t=3, p=4) no banco de dados, substituindo a senha anterior."
+        },
+        {
+          "id": 56,
+          "step": "Invalidar token de recuperação após uso",
+          "description": "Marcar o token de recuperação como utilizado imediatamente após a redefinição bem-sucedida, impedindo sua reutilização."
+        },
+        {
+          "id": 57,
+          "step": "Invalidar todas as sessões ativas do usuário",
+          "description": "Encerrar todas as sessões JWT ativas do usuário no momento da redefinição bem-sucedida, forçando novo login com a nova credencial."
+        },
+        {
+          "id": 58,
+          "step": "Registrar operação em trilha de auditoria",
+          "description": "Registrar em log de auditoria toda solicitação de recuperação e toda redefinição concluída, incluindo identificação do usuário, tenant, timestamp e resultado."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 65,
+        "category": "validation",
+        "description": "O endereço de e-mail informado na solicitação de recuperação deve estar em formato válido (RFC 5322) antes de processar qualquer operação.",
+        "enforcement": "code",
+        "verification": "Validação de regex ou biblioteca de validação de e-mail no cliente e servidor; rejeição de entradas malformadas com mensagem de erro específica."
+      },
+      {
+        "id": 66,
+        "category": "validation",
+        "description": "Os campos de nova senha e confirmação de senha devem ser idênticos antes de permitir a redefinição.",
+        "enforcement": "code",
+        "verification": "Comparação de strings dos dois campos; exibição de mensagem de erro quando divergem."
+      },
+      {
+        "id": 67,
+        "category": "validation",
+        "description": "A nova senha deve atender a regras de complexidade mínima: mínimo 8 caracteres, combinação de maiúsculas, minúsculas, números e símbolos.",
+        "enforcement": "code",
+        "verification": "Validação de regex ou função de verificação de complexidade; rejeição de senhas fracas com mensagem explicativa."
+      },
+      {
+        "id": 68,
+        "category": "rate_limit",
+        "description": "Máximo de 5 solicitações de recuperação de senha por e-mail em janela de 15 minutos; máximo de 10 solicitações por IP em janela de 15 minutos.",
+        "enforcement": "code",
+        "verification": "Contagem de requisições em cache (Redis) ou banco de dados com timestamp; bloqueio temporário com indicação de tempo de espera quando limite é atingido."
+      },
+      {
+        "id": 69,
+        "category": "idempotency",
+        "description": "Apenas o token de recuperação mais recente gerado para um usuário é válido; tokens anteriores ainda ativos devem ser invalidados automaticamente.",
+        "enforcement": "code",
+        "verification": "Consulta ao banco de dados para verificar se existe token anterior ativo; invalidação do token anterior antes de gerar novo token."
+      },
+      {
+        "id": 70,
+        "category": "invariant",
+        "description": "Token de recuperação de senha deve expirar automaticamente após 1 hora de geração, tornando-se inválido para redefinição.",
+        "enforcement": "code",
+        "verification": "Comparação de timestamp atual com timestamp de geração do token; rejeição de tokens expirados com mensagem de erro informativa."
+      },
+      {
+        "id": 71,
+        "category": "invariant",
+        "description": "Token de recuperação deve ser de uso único; após ser utilizado com sucesso para redefinir a senha, deve ser marcado como utilizado e não pode ser reutilizado.",
+        "enforcement": "code",
+        "verification": "Verificação de flag 'utilizado' no banco de dados antes de permitir redefinição; marcação da flag após redefinição bem-sucedida."
+      },
+      {
+        "id": 72,
+        "category": "authorization",
+        "description": "Mensagem de confirmação de solicitação de recuperação deve ser genérica, não discriminando se o e-mail existe ou não na base, prevenindo enumeração de usuários.",
+        "enforcement": "code",
+        "verification": "Exibição de mensagem idêntica independentemente de o e-mail existir na base; verificação de que a mensagem não contém indicadores de existência ou não do usuário."
+      },
+      {
+        "id": 73,
+        "category": "authorization",
+        "description": "Token de recuperação deve estar estritamente vinculado ao tenant do usuário; um token gerado para um usuário de um tenant não pode ser utilizado para redefinir senha de usuário de outro tenant.",
+        "enforcement": "code",
+        "verification": "Armazenamento do tenant_id associado ao token no banco de dados; validação de correspondência entre tenant do token e tenant do usuário antes de permitir redefinição."
+      },
+      {
+        "id": 74,
+        "category": "invariant",
+        "description": "Todas as sessões ativas do usuário devem ser invalidadas imediatamente após a redefinição bem-sucedida de senha, forçando novo login com a nova credencial.",
+        "enforcement": "code",
+        "verification": "Consulta ao banco de dados ou cache de sessões para identificar todas as sessões ativas do usuário; invalidação de tokens JWT e limpeza de cookies de sessão."
+      },
+      {
+        "id": 75,
+        "category": "compliance",
+        "description": "Senhas devem ser armazenadas exclusivamente em formato de hash seguro utilizando algoritmo resistente a ataques de força bruta (argon2id com m=64MiB, t=3, p=4), nunca em texto simples ou formato reversível.",
+        "enforcement": "code",
+        "verification": "Inspeção do código de persistência de senha; verificação de que apenas hashes são armazenados no banco de dados, nunca senhas em texto simples."
+      },
+      {
+        "id": 76,
+        "category": "compliance",
+        "description": "Tokens de recuperação de senha devem ser armazenados em formato de hash seguro no banco de dados, nunca em texto simples, de modo que sua exposição não permita uso direto por um atacante.",
+        "enforcement": "code",
+        "verification": "Inspeção do código de persistência de token; verificação de que apenas hashes de tokens são armazenados no banco de dados."
+      },
+      {
+        "id": 77,
+        "category": "compliance",
+        "description": "Todas as comunicações do fluxo de recuperação de senha devem ser transmitidas exclusivamente por meio de protocolo HTTPS, garantindo a confidencialidade dos dados em trânsito.",
+        "enforcement": "infra",
+        "verification": "Configuração de servidor web para forçar HTTPS; verificação de certificado SSL/TLS válido; teste de acesso via HTTP retornando redirecionamento para HTTPS."
+      },
+      {
+        "id": 78,
+        "category": "compliance",
+        "description": "Dados pessoais do usuário tratados no fluxo de recuperação de senha (e-mail) devem estar em conformidade com a LGPD, aplicando princípios de minimização de dados e proteção das informações pessoais.",
+        "enforcement": "code",
+        "verification": "Auditoria de código para verificar que apenas e-mail é coletado e processado; verificação de que dados não são compartilhados com terceiros; implementação de direito ao esquecimento."
+      },
+      {
+        "id": 79,
+        "category": "observability",
+        "description": "Toda solicitação de recuperação de senha e toda redefinição concluída devem ser registradas em log de auditoria com identificação do usuário, tenant, timestamp e resultado da operação.",
+        "enforcement": "code",
+        "verification": "Verificação de que logs de auditoria contêm entradas para cada solicitação e redefinição; validação de que logs incluem todos os campos obrigatórios."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "A Página de Recuperação de Senha é uma superfície de interface especializada que materializa o fluxo seguro de redefinição de credenciais para usuários que esqueceram suas senhas. Compõe-se de três etapas sequenciais: (1) formulário de solicitação com validação de e-mail e prevenção de enumeração de usuários através de mensagem genérica de confirmação, (2) envio de e-mail transacional contendo link com token de recuperação único e de uso único com prazo de expiração configurável, e (3) formulário de redefinição de senha com validação de complexidade mínima, confirmação de senha, invalidação de tokens após uso e invalidação de todas as sessões ativas do usuário. Integra-se ao serviço de envio de e-mail transacional (integração crítica), aplica criptografia de tokens em repouso, implementa rate limiting por e-mail e IP para prevenção de abuso, registra todas as operações em trilha de auditoria, e garante conformidade com LGPD no tratamento de dados pessoais. Funciona como o mecanismo de recuperação de acesso quando credenciais são perdidas, permitindo que usuários bloqueados restaurem o acesso de forma segura sem intervenção manual de administradores."
+    },
+    "definition": {
+      "route": "/password-recovery",
+      "renders": [
+        {
+          "id": 2,
+          "kind": "form",
+          "name": "Formulário de Solicitação de Recuperação de Senha",
+          "source": "password_recovery_request_form_component"
+        },
+        {
+          "id": 3,
+          "kind": "interactive_surface",
+          "name": "Indicador de Confirmação de Envio de E-mail",
+          "source": "email_sent_confirmation_indicator"
+        },
+        {
+          "id": 4,
+          "kind": "form",
+          "name": "Formulário de Redefinição de Senha",
+          "source": "password_reset_form_component"
+        },
+        {
+          "id": 5,
+          "kind": "interactive_surface",
+          "name": "Indicador de Token Inválido ou Expirado",
+          "source": "invalid_token_indicator"
+        }
+      ],
+      "state_machine": {
+        "states": [
+          {
+            "id": 6,
+            "name": "Formulário de Solicitação Carregado",
+            "description": "Estado inicial onde o formulário de solicitação de recuperação de senha foi carregado e exibido com sucesso, aguardando entrada do usuário."
+          },
+          {
+            "id": 7,
+            "name": "Validando Solicitação de Recuperação",
+            "description": "O endereço de e-mail informado está sendo validado quanto ao formato e existência na base de usuários do tenant correspondente."
+          },
+          {
+            "id": 8,
+            "name": "Gerando Token de Recuperação",
+            "description": "Token de recuperação único, seguro e de uso único está sendo gerado e armazenado em hash no banco de dados com prazo de expiração."
+          },
+          {
+            "id": 9,
+            "name": "Enviando E-mail de Recuperação",
+            "description": "E-mail transacional contendo link de redefinição com token embutido está sendo enfileirado para envio através do serviço de e-mail integrado."
+          },
+          {
+            "id": 10,
+            "name": "Confirmação de Solicitação Exibida",
+            "description": "Mensagem genérica de confirmação foi exibida ao usuário, sem discriminar se o e-mail existe ou não na base, prevenindo enumeração de usuários."
+          },
+          {
+            "id": 11,
+            "name": "Erro de Validação de Solicitação",
+            "description": "Validação de e-mail falhou (campo vazio ou formato inválido); mensagem de erro específica foi exibida."
+          },
+          {
+            "id": 12,
+            "name": "Bloqueado por Rate Limiting",
+            "description": "Limite de requisições de recuperação foi atingido para o e-mail ou IP; acesso foi bloqueado temporariamente com indicação de tempo de espera."
+          },
+          {
+            "id": 13,
+            "name": "Link de Recuperação Acessado",
+            "description": "Usuário acessou o link de recuperação contendo token válido e não expirado; formulário de redefinição foi exibido."
+          },
+          {
+            "id": 14,
+            "name": "Token Inválido ou Expirado",
+            "description": "Token de recuperação é inválido, já foi utilizado ou expirou; mensagem de erro informativa foi exibida orientando o usuário a solicitar novo link."
+          },
+          {
+            "id": 15,
+            "name": "Validando Redefinição de Senha",
+            "description": "Nova senha está sendo validada quanto a complexidade mínima, confirmação de senha e conformidade com políticas de segurança."
+          },
+          {
+            "id": 16,
+            "name": "Persistindo Nova Senha",
+            "description": "Nova senha foi validada com sucesso e está sendo persistida em formato de hash seguro no banco de dados."
+          },
+          {
+            "id": 17,
+            "name": "Invalidando Sessões Anteriores",
+            "description": "Todas as sessões ativas do usuário estão sendo invalidadas para forçar novo login com a nova credencial."
+          },
+          {
+            "id": 18,
+            "name": "Redefinição Concluída com Sucesso",
+            "description": "Nova senha foi persistida com sucesso, token foi invalidado, sessões anteriores foram encerradas e mensagem de confirmação foi exibida."
+          },
+          {
+            "id": 19,
+            "name": "Erro de Validação de Redefinição",
+            "description": "Validação de nova senha falhou (campos vazios, senhas não correspondem, complexidade insuficiente); mensagem de erro específica foi exibida."
+          },
+          {
+            "id": 20,
+            "name": "Erro de Persistência",
+            "description": "Falha ao persistir nova senha no banco de dados; mensagem de erro foi exibida e usuário pode tentar novamente."
+          }
+        ],
+        "transitions": [
+          {
+            "id": 21,
+            "to": "Validando Solicitação de Recuperação",
+            "from": "Formulário de Solicitação Carregado",
+            "trigger": "Usuário submete o formulário com endereço de e-mail preenchido"
+          },
+          {
+            "id": 22,
+            "to": "Erro de Validação de Solicitação",
+            "from": "Validando Solicitação de Recuperação",
+            "guard": "email_vazio OR email_formato_invalido",
+            "trigger": "Validação de formato de e-mail falhou"
+          },
+          {
+            "id": 23,
+            "to": "Bloqueado por Rate Limiting",
+            "from": "Validando Solicitação de Recuperação",
+            "guard": "requisicoes_recuperacao >= limite_por_email_e_ip AND janela_tempo_ativa",
+            "trigger": "Limite de requisições de recuperação foi atingido"
+          },
+          {
+            "id": 24,
+            "to": "Gerando Token de Recuperação",
+            "from": "Validando Solicitação de Recuperação",
+            "guard": "email_formato_valido",
+            "trigger": "Validação de e-mail passou, independentemente de existência na base"
+          },
+          {
+            "id": 25,
+            "to": "Enviando E-mail de Recuperação",
+            "from": "Gerando Token de Recuperação",
+            "guard": "email_existe_na_base AND usuario_ativo AND tenant_ativo",
+            "trigger": "Token foi gerado e e-mail existe na base de usuários do tenant"
+          },
+          {
+            "id": 26,
+            "to": "Confirmação de Solicitação Exibida",
+            "from": "Gerando Token de Recuperação",
+            "guard": "email_nao_existe OR usuario_inativo OR tenant_inativo",
+            "trigger": "E-mail não existe ou usuário/tenant inativo; mensagem genérica é exibida"
+          },
+          {
+            "id": 27,
+            "to": "Confirmação de Solicitação Exibida",
+            "from": "Enviando E-mail de Recuperação",
+            "trigger": "E-mail foi enfileirado para envio com sucesso"
+          },
+          {
+            "id": 28,
+            "to": "Formulário de Solicitação Carregado",
+            "from": "Confirmação de Solicitação Exibida",
+            "trigger": "Usuário retorna ao formulário de solicitação para nova tentativa"
+          },
+          {
+            "id": 29,
+            "to": "Formulário de Solicitação Carregado",
+            "from": "Erro de Validação de Solicitação",
+            "trigger": "Usuário corrige o e-mail e resubmete o formulário"
+          },
+          {
+            "id": 30,
+            "to": "Formulário de Solicitação Carregado",
+            "from": "Bloqueado por Rate Limiting",
+            "guard": "tempo_espera_decorrido",
+            "trigger": "Período de bloqueio expirou, usuário pode tentar novamente"
+          },
+          {
+            "id": 31,
+            "to": "Validando Redefinição de Senha",
+            "from": "Link de Recuperação Acessado",
+            "trigger": "Usuário submete o formulário com nova senha e confirmação preenchidas"
+          },
+          {
+            "id": 32,
+            "to": "Erro de Validação de Redefinição",
+            "from": "Validando Redefinição de Senha",
+            "guard": "senha_vazia OR confirmacao_vazia OR senhas_nao_correspondem OR complexidade_insuficiente",
+            "trigger": "Validação de nova senha falhou"
+          },
+          {
+            "id": 33,
+            "to": "Persistindo Nova Senha",
+            "from": "Validando Redefinição de Senha",
+            "guard": "validacao_senha_passou",
+            "trigger": "Todas as validações de nova senha passaram"
+          },
+          {
+            "id": 34,
+            "to": "Invalidando Sessões Anteriores",
+            "from": "Persistindo Nova Senha",
+            "guard": "persistencia_sucesso",
+            "trigger": "Nova senha foi persistida com sucesso em hash seguro"
+          },
+          {
+            "id": 35,
+            "to": "Erro de Persistência",
+            "from": "Persistindo Nova Senha",
+            "guard": "persistencia_falhou",
+            "trigger": "Falha ao persistir nova senha no banco de dados"
+          },
+          {
+            "id": 36,
+            "to": "Redefinição Concluída com Sucesso",
+            "from": "Invalidando Sessões Anteriores",
+            "trigger": "Todas as sessões ativas do usuário foram invalidadas"
+          },
+          {
+            "id": 37,
+            "to": "Formulário de Solicitação Carregado",
+            "from": "Redefinição Concluída com Sucesso",
+            "trigger": "Usuário retorna ao formulário de login ou solicitação de recuperação"
+          },
+          {
+            "id": 38,
+            "to": "Formulário de Solicitação Carregado",
+            "from": "Token Inválido ou Expirado",
+            "trigger": "Usuário clica em link para solicitar novo token de recuperação"
+          },
+          {
+            "id": 39,
+            "to": "Link de Recuperação Acessado",
+            "from": "Erro de Validação de Redefinição",
+            "trigger": "Usuário corrige os erros e resubmete o formulário de redefinição"
+          },
+          {
+            "id": 40,
+            "to": "Link de Recuperação Acessado",
+            "from": "Erro de Persistência",
+            "trigger": "Usuário tenta novamente após erro de persistência"
+          },
+          {
+            "id": 41,
+            "to": "Token Inválido ou Expirado",
+            "from": "Link de Recuperação Acessado",
+            "guard": "token_invalido OR token_expirado OR token_ja_utilizado",
+            "trigger": "Token de recuperação é inválido, expirado ou já foi utilizado"
+          }
+        ]
+      }
+    },
+    "pendencies": [
+      {
+        "id": 96,
+        "section": "definition",
+        "description": "Prazo de expiração do token de recuperação de senha não foi explicitamente definido nos requisitos. Valor padrão de 1 hora é assumido, mas deve ser confirmado com stakeholders se este prazo é adequado para o contexto de negócio.",
+        "resolutionOptions": [
+          {
+            "id": 97,
+            "text": "Confirmar prazo de expiração de 1 hora (3600 segundos) como padrão para tokens de recuperação de senha."
+          },
+          {
+            "id": 98,
+            "text": "Definir prazo de expiração de 30 minutos (1800 segundos) para maior segurança, reduzindo janela de exposição de token."
+          },
+          {
+            "id": 99,
+            "text": "Definir prazo de expiração de 24 horas (86400 segundos) para maior conveniência do usuário, aceitando maior risco de segurança."
+          },
+          {
+            "id": 100,
+            "text": "Tornar o prazo de expiração configurável por tenant, permitindo que cada organização defina seu próprio prazo conforme política de segurança."
+          }
+        ],
+        "recommendedOptionId": 97
+      },
+      {
+        "id": 101,
+        "section": "definition",
+        "description": "Regras de complexidade mínima de senha não foram explicitamente definidas nos requisitos. Critérios padrão de 8 caracteres com combinação de maiúsculas, minúsculas, números e símbolos são assumidos, mas devem ser confirmados.",
+        "resolutionOptions": [
+          {
+            "id": 102,
+            "text": "Confirmar critérios de complexidade: mínimo 8 caracteres, combinação de maiúsculas, minúsculas, números e símbolos."
+          },
+          {
+            "id": 103,
+            "text": "Relaxar critérios para mínimo 8 caracteres sem exigência de símbolos, apenas maiúsculas, minúsculas e números."
+          },
+          {
+            "id": 104,
+            "text": "Aumentar critérios para mínimo 12 caracteres com exigência de símbolos especiais para maior segurança."
+          },
+          {
+            "id": 105,
+            "text": "Implementar validação de força de senha baseada em entropia (ex: zxcvbn) em vez de regras fixas, oferecendo feedback em tempo real."
+          }
+        ],
+        "recommendedOptionId": 102
+      },
+      {
+        "id": 106,
+        "section": "non_functional_requirements",
+        "description": "Algoritmo específico de hash para armazenamento de senhas foi mencionado como argon2id com m=64MiB, t=3, p=4, mas estes parâmetros devem ser validados com especialista em segurança para garantir que são adequados para o contexto de carga esperada.",
+        "resolutionOptions": [
+          {
+            "id": 107,
+            "text": "Confirmar parâmetros argon2id: m=64MiB, t=3, p=4 como adequados para a plataforma."
+          },
+          {
+            "id": 108,
+            "text": "Ajustar parâmetros para m=128MiB, t=4, p=2 para maior segurança, aceitando maior tempo de processamento."
+          },
+          {
+            "id": 109,
+            "text": "Usar bcrypt com cost factor 12 como alternativa mais simples e amplamente testada."
+          },
+          {
+            "id": 110,
+            "text": "Consultar especialista em segurança para definir parâmetros ótimos baseado em análise de ameaças específica do projeto."
+          }
+        ],
+        "recommendedOptionId": 107
+      },
+      {
+        "id": 111,
+        "section": "flow",
+        "description": "Integração com serviço de envio de e-mail transacional foi identificada como crítica, mas detalhes de tratamento de falhas de envio (retry, fallback, notificação ao usuário) não foram especificados.",
+        "resolutionOptions": [
+          {
+            "id": 112,
+            "text": "Implementar retry automático com backoff exponencial (ex: 3 tentativas em 5, 15, 45 minutos) e notificar usuário se falhar após todas as tentativas."
+          },
+          {
+            "id": 113,
+            "text": "Implementar fila de prioridade para e-mails de recuperação de senha, garantindo que sejam processados antes de outros tipos de e-mail."
+          },
+          {
+            "id": 114,
+            "text": "Implementar fallback para envio via SMS ou notificação push se envio de e-mail falhar após 3 tentativas."
+          },
+          {
+            "id": 115,
+            "text": "Manter registro de tentativas de envio e permitir que usuário solicite reenvio manual do link de recuperação."
+          }
+        ],
+        "recommendedOptionId": 112
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 86,
+        "then": "O formulário exibe mensagem de erro específica indicando que o formato de e-mail é inválido, sem submeter a requisição ao servidor.",
+        "type": "unit",
+        "when": "O usuário submete o formulário com um endereço de e-mail em formato inválido (ex: 'usuario@' ou 'usuario.com')",
+        "given": "Um usuário acessa o formulário de solicitação de recuperação de senha",
+        "scenario": "Validação de formato de e-mail na solicitação de recuperação",
+        "target_section": "definition"
+      },
+      {
+        "id": 87,
+        "then": "Token é armazenado em hash no banco de dados com prazo de expiração, e-mail é enfileirado para envio, e mensagem genérica de confirmação é exibida ao usuário.",
+        "type": "integration",
+        "when": "O servidor processa a solicitação, gera um token de recuperação e enfileira o e-mail transacional",
+        "given": "Um usuário ativo de um tenant ativo submete a solicitação de recuperação com um e-mail válido que existe na base",
+        "scenario": "Geração e envio de token de recuperação para e-mail válido",
+        "target_section": "flow"
+      },
+      {
+        "id": 88,
+        "then": "Mensagem de confirmação é idêntica para todos os casos (e-mail existe ou não), impossibilitando que o atacante enumere usuários válidos.",
+        "type": "security",
+        "when": "O servidor processa as solicitações e retorna respostas",
+        "given": "Um atacante submete solicitações de recuperação com múltiplos endereços de e-mail, alguns existentes e outros não",
+        "scenario": "Prevenção de enumeração de usuários na solicitação de recuperação",
+        "target_section": "rules"
+      },
+      {
+        "id": 89,
+        "then": "Servidor valida o token (existência, validade, expiração, uso único), confirma que pertence ao tenant correto, e exibe o formulário de redefinição de senha.",
+        "type": "integration",
+        "when": "O usuário clica no link e acessa a página de redefinição",
+        "given": "Um usuário recebe e-mail de recuperação com link contendo token válido",
+        "scenario": "Validação de token de recuperação no link acessado",
+        "target_section": "flow"
+      },
+      {
+        "id": 90,
+        "then": "O formulário exibe mensagem de erro específica indicando os critérios não atendidos, sem submeter a requisição ao servidor.",
+        "type": "unit",
+        "when": "O usuário submete o formulário com uma nova senha que não atende aos critérios de complexidade (ex: menos de 8 caracteres ou sem números)",
+        "given": "Um usuário acessa o formulário de redefinição de senha com token válido",
+        "scenario": "Validação de complexidade de nova senha",
+        "target_section": "definition"
+      },
+      {
+        "id": 91,
+        "then": "Todas as sessões JWT ativas do usuário são invalidadas, forçando novo login com a nova credencial.",
+        "type": "integration",
+        "when": "Servidor persiste a nova senha em hash seguro e marca o token como utilizado",
+        "given": "Um usuário tem múltiplas sessões ativas e submete a redefinição de senha com sucesso",
+        "scenario": "Invalidação de sessões após redefinição bem-sucedida de senha",
+        "target_section": "flow"
+      },
+      {
+        "id": 92,
+        "then": "Após a 5ª solicitação, as requisições subsequentes são bloqueadas com mensagem informando o tempo de espera até poder tentar novamente.",
+        "type": "security",
+        "when": "O servidor processa as requisições e verifica o limite de rate limiting",
+        "given": "Um atacante submete 6 solicitações de recuperação para o mesmo e-mail em 10 minutos",
+        "scenario": "Bloqueio por rate limiting após múltiplas solicitações",
+        "target_section": "rules"
+      },
+      {
+        "id": 93,
+        "then": "Servidor valida que o token pertence ao tenant A, rejeita a operação e exibe mensagem de erro indicando que o token é inválido.",
+        "type": "integration",
+        "when": "Um atacante tenta utilizar o mesmo token para redefinir a senha de um usuário do tenant B",
+        "given": "Um token de recuperação foi gerado para um usuário do tenant A",
+        "scenario": "Isolamento de tenant no fluxo de recuperação de senha",
+        "target_section": "rules"
+      },
+      {
+        "id": 94,
+        "then": "Todas as solicitações são processadas e e-mails são enfileirados em tempo <= 500ms (p99), sem degradação perceptível.",
+        "type": "performance",
+        "when": "100 usuários simultâneos submetem solicitações de recuperação de senha",
+        "given": "Plataforma está sob carga de 5.000 usuários ativos simultâneos",
+        "scenario": "Desempenho de processamento de solicitação de recuperação sob carga",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 95,
+        "then": "Fluxo completo é executado com sucesso: token é gerado, e-mail é enviado, token é validado, nova senha é persistida, sessões anteriores são invalidadas, e usuário consegue fazer login com a nova senha.",
+        "type": "e2e",
+        "when": "Usuário submete solicitação com e-mail válido, recebe e-mail com link, clica no link, submete nova senha válida e faz login com a nova credencial",
+        "given": "Um usuário ativo esqueceu sua senha e acessa a página de recuperação",
+        "scenario": "Fluxo completo de recuperação de senha do início ao fim",
+        "target_section": "flow"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 80,
+        "target": "Entropia mínima de 128 bits; algoritmo de geração conforme NIST SP 800-90A.",
+        "category": "security",
+        "requirement": "Tokens de recuperação de senha devem ser gerados utilizando gerador criptograficamente seguro com entropia suficiente para resistir a ataques de força bruta e adivinhação.",
+        "verification": "Análise de código do gerador de tokens; teste de aleatoriedade com ferramentas de análise criptográfica; verificação de que tokens não são previsíveis ou reutilizáveis."
+      },
+      {
+        "id": 81,
+        "target": "p99 <= 500ms para processamento da solicitação e enfileiramento do e-mail.",
+        "category": "performance",
+        "requirement": "Solicitação de recuperação de senha deve ser processada e e-mail enfileirado para envio em tempo adequado, mesmo sob carga de até 5.000 usuários ativos na plataforma.",
+        "verification": "Teste de carga com 5.000 usuários simultâneos; medição de latência p99 de requisições de solicitação de recuperação; monitoramento de fila de e-mail."
+      },
+      {
+        "id": 82,
+        "target": "Disponibilidade >= 99.9% (SLA de 43 minutos de downtime por mês).",
+        "category": "availability",
+        "requirement": "Fluxo de recuperação de senha deve permanecer disponível com alta disponibilidade, dado que sua indisponibilidade impede que usuários bloqueados recuperem o acesso à plataforma.",
+        "verification": "Monitoramento contínuo de disponibilidade; alertas para indisponibilidade; teste de failover de componentes críticos."
+      },
+      {
+        "id": 83,
+        "target": "Breakpoints responsivos: mobile <= 480px, tablet 481-768px, desktop > 768px; tempo de carregamento <= 2s em conexão 3G.",
+        "category": "performance",
+        "requirement": "Fluxo de recuperação de senha deve ser renderizado de forma responsiva e adaptativa, garantindo usabilidade adequada em dispositivos móveis (smartphones e tablets) e em desktops.",
+        "verification": "Teste de responsividade em múltiplos dispositivos; validação de layout em diferentes tamanhos de tela; teste de performance em conexões lentas."
+      },
+      {
+        "id": 84,
+        "target": "Máximo 5 solicitações por e-mail em 15 minutos; máximo 10 solicitações por IP em 15 minutos.",
+        "category": "security",
+        "requirement": "Mecanismo de limitação de taxa (rate limiting) deve ser aplicado nas requisições de solicitação de recuperação de senha por endereço de e-mail e por endereço IP, prevenindo abuso e ataques de enumeração ou sobrecarga do serviço de e-mail.",
+        "verification": "Teste de rate limiting com requisições acima do limite; verificação de bloqueio temporário; validação de mensagem de erro informativa."
+      },
+      {
+        "id": 85,
+        "target": "Logs estruturados em JSON com campos: timestamp, user_id, tenant_id, operation, result, error_code (se aplicável), ip_address, user_agent.",
+        "category": "observability",
+        "requirement": "Todas as operações do fluxo de recuperação de senha devem ser registradas em log estruturado com contexto completo para auditoria e investigação de incidentes.",
+        "verification": "Análise de logs para verificar presença de todos os campos obrigatórios; teste de rastreabilidade de operações de ponta a ponta."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 13,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T15:14:36.247Z",
+  "updatedAt": null
+}

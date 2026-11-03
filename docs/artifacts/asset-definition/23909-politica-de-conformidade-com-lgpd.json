@@ -1,0 +1,1058 @@
+{
+  "id": 23909,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 47,
+          "name": "Requisição de Cadastro de Usuário",
+          "format": "JSON { email: string, nome_completo: string, nivel_hierarquico_id: uuid }",
+          "origin": "Formulário de Cadastro de Usuário (Feature 1)",
+          "trigger": "Clique em 'Cadastrar' pelo administrador do tenant"
+        },
+        {
+          "id": 48,
+          "name": "Requisição de Edição de Usuário",
+          "format": "JSON { email: string, nome_completo: string, nivel_hierarquico_id: uuid }",
+          "origin": "Formulário de Edição de Perfil (Feature 3)",
+          "trigger": "Clique em 'Salvar' pelo administrador do tenant"
+        },
+        {
+          "id": 49,
+          "name": "Requisição de Ativação/Desativação de Usuário",
+          "format": "JSON { user_id: uuid, action: enum[activate|deactivate] }",
+          "origin": "Página de Gerenciamento de Usuários (Feature 3)",
+          "trigger": "Clique em 'Ativar' ou 'Desativar' pelo administrador do tenant"
+        },
+        {
+          "id": 50,
+          "name": "Requisição de Login",
+          "format": "JSON { email: string, password: string }",
+          "origin": "Formulário de Login (Feature 4)",
+          "trigger": "Clique em 'Entrar' pelo usuário"
+        },
+        {
+          "id": 51,
+          "name": "Requisição de Recuperação de Senha",
+          "format": "JSON { email: string }",
+          "origin": "Formulário de Recuperação de Senha (Feature 5)",
+          "trigger": "Clique em 'Recuperar Senha' pelo usuário"
+        },
+        {
+          "id": 52,
+          "name": "Requisição de Redefinição de Senha",
+          "format": "JSON { token: string, new_password: string, password_confirmation: string }",
+          "origin": "Formulário de Redefinição de Senha (Feature 5)",
+          "trigger": "Clique em 'Redefinir Senha' pelo usuário via link de e-mail"
+        },
+        {
+          "id": 53,
+          "name": "Requisição de Provisionamento de Tenant",
+          "format": "JSON { nome_organizacao: string, tenant_slug: string }",
+          "origin": "Formulário de Provisionamento de Tenant (Feature 6)",
+          "trigger": "Clique em 'Provisionar' pelo administrador interno da plataforma"
+        },
+        {
+          "id": 54,
+          "name": "Requisição de Ativação/Desativação de Tenant",
+          "format": "JSON { tenant_id: uuid, action: enum[activate|deactivate] }",
+          "origin": "Página de Gerenciamento de Tenants (Feature 7)",
+          "trigger": "Clique em 'Ativar' ou 'Desativar' pelo administrador interno da plataforma"
+        },
+        {
+          "id": 55,
+          "name": "Requisição de Criação de Tarefa",
+          "format": "JSON { titulo: string, descricao: string, responsavel_id: uuid, prioridade: enum[baixa|media|alta|urgente], status: enum[a_fazer|em_andamento|concluido], data_limite: date }",
+          "origin": "Formulário de Criação de Tarefa (Feature 8)",
+          "trigger": "Clique em 'Criar Tarefa' pelo usuário"
+        },
+        {
+          "id": 56,
+          "name": "Requisição de Edição de Tarefa",
+          "format": "JSON { titulo: string, descricao: string, responsavel_id: uuid, prioridade: enum[baixa|media|alta|urgente], status: enum[a_fazer|em_andamento|concluido], data_limite: date }",
+          "origin": "Formulário de Edição de Tarefa (Feature 13)",
+          "trigger": "Clique em 'Salvar' pelo usuário"
+        },
+        {
+          "id": 57,
+          "name": "Requisição de Alteração de Status de Tarefa",
+          "format": "JSON { task_id: uuid, novo_status: enum[a_fazer|em_andamento|concluido] }",
+          "origin": "Painel Kanban ou Formulário de Edição (Feature 12)",
+          "trigger": "Drag-and-drop no Kanban ou seleção no formulário"
+        },
+        {
+          "id": 58,
+          "name": "Requisição de Conclusão de Tarefa",
+          "format": "JSON { task_id: uuid }",
+          "origin": "Painel de Tarefas (Feature 14)",
+          "trigger": "Clique em 'Concluir' pelo usuário"
+        },
+        {
+          "id": 59,
+          "name": "Evento de Desativação de Usuário",
+          "format": "JSON { user_id: uuid, tenant_id: uuid, email: string, timestamp: timestamp }",
+          "origin": "Controle de Identidade e Acesso (Asset 7)",
+          "trigger": "Desativação de usuário via API"
+        },
+        {
+          "id": 60,
+          "name": "Evento de Desativação de Tenant",
+          "format": "JSON { tenant_id: uuid, timestamp: timestamp }",
+          "origin": "Controle de Identidade e Acesso (Asset 7)",
+          "trigger": "Desativação de tenant via API"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 81,
+          "name": "Confirmação de Cadastro de Usuário",
+          "format": "JSON { message: string, user: { id: uuid, email: string, nome_completo: string, status: enum[ativo|inativo] } }",
+          "destination": "Página de Gerenciamento de Usuários (Feature 3)"
+        },
+        {
+          "id": 82,
+          "name": "Confirmação de Edição de Usuário",
+          "format": "JSON { message: string, user: { id: uuid, email: string, nome_completo: string, status: enum[ativo|inativo] } }",
+          "destination": "Página de Gerenciamento de Usuários (Feature 3)"
+        },
+        {
+          "id": 83,
+          "name": "Confirmação de Ativação/Desativação de Usuário",
+          "format": "JSON { message: string, user: { id: uuid, email: string, status: enum[ativo|inativo] } }",
+          "destination": "Página de Gerenciamento de Usuários (Feature 3)"
+        },
+        {
+          "id": 84,
+          "name": "Token de Sessão Autenticada",
+          "format": "JWT { sub: uuid, email: string, tenant_id: uuid, nivel_hierarquico_id: uuid, iat: timestamp, exp: timestamp }",
+          "destination": "Controle de Identidade e Acesso (Asset 7)"
+        },
+        {
+          "id": 85,
+          "name": "Mensagem de Erro de Autenticação",
+          "format": "JSON { error: string, retry_after_seconds: integer (quando rate limited) }",
+          "destination": "Formulário de Login (Feature 4)"
+        },
+        {
+          "id": 86,
+          "name": "Confirmação de Solicitação de Recuperação de Senha",
+          "format": "JSON { message: string }",
+          "destination": "Formulário de Recuperação de Senha (Feature 5)"
+        },
+        {
+          "id": 87,
+          "name": "E-mail de Recuperação de Senha",
+          "format": "E-mail transacional com link contendo token de recuperação",
+          "destination": "Serviço de Envio de E-mail (Integration 42)"
+        },
+        {
+          "id": 88,
+          "name": "Confirmação de Redefinição de Senha",
+          "format": "JSON { message: string }",
+          "destination": "Formulário de Redefinição de Senha (Feature 5)"
+        },
+        {
+          "id": 89,
+          "name": "Confirmação de Provisionamento de Tenant",
+          "format": "JSON { message: string, tenant: { id: uuid, slug: string, status: enum[ativo|inativo] } }",
+          "destination": "Página de Gerenciamento de Tenants (Feature 6)"
+        },
+        {
+          "id": 90,
+          "name": "Confirmação de Ativação/Desativação de Tenant",
+          "format": "JSON { message: string, tenant: { id: uuid, slug: string, status: enum[ativo|inativo] } }",
+          "destination": "Página de Gerenciamento de Tenants (Feature 7)"
+        },
+        {
+          "id": 91,
+          "name": "Evento de Auditoria",
+          "format": "JSON com payload conforme audit_emitters[] (user_created, user_updated, authentication_successful, etc.)",
+          "destination": "Trilha de Auditoria de Ações (Asset 53)"
+        },
+        {
+          "id": 92,
+          "name": "Alerta de Violação de Conformidade",
+          "format": "JSON { violation_type: enum[unauthorized_access|data_breach_attempt|rate_limit_exceeded|invalid_consent], user_id: uuid, tenant_id: uuid, timestamp: timestamp, details: string }",
+          "destination": "Sistema de Monitoramento de Segurança"
+        }
+      ],
+      "processing": [
+        {
+          "id": 61,
+          "step": "Validar Isolamento de Tenant",
+          "description": "Verificar que o tenant_id do usuário autenticado corresponde ao tenant_id do recurso sendo acessado, impedindo acesso cruzado entre organizações."
+        },
+        {
+          "id": 62,
+          "step": "Validar Status de Usuário e Tenant",
+          "description": "Confirmar que o usuário está ativo e o tenant está ativo antes de permitir qualquer operação, bloqueando acessos de usuários ou tenants desativados."
+        },
+        {
+          "id": 63,
+          "step": "Validar Formato de E-mail",
+          "description": "Verificar que o e-mail informado está em formato válido conforme RFC 5322 antes de persistir ou processar."
+        },
+        {
+          "id": 64,
+          "step": "Validar Unicidade de E-mail por Tenant",
+          "description": "Consultar banco de dados para garantir que o e-mail não está duplicado dentro do tenant, impedindo conflitos de identidade."
+        },
+        {
+          "id": 65,
+          "step": "Criptografar Senha com Argon2id",
+          "description": "Aplicar algoritmo argon2id (m=64MiB, t=3, p=4) para gerar hash seguro da senha antes de persistir no banco de dados."
+        },
+        {
+          "id": 66,
+          "step": "Armazenar Dados Pessoais com Proteção",
+          "description": "Persistir e-mail e nome completo no banco de dados com criptografia AES-256-GCM em repouso, garantindo proteção de dados sensíveis."
+        },
+        {
+          "id": 67,
+          "step": "Registrar Evento de Auditoria",
+          "description": "Emitir evento de auditoria (user_created, user_updated, user_activated, user_deactivated, authentication_successful, etc.) com timestamp, IP, usuário executor e detalhes da operação."
+        },
+        {
+          "id": 68,
+          "step": "Validar Consentimento Informado",
+          "description": "Verificar que o usuário ou administrador consentiu com o processamento de dados pessoais conforme LGPD antes de persistir."
+        },
+        {
+          "id": 69,
+          "step": "Aplicar Rate Limiting",
+          "description": "Limitar tentativas de login a 5 por 15 minutos por IP, e requisições de recuperação de senha a 3 por hora por e-mail, prevenindo força bruta e enumeração."
+        },
+        {
+          "id": 70,
+          "step": "Retornar Mensagem de Erro Genérica",
+          "description": "Em caso de falha de autenticação, retornar mensagem não discriminatória que não revela se e-mail ou senha está incorreto, prevenindo enumeração de usuários."
+        },
+        {
+          "id": 71,
+          "step": "Gerar Token de Recuperação de Senha",
+          "description": "Criar token único e criptograficamente seguro com 32 bytes de entropia, armazenar hash SHA-256 no banco de dados, e definir expiração de 30 minutos."
+        },
+        {
+          "id": 72,
+          "step": "Enviar Link de Recuperação por E-mail",
+          "description": "Disparar e-mail transacional contendo link de redefinição com token embutido, via serviço de envio de e-mail integrado."
+        },
+        {
+          "id": 73,
+          "step": "Validar Token de Recuperação",
+          "description": "Verificar que o token é válido, não expirou (30 minutos), pertence ao tenant correto e não foi reutilizado antes de permitir redefinição."
+        },
+        {
+          "id": 74,
+          "step": "Invalidar Sessões Ativas após Redefinição de Senha",
+          "description": "Revogar todas as sessões ativas do usuário no momento em que a redefinição de senha é concluída, forçando novo login com nova credencial."
+        },
+        {
+          "id": 75,
+          "step": "Invalidar Sessões Ativas após Desativação de Usuário",
+          "description": "Revogar imediatamente todas as sessões ativas do usuário quando sua desativação é efetivada, impedindo uso continuado da plataforma."
+        },
+        {
+          "id": 76,
+          "step": "Invalidar Sessões de Tenant após Desativação",
+          "description": "Revogar todas as sessões ativas de todos os usuários pertencentes ao tenant quando sua desativação é efetivada."
+        },
+        {
+          "id": 77,
+          "step": "Aplicar Janela de Retenção de Dados",
+          "description": "Manter dados pessoais armazenados conforme janela de retenção definida (padrão 2555 dias / 7 anos), e excluir automaticamente após expiração conforme LGPD."
+        },
+        {
+          "id": 78,
+          "step": "Implementar Direito ao Esquecimento",
+          "description": "Permitir exclusão completa de dados pessoais de usuário a pedido, respeitando retenção legal obrigatória para auditoria (logs de auditoria retidos por 2555 dias)."
+        },
+        {
+          "id": 79,
+          "step": "Transmitir Dados Pessoais via HTTPS",
+          "description": "Garantir que toda transmissão de dados pessoais entre cliente e servidor ocorre exclusivamente via HTTPS com TLS 1.2 ou superior, protegendo em trânsito."
+        },
+        {
+          "id": 80,
+          "step": "Detectar Violação de Conformidade",
+          "description": "Monitorar tentativas de acesso não autorizado, manipulação de tenant_id, ou padrões suspeitos, emitindo alerta de segurança quando detectado."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 93,
+        "category": "compliance",
+        "description": "Toda operação de leitura, escrita ou exclusão de dados pessoais (nome, e-mail) deve ser validada contra o tenant_id do usuário autenticado, impedindo acesso cruzado entre organizações.",
+        "enforcement": "code",
+        "verification": "Validação de tenant_id em cada requisição de API, com teste de integração confirmando que usuário de tenant A não consegue acessar dados de tenant B."
+      },
+      {
+        "id": 94,
+        "category": "invariant",
+        "description": "Senhas de usuários devem ser armazenadas exclusivamente em formato de hash seguro (argon2id com m=64MiB, t=3, p=4), nunca em texto simples ou formato reversível.",
+        "enforcement": "code",
+        "verification": "Inspeção de código confirmando que toda persistência de senha passa por função de hash argon2id; teste de segurança confirmando que hash não pode ser revertido para texto simples."
+      },
+      {
+        "id": 95,
+        "category": "validation",
+        "description": "E-mails de usuários devem estar em formato válido conforme RFC 5322 antes de serem persistidos ou processados.",
+        "enforcement": "code",
+        "verification": "Teste unitário confirmando que e-mails inválidos (sem @, domínio inválido, caracteres especiais) são rejeitados; teste de integração confirmando que e-mails válidos são aceitos."
+      },
+      {
+        "id": 96,
+        "category": "invariant",
+        "description": "E-mail deve ser único dentro de cada tenant, impedindo duplicação de identidade e conflitos de autenticação.",
+        "enforcement": "db_constraint",
+        "verification": "Índice único composto (tenant_id, email) no banco de dados; teste de integração confirmando que tentativa de cadastrar e-mail duplicado retorna erro 409 Conflict."
+      },
+      {
+        "id": 97,
+        "category": "authorization",
+        "description": "Apenas usuários com status 'ativo' e pertencentes a tenants com status 'ativo' podem acessar qualquer recurso ou funcionalidade da plataforma.",
+        "enforcement": "code",
+        "verification": "Middleware de autenticação validando status de usuário e tenant em cada requisição; teste de integração confirmando que usuário inativo recebe erro 401 Unauthorized."
+      },
+      {
+        "id": 98,
+        "category": "rate_limit",
+        "description": "Tentativas de login devem ser limitadas a 5 por 15 minutos por endereço IP, prevenindo ataques de força bruta.",
+        "enforcement": "network",
+        "verification": "Teste de segurança confirmando que após 5 tentativas falhadas em 15 minutos, requisições subsequentes retornam erro 429 Too Many Requests com retry_after_seconds."
+      },
+      {
+        "id": 99,
+        "category": "rate_limit",
+        "description": "Requisições de recuperação de senha devem ser limitadas a 3 por hora por e-mail, prevenindo abuso do serviço de e-mail.",
+        "enforcement": "network",
+        "verification": "Teste de segurança confirmando que após 3 requisições em 1 hora, requisições subsequentes retornam erro 429 Too Many Requests."
+      },
+      {
+        "id": 100,
+        "category": "validation",
+        "description": "Mensagens de erro em autenticação devem ser genéricas e não discriminatórias, não revelando se e-mail ou senha está incorreto, prevenindo enumeração de usuários.",
+        "enforcement": "code",
+        "verification": "Inspeção de código confirmando que erro de autenticação retorna mensagem genérica; teste de segurança confirmando que atacante não consegue enumerar usuários válidos."
+      },
+      {
+        "id": 101,
+        "category": "compliance",
+        "description": "Tokens de recuperação de senha devem ser armazenados exclusivamente em formato de hash (SHA-256), nunca em texto simples, e expirar automaticamente após 30 minutos.",
+        "enforcement": "code",
+        "verification": "Inspeção de código confirmando que token é hasheado antes de persistir; teste de integração confirmando que token expirado (>30 minutos) é rejeitado."
+      },
+      {
+        "id": 102,
+        "category": "compliance",
+        "description": "Todas as sessões ativas de um usuário devem ser revogadas imediatamente quando a redefinição de senha é concluída, forçando novo login com nova credencial.",
+        "enforcement": "code",
+        "verification": "Teste de integração confirmando que após redefinição de senha, token de acesso anterior é invalidado e requisições com ele retornam erro 401 Unauthorized."
+      },
+      {
+        "id": 103,
+        "category": "compliance",
+        "description": "Todas as sessões ativas de um usuário devem ser revogadas imediatamente quando sua desativação é efetivada, impedindo uso continuado da plataforma.",
+        "enforcement": "code",
+        "verification": "Teste de integração confirmando que após desativação de usuário, token de acesso anterior é invalidado e requisições com ele retornam erro 401 Unauthorized."
+      },
+      {
+        "id": 104,
+        "category": "compliance",
+        "description": "Todas as sessões ativas de todos os usuários pertencentes a um tenant devem ser revogadas imediatamente quando o tenant é desativado.",
+        "enforcement": "code",
+        "verification": "Teste de integração confirmando que após desativação de tenant, todos os tokens de acesso de usuários daquele tenant são invalidados."
+      },
+      {
+        "id": 105,
+        "category": "observability",
+        "description": "Toda operação crítica (cadastro, edição, ativação, desativação de usuário; login bem-sucedido ou falhado; recuperação de senha; redefinição de senha) deve ser registrada em log de auditoria com timestamp, IP, usuário executor e detalhes da operação.",
+        "enforcement": "code",
+        "verification": "Inspeção de código confirmando que cada operação crítica emite evento de auditoria; teste de integração confirmando que eventos aparecem em audit_log table com todos os campos preenchidos."
+      },
+      {
+        "id": 106,
+        "category": "compliance",
+        "description": "Dados pessoais (e-mail) devem ser transmitidos exclusivamente via HTTPS com TLS 1.2 ou superior, garantindo confidencialidade em trânsito.",
+        "enforcement": "network",
+        "verification": "Teste de segurança confirmando que requisições HTTP (não HTTPS) são redirecionadas ou rejeitadas; inspeção de configuração confirmando TLS 1.2+ habilitado."
+      },
+      {
+        "id": 107,
+        "category": "compliance",
+        "description": "Dados pessoais (e-mail) devem ser armazenados com criptografia AES-256-GCM em repouso no banco de dados, garantindo proteção contra exposição de dados.",
+        "enforcement": "code",
+        "verification": "Inspeção de código confirmando que e-mail é criptografado antes de persistir; teste de segurança confirmando que dados no banco de dados não estão em texto simples."
+      },
+      {
+        "id": 108,
+        "category": "retention",
+        "description": "Dados pessoais devem ser retidos conforme janela de retenção definida (padrão 2555 dias / 7 anos), e excluídos automaticamente após expiração conforme LGPD.",
+        "enforcement": "infra",
+        "verification": "Job de manutenção agendado confirmando que dados pessoais expirados são deletados; teste de integração confirmando que dados com data_criacao > 2555 dias são removidos."
+      },
+      {
+        "id": 109,
+        "category": "compliance",
+        "description": "Direito ao esquecimento (right to be forgotten) deve ser implementado, permitindo exclusão completa de dados pessoais de usuário a pedido, respeitando retenção legal obrigatória para auditoria.",
+        "enforcement": "manual",
+        "verification": "Procedimento documentado para processamento de requisições de exclusão; teste de integração confirmando que dados pessoais são deletados mas logs de auditoria são retidos por 2555 dias."
+      },
+      {
+        "id": 110,
+        "category": "compliance",
+        "description": "Consentimento informado deve ser obtido e registrado antes de processar dados pessoais para fins específicos, conforme LGPD.",
+        "enforcement": "manual",
+        "verification": "Formulário de consentimento apresentado ao usuário; registro de consentimento armazenado em banco de dados com timestamp e versão da política."
+      },
+      {
+        "id": 111,
+        "category": "validation",
+        "description": "Senhas devem atender a critérios mínimos de complexidade: 8 caracteres, incluindo maiúscula, minúscula e número.",
+        "enforcement": "code",
+        "verification": "Teste unitário confirmando que senhas que não atendem critérios são rejeitadas; teste de integração confirmando que senhas válidas são aceitas."
+      },
+      {
+        "id": 112,
+        "category": "observability",
+        "description": "Tentativas de acesso não autorizado, manipulação de tenant_id ou padrões suspeitos devem ser detectados e registrados como alerta de segurança.",
+        "enforcement": "code",
+        "verification": "Teste de segurança confirmando que tentativa de acessar recurso de outro tenant gera alerta; inspeção de logs confirmando que alertas são registrados com detalhes."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "A Política de Conformidade com LGPD é um conjunto de regras, procedimentos e controles que garante o tratamento seguro e legal de dados pessoais de usuários na plataforma multi-tenant de gerenciamento de tarefas, em conformidade com a Lei Geral de Proteção de Dados (LGPD). Define e aplica princípios de minimização de dados, proteção de informações pessoais, consentimento informado, direito ao esquecimento, retenção limitada, e rastreabilidade completa de acessos e modificações. Implementa validações obrigatórias em pontos críticos (cadastro, autenticação, edição, exclusão de usuários), criptografia de dados sensíveis em repouso e em trânsito, isolamento de dados por tenant, e emissão de eventos de auditoria para toda operação que envolva dados pessoais. Atua como camada de governança que intercepta operações de leitura, escrita e exclusão de dados pessoais em todas as camadas (API, repositórios, banco de dados), garantindo que nenhuma brecha de conformidade ocorra independentemente do ponto de entrada ou do tenant afetado."
+    },
+    "definition": {
+      "params": [
+        {
+          "id": 32,
+          "name": "password_hash_algorithm",
+          "value": "argon2id"
+        },
+        {
+          "id": 33,
+          "name": "password_hash_memory_mib",
+          "value": "64"
+        },
+        {
+          "id": 34,
+          "name": "password_hash_time_cost",
+          "value": "3"
+        },
+        {
+          "id": 35,
+          "name": "password_hash_parallelism",
+          "value": "4"
+        },
+        {
+          "id": 36,
+          "name": "access_token_ttl_seconds",
+          "value": "3600"
+        },
+        {
+          "id": 37,
+          "name": "password_recovery_token_ttl_minutes",
+          "value": "30"
+        },
+        {
+          "id": 38,
+          "name": "login_rate_limit_max_attempts",
+          "value": "5"
+        },
+        {
+          "id": 39,
+          "name": "login_rate_limit_window_minutes",
+          "value": "15"
+        },
+        {
+          "id": 40,
+          "name": "password_recovery_rate_limit_per_hour",
+          "value": "3"
+        },
+        {
+          "id": 41,
+          "name": "data_retention_days_default",
+          "value": "2555"
+        },
+        {
+          "id": 42,
+          "name": "audit_log_retention_days",
+          "value": "2555"
+        },
+        {
+          "id": 43,
+          "name": "tls_min_version",
+          "value": "1.2"
+        },
+        {
+          "id": 44,
+          "name": "hsts_max_age_seconds",
+          "value": "31536000"
+        },
+        {
+          "id": 45,
+          "name": "encryption_algorithm",
+          "value": "AES-256-GCM"
+        },
+        {
+          "id": 46,
+          "name": "email_format_pattern",
+          "value": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+        }
+      ],
+      "policies": [
+        {
+          "id": 2,
+          "name": "Minimização de Dados Pessoais",
+          "scope": "Coleta, armazenamento e processamento de dados pessoais de usuários (nome completo, e-mail)",
+          "enforcement": "code",
+          "audit_action": "log"
+        },
+        {
+          "id": 3,
+          "name": "Proteção de Dados Pessoais em Repouso",
+          "scope": "Armazenamento de e-mail de usuários no banco de dados relacional",
+          "enforcement": "db_constraint",
+          "audit_action": "log"
+        },
+        {
+          "id": 4,
+          "name": "Proteção de Dados Pessoais em Trânsito",
+          "scope": "Transmissão de dados pessoais entre cliente e servidor via HTTPS",
+          "enforcement": "network",
+          "audit_action": "log"
+        },
+        {
+          "id": 5,
+          "name": "Isolamento de Dados Pessoais por Tenant",
+          "scope": "Garantir que dados pessoais de um tenant não sejam acessíveis por outro tenant",
+          "enforcement": "code",
+          "audit_action": "log"
+        },
+        {
+          "id": 6,
+          "name": "Rastreabilidade de Acesso a Dados Pessoais",
+          "scope": "Registrar toda operação de leitura, escrita ou exclusão de dados pessoais em log de auditoria",
+          "enforcement": "code",
+          "audit_action": "log"
+        },
+        {
+          "id": 7,
+          "name": "Retenção Limitada de Dados Pessoais",
+          "scope": "Definir e aplicar janelas de retenção para dados pessoais conforme regulamentação LGPD",
+          "enforcement": "infra",
+          "audit_action": "log"
+        },
+        {
+          "id": 8,
+          "name": "Direito ao Esquecimento (Right to be Forgotten)",
+          "scope": "Permitir exclusão completa de dados pessoais de usuário a pedido, respeitando retenção legal",
+          "enforcement": "code",
+          "audit_action": "log"
+        },
+        {
+          "id": 9,
+          "name": "Consentimento Informado para Processamento de Dados",
+          "scope": "Obter e registrar consentimento explícito antes de processar dados pessoais para fins específicos",
+          "enforcement": "manual",
+          "audit_action": "log"
+        },
+        {
+          "id": 10,
+          "name": "Validação de Formato de E-mail",
+          "scope": "Garantir que e-mails armazenados estejam em formato válido conforme RFC 5322",
+          "enforcement": "code",
+          "audit_action": "log"
+        },
+        {
+          "id": 11,
+          "name": "Unicidade de E-mail por Tenant",
+          "scope": "Impedir duplicação de e-mail dentro de um tenant, evitando conflitos de identidade",
+          "enforcement": "db_constraint",
+          "audit_action": "block"
+        },
+        {
+          "id": 12,
+          "name": "Criptografia de Senhas com Argon2id",
+          "scope": "Armazenar senhas exclusivamente em formato de hash seguro, nunca em texto simples",
+          "enforcement": "code",
+          "audit_action": "log"
+        },
+        {
+          "id": 13,
+          "name": "Invalidação de Sessões após Desativação de Usuário",
+          "scope": "Revogar imediatamente todas as sessões ativas quando um usuário é desativado",
+          "enforcement": "code",
+          "audit_action": "log"
+        },
+        {
+          "id": 14,
+          "name": "Invalidação de Sessões após Redefinição de Senha",
+          "scope": "Revogar todas as sessões ativas quando uma senha é redefinida via recuperação",
+          "enforcement": "code",
+          "audit_action": "log"
+        },
+        {
+          "id": 15,
+          "name": "Rate Limiting em Endpoints de Autenticação",
+          "scope": "Limitar tentativas de login e recuperação de senha para prevenir força bruta e enumeração de usuários",
+          "enforcement": "network",
+          "audit_action": "alert"
+        },
+        {
+          "id": 16,
+          "name": "Mensagens de Erro Genéricas em Autenticação",
+          "scope": "Retornar mensagens de erro não discriminatórias que não revelam se e-mail ou senha está incorreto",
+          "enforcement": "code",
+          "audit_action": "log"
+        },
+        {
+          "id": 17,
+          "name": "Armazenamento Seguro de Tokens de Recuperação de Senha",
+          "scope": "Armazenar tokens de recuperação exclusivamente em formato de hash, nunca em texto simples",
+          "enforcement": "code",
+          "audit_action": "log"
+        },
+        {
+          "id": 18,
+          "name": "Expiração de Tokens de Recuperação de Senha",
+          "scope": "Invalidar automaticamente tokens de recuperação após 30 minutos de inatividade",
+          "enforcement": "code",
+          "audit_action": "log"
+        },
+        {
+          "id": 19,
+          "name": "Conformidade com Princípios LGPD em Operações de Usuário",
+          "scope": "Garantir que toda operação de cadastro, edição, ativação, desativação e exclusão de usuário respeite princípios LGPD",
+          "enforcement": "code",
+          "audit_action": "log"
+        }
+      ],
+      "audit_emitters": [
+        {
+          "id": 20,
+          "event_name": "user_created",
+          "destination": "audit_log table",
+          "payload_shape": "{ user_id: uuid, tenant_id: uuid, email: string, nome_completo: string, criador_id: uuid, timestamp: timestamp, ip_address: string }"
+        },
+        {
+          "id": 21,
+          "event_name": "user_updated",
+          "destination": "audit_log table",
+          "payload_shape": "{ user_id: uuid, tenant_id: uuid, email: string, nome_completo: string, editor_id: uuid, fields_changed: string[], timestamp: timestamp, ip_address: string }"
+        },
+        {
+          "id": 22,
+          "event_name": "user_activated",
+          "destination": "audit_log table",
+          "payload_shape": "{ user_id: uuid, tenant_id: uuid, email: string, executor_id: uuid, timestamp: timestamp, ip_address: string }"
+        },
+        {
+          "id": 23,
+          "event_name": "user_deactivated",
+          "destination": "audit_log table",
+          "payload_shape": "{ user_id: uuid, tenant_id: uuid, email: string, executor_id: uuid, timestamp: timestamp, ip_address: string }"
+        },
+        {
+          "id": 24,
+          "event_name": "user_deleted",
+          "destination": "audit_log table",
+          "payload_shape": "{ user_id: uuid, tenant_id: uuid, email: string, executor_id: uuid, timestamp: timestamp, ip_address: string, deletion_reason: string }"
+        },
+        {
+          "id": 25,
+          "event_name": "authentication_successful",
+          "destination": "audit_log table",
+          "payload_shape": "{ user_id: uuid, tenant_id: uuid, email: string, timestamp: timestamp, ip_address: string }"
+        },
+        {
+          "id": 26,
+          "event_name": "authentication_failed",
+          "destination": "audit_log table",
+          "payload_shape": "{ email: string, tenant_id: uuid, reason: enum[invalid_credentials|user_inactive|tenant_inactive|rate_limited], timestamp: timestamp, ip_address: string }"
+        },
+        {
+          "id": 27,
+          "event_name": "password_recovery_requested",
+          "destination": "audit_log table",
+          "payload_shape": "{ email: string, tenant_id: uuid, timestamp: timestamp, ip_address: string }"
+        },
+        {
+          "id": 28,
+          "event_name": "password_reset_completed",
+          "destination": "audit_log table",
+          "payload_shape": "{ user_id: uuid, tenant_id: uuid, email: string, timestamp: timestamp, ip_address: string }"
+        },
+        {
+          "id": 29,
+          "event_name": "session_revoked",
+          "destination": "audit_log table",
+          "payload_shape": "{ user_id: uuid, tenant_id: uuid, email: string, reason: enum[logout|user_deactivated|tenant_deactivated|token_expired|password_reset], timestamp: timestamp }"
+        },
+        {
+          "id": 30,
+          "event_name": "data_access_logged",
+          "destination": "audit_log table",
+          "payload_shape": "{ user_id: uuid, tenant_id: uuid, resource_type: enum[user|task|tenant], resource_id: uuid, operation: enum[read|write|delete], timestamp: timestamp, ip_address: string }"
+        },
+        {
+          "id": 31,
+          "event_name": "compliance_violation_detected",
+          "destination": "audit_log table",
+          "payload_shape": "{ violation_type: enum[unauthorized_access|data_breach_attempt|rate_limit_exceeded|invalid_consent], user_id: uuid, tenant_id: uuid, timestamp: timestamp, ip_address: string, details: string }"
+        }
+      ]
+    },
+    "pendencies": [
+      {
+        "id": 141,
+        "section": "definition",
+        "description": "Definir mecanismo específico de consentimento informado (LGPD) — se será checkbox no formulário de cadastro, aceite de termos de serviço, ou outro método. Atualmente, a política menciona 'obter e registrar consentimento' mas não especifica a implementação exata.",
+        "resolutionOptions": [
+          {
+            "id": 142,
+            "text": "Implementar checkbox obrigatório no formulário de cadastro de usuário com texto de consentimento LGPD; armazenar timestamp e versão da política aceita em tabela de consentimentos."
+          },
+          {
+            "id": 143,
+            "text": "Integrar aceite de termos de serviço (que incluem cláusula LGPD) no fluxo de login inicial; registrar aceite com timestamp em tabela de consentimentos."
+          },
+          {
+            "id": 144,
+            "text": "Implementar fluxo de consentimento granular permitindo usuário escolher quais dados pessoais deseja compartilhar (e-mail, nome, etc.); armazenar preferências em tabela de consentimentos."
+          }
+        ],
+        "recommendedOptionId": 142
+      },
+      {
+        "id": 145,
+        "section": "definition",
+        "description": "Definir procedimento operacional para processamento de requisições de direito ao esquecimento (right to be forgotten) — quem pode solicitar, como é validada a identidade, qual é o SLA de processamento, e como dados relacionados (histórico de tarefas, logs de auditoria) são tratados.",
+        "resolutionOptions": [
+          {
+            "id": 146,
+            "text": "Criar endpoint /api/users/:id/delete-personal-data acessível apenas pelo próprio usuário ou administrador do tenant; validar identidade via token JWT; processar em <= 30 dias; manter logs de auditoria por 2555 dias conforme retenção legal."
+          },
+          {
+            "id": 147,
+            "text": "Implementar fluxo manual via suporte técnico — usuário solicita exclusão por e-mail, suporte valida identidade, administrador da plataforma processa em <= 30 dias; documentar procedimento em manual de conformidade."
+          },
+          {
+            "id": 148,
+            "text": "Criar dashboard administrativo para processamento de requisições de exclusão; implementar workflow de aprovação (usuário solicita → administrador de tenant aprova → administrador de plataforma executa); SLA de 30 dias."
+          }
+        ],
+        "recommendedOptionId": 146
+      },
+      {
+        "id": 149,
+        "section": "rules",
+        "description": "Definir janela de retenção de dados pessoais — atualmente definida como padrão 2555 dias (7 anos), mas LGPD permite retenção apenas pelo tempo necessário. Esclarecer se 7 anos é apropriado para este caso de uso ou se deve ser reduzido.",
+        "resolutionOptions": [
+          {
+            "id": 150,
+            "text": "Manter 2555 dias (7 anos) como padrão, justificado por requisitos de auditoria e conformidade fiscal; permitir configuração por tenant se necessário."
+          },
+          {
+            "id": 151,
+            "text": "Reduzir para 1095 dias (3 anos) como padrão, alinhado com retenção típica de registros administrativos; permitir extensão para tenants com requisitos específicos."
+          },
+          {
+            "id": 152,
+            "text": "Implementar política granular: dados pessoais (e-mail, nome) retidos por 365 dias após desativação de usuário; logs de auditoria retidos por 2555 dias; histórico de tarefas retido por 1095 dias."
+          }
+        ],
+        "recommendedOptionId": 152
+      },
+      {
+        "id": 153,
+        "section": "definition",
+        "description": "Definir como dados pessoais de usuários deletados serão tratados em contextos relacionados (ex: tarefa criada por usuário que foi deletado, histórico de status modificado por usuário deletado). Atualmente não está claro se referências a usuários deletados serão mantidas (anonimizadas) ou removidas.",
+        "resolutionOptions": [
+          {
+            "id": 154,
+            "text": "Anonimizar referências: substituir user_id por NULL e nome do usuário por '[Usuário Deletado]' em tarefas, histórico de status e logs de auditoria; manter integridade referencial."
+          },
+          {
+            "id": 155,
+            "text": "Manter referências com dados anonimizados: armazenar snapshot do nome do usuário no momento da ação (ex: 'João Silva [Deletado]') em histórico; permitir rastreabilidade sem expor dados pessoais."
+          },
+          {
+            "id": 156,
+            "text": "Implementar soft delete: marcar usuário como deletado mas manter dados para auditoria; dados não são acessíveis via API mas são retidos para conformidade legal."
+          }
+        ],
+        "recommendedOptionId": 154
+      },
+      {
+        "id": 157,
+        "section": "non_functional_requirements",
+        "description": "Definir SLA específico para processamento de eventos de auditoria — atualmente mencionado 'latência de escrita <= 100ms' mas não está claro se é síncrono ou assíncrono, e qual é o impacto em latência geral da API.",
+        "resolutionOptions": [
+          {
+            "id": 158,
+            "text": "Implementar escrita síncrona de auditoria: evento é escrito no banco de dados antes de resposta ser retornada ao cliente; latência <= 100ms; garante consistência imediata."
+          },
+          {
+            "id": 159,
+            "text": "Implementar escrita assíncrona de auditoria: evento é enfileirado em fila de mensagens e processado em background; latência de API não é impactada; eventual consistency com RTO <= 5 segundos."
+          },
+          {
+            "id": 160,
+            "text": "Implementar escrita em batch: eventos são coletados em buffer e escritos em lotes a cada 1 segundo ou quando buffer atinge 1000 eventos; balanço entre latência e throughput."
+          }
+        ],
+        "recommendedOptionId": 159
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 123,
+        "then": "A validação retorna false e rejeita o e-mail",
+        "type": "unit",
+        "when": "A função de validação de e-mail é chamada",
+        "given": "Um e-mail em formato inválido (sem @, domínio inválido, caracteres especiais)",
+        "scenario": "Validação de Formato de E-mail",
+        "target_section": "rules"
+      },
+      {
+        "id": 124,
+        "then": "Um hash seguro é gerado e a senha original não pode ser recuperada",
+        "type": "unit",
+        "when": "A função de hash argon2id é chamada com parâmetros m=64MiB, t=3, p=4",
+        "given": "Uma senha em texto simples",
+        "scenario": "Hash de Senha com Argon2id",
+        "target_section": "rules"
+      },
+      {
+        "id": 125,
+        "then": "A requisição é rejeitada com erro 403 Forbidden e evento de violação é registrado",
+        "type": "integration",
+        "when": "Um usuário do tenant A tenta acessar dados do tenant B",
+        "given": "Dois tenants (A e B) com usuários diferentes",
+        "scenario": "Isolamento de Tenant em Operação de Leitura",
+        "target_section": "rules"
+      },
+      {
+        "id": 126,
+        "then": "A operação é rejeitada com erro 409 Conflict e mensagem de erro específica",
+        "type": "integration",
+        "when": "Uma tentativa de cadastrar outro usuário com o mesmo e-mail é feita",
+        "given": "Um tenant com um usuário já cadastrado com e-mail 'user@example.com'",
+        "scenario": "Cadastro de Usuário com Validação de Unicidade de E-mail",
+        "target_section": "rules"
+      },
+      {
+        "id": 127,
+        "then": "A requisição é rejeitada com erro 429 Too Many Requests e retry_after_seconds informado",
+        "type": "integration",
+        "when": "Uma 6ª tentativa de login é feita do mesmo IP",
+        "given": "Um endereço IP com 5 tentativas de login falhadas nos últimos 15 minutos",
+        "scenario": "Rate Limiting em Login",
+        "target_section": "rules"
+      },
+      {
+        "id": 128,
+        "then": "Ambas retornam a mesma mensagem de erro genérica, impossibilitando enumeração",
+        "type": "security",
+        "when": "Requisições de login com e-mails válidos e inválidos são feitas",
+        "given": "Um atacante tentando descobrir usuários válidos",
+        "scenario": "Enumeração de Usuários Prevenida",
+        "target_section": "rules"
+      },
+      {
+        "id": 129,
+        "then": "A sessão anterior é revogada e requisições com o token antigo retornam erro 401 Unauthorized",
+        "type": "integration",
+        "when": "A redefinição de senha é concluída via link de recuperação",
+        "given": "Um usuário com uma sessão ativa",
+        "scenario": "Revogação de Sessão após Redefinição de Senha",
+        "target_section": "rules"
+      },
+      {
+        "id": 130,
+        "then": "A sessão é revogada imediatamente e requisições com o token retornam erro 401 Unauthorized",
+        "type": "integration",
+        "when": "O usuário é desativado pelo administrador",
+        "given": "Um usuário ativo com uma sessão ativa",
+        "scenario": "Revogação de Sessão após Desativação de Usuário",
+        "target_section": "rules"
+      },
+      {
+        "id": 131,
+        "then": "Todas as sessões de todos os usuários do tenant são revogadas imediatamente",
+        "type": "integration",
+        "when": "O tenant é desativado pelo administrador interno",
+        "given": "Um tenant ativo com múltiplos usuários com sessões ativas",
+        "scenario": "Revogação de Sessões de Tenant após Desativação",
+        "target_section": "rules"
+      },
+      {
+        "id": 132,
+        "then": "Um evento 'user_created' é registrado em audit_log com timestamp, IP, executor e detalhes do usuário",
+        "type": "integration",
+        "when": "O cadastro é concluído com sucesso",
+        "given": "Um administrador de tenant cadastrando um novo usuário",
+        "scenario": "Registro de Evento de Auditoria em Cadastro de Usuário",
+        "target_section": "rules"
+      },
+      {
+        "id": 133,
+        "then": "Um evento 'authentication_successful' é registrado em audit_log com timestamp, IP e identificação do usuário",
+        "type": "integration",
+        "when": "A autenticação é bem-sucedida",
+        "given": "Um usuário realizando login com credenciais válidas",
+        "scenario": "Registro de Evento de Auditoria em Login Bem-sucedido",
+        "target_section": "rules"
+      },
+      {
+        "id": 134,
+        "then": "Um evento 'authentication_failed' é registrado em audit_log com timestamp, IP, e-mail e motivo da falha",
+        "type": "integration",
+        "when": "A autenticação falha",
+        "given": "Um usuário tentando login com credenciais inválidas",
+        "scenario": "Registro de Evento de Auditoria em Login Falhado",
+        "target_section": "rules"
+      },
+      {
+        "id": 135,
+        "then": "A comunicação ocorre via HTTPS com TLS 1.2 ou superior, garantindo criptografia em trânsito",
+        "type": "security",
+        "when": "A requisição é enviada para a API",
+        "given": "Uma requisição contendo dados pessoais (e-mail)",
+        "scenario": "Criptografia de Dados em Trânsito",
+        "target_section": "rules"
+      },
+      {
+        "id": 136,
+        "then": "O e-mail está armazenado em formato criptografado (AES-256-GCM), não em texto simples",
+        "type": "security",
+        "when": "O banco de dados é consultado diretamente",
+        "given": "Um e-mail de usuário armazenado no banco de dados",
+        "scenario": "Criptografia de Dados em Repouso",
+        "target_section": "rules"
+      },
+      {
+        "id": 137,
+        "then": "p95 <= 500ms e p99 <= 1000ms para POST /api/auth/login",
+        "type": "performance",
+        "when": "Requisições de autenticação são processadas",
+        "given": "5.000 usuários simultâneos tentando fazer login",
+        "scenario": "Latência de Autenticação sob Carga",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 138,
+        "then": "p95 <= 50ms para validação de formato e unicidade",
+        "type": "performance",
+        "when": "A validação de e-mail é executada",
+        "given": "Uma requisição de cadastro de usuário com e-mail",
+        "scenario": "Latência de Validação de E-mail",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 139,
+        "then": "A resposta contém access_token, refresh_token, user e tenant conforme schema definido",
+        "type": "contract",
+        "when": "A requisição é processada",
+        "given": "Um cliente chamando POST /api/auth/login com credenciais válidas",
+        "scenario": "Contrato de API de Autenticação",
+        "target_section": "definition"
+      },
+      {
+        "id": 140,
+        "then": "O payload contém user_id, tenant_id, email, criador_id, timestamp e ip_address conforme schema definido",
+        "type": "contract",
+        "when": "O evento de auditoria é emitido",
+        "given": "Uma operação crítica (cadastro de usuário) sendo executada",
+        "scenario": "Contrato de Evento de Auditoria",
+        "target_section": "definition"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 113,
+        "target": "argon2id com m=64MiB, t=3, p=4; tempo de hash >= 500ms por tentativa",
+        "category": "security",
+        "requirement": "Algoritmo de hash de senha deve ser resistente a ataques de força bruta, com parâmetros de custo computacional adequados.",
+        "verification": "Teste de desempenho confirmando que hash de senha leva >= 500ms; teste de segurança confirmando que força bruta é impraticável (>1 ano para quebrar senha de 8 caracteres)."
+      },
+      {
+        "id": 114,
+        "target": "JWT assinado com RS256; refresh token com 256 bits de entropia; expiração de 3600 segundos para access token",
+        "category": "security",
+        "requirement": "Tokens de sessão devem ser criptograficamente seguros e impossíveis de adivinhar ou forjar.",
+        "verification": "Teste de segurança confirmando que token não pode ser forjado sem chave privada; teste de integração confirmando que token expirado é rejeitado."
+      },
+      {
+        "id": 115,
+        "target": "32 bytes de entropia; hash SHA-256; expiração de 30 minutos; invalidação após uso",
+        "category": "security",
+        "requirement": "Tokens de recuperação de senha devem ser únicos, criptograficamente seguros e de uso único.",
+        "verification": "Teste de segurança confirmando que token não pode ser adivinhado; teste de integração confirmando que token é invalidado após uso."
+      },
+      {
+        "id": 116,
+        "target": "HTTPS com TLS 1.2 ou superior; HSTS com max-age >= 31536000 segundos",
+        "category": "security",
+        "requirement": "Comunicações entre cliente e servidor devem ser criptografadas em trânsito.",
+        "verification": "Teste de segurança confirmando que requisições HTTP são redirecionadas ou rejeitadas; inspeção de headers confirmando HSTS habilitado."
+      },
+      {
+        "id": 117,
+        "target": "Criptografia AES-256-GCM em repouso; isolamento de tenant em todas as operações; rate limiting em endpoints sensíveis",
+        "category": "security",
+        "requirement": "Dados pessoais devem ser protegidos contra exposição não autorizada.",
+        "verification": "Teste de segurança confirmando que dados no banco de dados não estão em texto simples; teste de integração confirmando que usuário de tenant A não consegue acessar dados de tenant B."
+      },
+      {
+        "id": 118,
+        "target": "Uptime >= 99.9%; RTO <= 5 minutos; RPO <= 1 minuto",
+        "category": "availability",
+        "requirement": "Serviço de autenticação deve estar disponível com alta disponibilidade, dado que sua indisponibilidade impede acesso de todos os usuários.",
+        "verification": "Monitoramento contínuo de disponibilidade; teste de failover confirmando que serviço se recupera em <= 5 minutos."
+      },
+      {
+        "id": 119,
+        "target": "p95 <= 500ms para POST /api/auth/login; p99 <= 1000ms",
+        "category": "performance",
+        "requirement": "Operações de autenticação devem ser processadas com latência aceitável, mesmo sob carga.",
+        "verification": "Teste de carga confirmando que latência permanece dentro de limites com 5.000 usuários simultâneos."
+      },
+      {
+        "id": 120,
+        "target": "p95 <= 50ms para validação de e-mail; p95 <= 10ms para validação de tenant_id",
+        "category": "performance",
+        "requirement": "Operações de validação de e-mail e isolamento de tenant devem ser rápidas e não impactar latência geral.",
+        "verification": "Teste de desempenho confirmando que validações completam dentro de limites; índices de banco de dados otimizados para consultas de e-mail e tenant_id."
+      },
+      {
+        "id": 121,
+        "target": "100% de eventos críticos registrados; latência de escrita <= 100ms; retenção >= 2555 dias",
+        "category": "observability",
+        "requirement": "Eventos de auditoria devem ser registrados com precisão e completude, sem perda de dados.",
+        "verification": "Teste de integração confirmando que todos os eventos críticos aparecem em audit_log; teste de retenção confirmando que dados antigos são mantidos por 2555 dias."
+      },
+      {
+        "id": 122,
+        "target": "100% de operações validadas contra regras LGPD; 0 brechas de isolamento de tenant; 0 exposições de dados pessoais",
+        "category": "security",
+        "requirement": "Conformidade com LGPD deve ser mantida em todas as operações, sem exceções.",
+        "verification": "Auditoria de segurança confirmando conformidade; testes de penetração confirmando que nenhuma brecha de isolamento existe."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 54,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T14:27:30.511Z",
+  "updatedAt": null
+}

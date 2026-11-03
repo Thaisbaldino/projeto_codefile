@@ -1,0 +1,145 @@
+{
+  "id": 24001,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 19,
+        "name": "Pontos Únicos de Falha",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem failover de banco de dados, a indisponibilidade de uma operação de alteração de status impede o acompanhamento de progresso de tarefas, violando SLA de 5 minutos.",
+        "confidence": 0.7418,
+        "context_element_id": 2817
+      },
+      {
+        "id": 20,
+        "name": "Falhas de Execução e Idempotência",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Apenas o responsável ou criador da tarefa pode alterar seu status, e o usuário não é responsável nem criador, o que torna a tentativa de alteração irreversível.",
+        "confidence": 0.789,
+        "context_element_id": 2819
+      }
+    ],
+    "attributes": [
+      {
+        "id": 12,
+        "name": "Domínios de negócio sobre os quais a regra atua, valida ou decide",
+        "value": [
+          "compliance"
+        ],
+        "method": "internal-inference",
+        "reasoning": "A regra de negócio registra cada transição no histórico imutável, garantindo rastreabilidade completa de mudanças e conformidade com requisitos de auditabilidade e LGPD.",
+        "confidence": 0.7395,
+        "context_element_id": 2678
+      },
+      {
+        "id": 14,
+        "name": "Tipo específico de evento ou mensagem que está sendo comunicado",
+        "value": [
+          "Concluído"
+        ],
+        "method": "user-input",
+        "reasoning": "A notificação é enviada ao responsável quando o status é alterado para 'Concluído', e ao criador quando alterado por outro usuário.",
+        "confidence": 0.7315,
+        "context_element_id": 2755
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 23,
+        "name": "Implementar reinício escalonado começando pelos componentes menos críticos e progredindo gradualmente",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Reabertura de um pedido já concluído não pode ser revertida, e a reabertura só pode ser feita com confirmação adicional.",
+        "confidence": 0.7134,
+        "context_element_id": 2904
+      },
+      {
+        "id": 24,
+        "name": "Implementar encaminhamento contínuo mantendo o fluxo de dados durante a reintegração de componentes",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Reabertura de tarefas concluídas é uma operação separada, e a reabertura de um tarefa já concluída não pode ser revertida.",
+        "confidence": 0.7163,
+        "context_element_id": 2905
+      },
+      {
+        "id": 26,
+        "name": "Implementar redundância em todos os componentes críticos, eliminando pontos únicos de falha",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem registro duplicado, a confirmação é entregue sem quebra de integridade, e a operação é executada sem repetição.",
+        "confidence": 0.8251,
+        "context_element_id": 2912
+      },
+      {
+        "id": 28,
+        "name": "Incorpore asserções executáveis que possam ser verificadas automaticamente durante a execução",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem verificação, a tarefa é executada em vez de executável, e o resultado não pode ser refeito depois.",
+        "confidence": 0.7615,
+        "context_element_id": 2995
+      },
+      {
+        "id": 29,
+        "name": "Implemente Policy Enforcement Points em gateways e APIs para validar requisições contra regras de conformidade antes da execução",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem autorização válida, a alteração de status da tarefa é bloqueada, e o usuário não pode alterá-la mesmo que o status já esteja correto.",
+        "confidence": 0.7389,
+        "context_element_id": 3010
+      },
+      {
+        "id": 31,
+        "name": "Implemente Event Sourcing para conformidade, armazenando todos os eventos de mudança de estado como uma sequência imutável com versionamento e capacidade de replay",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem registro de cada transição, ninguém sabe quem alterou o que quando, e a responsabilidade é passada para o cliente que não tem acesso ao histórico.",
+        "confidence": 0.7818,
+        "context_element_id": 3017
+      },
+      {
+        "id": 33,
+        "name": "Mantenha um modelo de tarefas do usuário com rastreamento do contexto atual, histórico de ações e sugestões de próximos passos com base no fluxo de trabalho",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem feedback direto, o usuário fica confuso sobre o que mudou na tarefa e não consegue rever o que fez.",
+        "confidence": 0.7393,
+        "context_element_id": 3045
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 39,
+        "name": "Conformidade Regulatória",
+        "value": "validation-rule",
+        "method": "internal-inference",
+        "reasoning": "A restrição de alteração de status é validada com restrições específicas de negócio, como responsabilidade e prazo.",
+        "confidence": 0.7149,
+        "context_element_id": 4163
+      },
+      {
+        "id": 44,
+        "name": "Tipo de Fluxo",
+        "value": "fluxo linear",
+        "method": "user-input",
+        "reasoning": "A transição de tarefas entre Fazer, Em Andamento e Concluído é realizada em um fluxo linear, sem possibilidade de retrocesso.",
+        "confidence": 0.9175,
+        "context_element_id": 4590
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 4,
+  "active": true,
+  "sourceId": 23773,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}

@@ -1,0 +1,293 @@
+{
+  "id": 23631,
+  "projectId": 4118,
+  "type": "feature_definition",
+  "content": {
+    "pendencies": [
+      {
+        "id": 31,
+        "section": "functional",
+        "description": "A pesquisa textual deve ser executada de forma imediata à medida que o usuário digita (busca em tempo real com debounce) ou apenas após o usuário pressionar Enter ou clicar em um botão de busca explícito?",
+        "resolutionOptions": [
+          {
+            "id": 32,
+            "text": "Executar a pesquisa em tempo real à medida que o usuário digita, aplicando debounce de 300 a 500 milissegundos para evitar requisições excessivas ao servidor."
+          },
+          {
+            "id": 33,
+            "text": "Executar a pesquisa apenas após o usuário pressionar Enter ou clicar em botão de busca explícito, sem atualização automática durante a digitação."
+          }
+        ],
+        "recommendedOptionId": 32
+      },
+      {
+        "id": 34,
+        "section": "functional",
+        "description": "O filtro por data limite deve suportar seleção de intervalo de datas personalizado (data inicial e data final), condições predefinidas (como 'Atrasadas', 'Vence hoje', 'Vence esta semana', 'Sem prazo') ou ambas as abordagens?",
+        "resolutionOptions": [
+          {
+            "id": 35,
+            "text": "Suportar apenas condições predefinidas: Atrasadas, Vence hoje, Vence esta semana e Sem prazo definido."
+          },
+          {
+            "id": 36,
+            "text": "Suportar apenas seleção de intervalo de datas personalizado (data inicial e data final) por meio de seletor de calendário."
+          },
+          {
+            "id": 37,
+            "text": "Suportar ambas as abordagens: condições predefinidas e seleção de intervalo de datas personalizado."
+          }
+        ],
+        "recommendedOptionId": 35
+      },
+      {
+        "id": 38,
+        "section": "functional",
+        "description": "A lista de responsáveis disponíveis para seleção no filtro deve ser carregada de forma estática (carregada uma única vez ao abrir o campo) ou dinâmica com busca em tempo real no servidor à medida que o usuário digita? Considerando tenants com até 100 usuários, qual abordagem é mais adequada?",
+        "resolutionOptions": [
+          {
+            "id": 39,
+            "text": "Carregar a lista completa de colaboradores ativos de uma única vez ao abrir o campo de filtro, com filtragem local no cliente à medida que o usuário digita; adequado para até 100 usuários por tenant."
+          },
+          {
+            "id": 40,
+            "text": "Implementar busca dinâmica com requisição ao servidor a cada digitação do usuário, retornando apenas os colaboradores que correspondem ao texto informado."
+          }
+        ],
+        "recommendedOptionId": 39
+      },
+      {
+        "id": 41,
+        "section": "functional",
+        "description": "Os filtros e a pesquisa textual ativos devem ser preservados ao navegar entre as visualizações de lista e Kanban (ou seja, ao alternar de uma visualização para a outra os critérios permanecem aplicados), ou cada visualização mantém seu próprio estado de filtros independente?",
+        "resolutionOptions": [
+          {
+            "id": 42,
+            "text": "Compartilhar o estado de filtros entre as visualizações de lista e Kanban; ao alternar entre elas, os critérios ativos são mantidos e aplicados à nova visualização."
+          },
+          {
+            "id": 43,
+            "text": "Cada visualização (lista e Kanban) mantém seu próprio estado de filtros independente; ao alternar entre elas, os filtros não são transferidos."
+          }
+        ],
+        "recommendedOptionId": 42
+      },
+      {
+        "id": 44,
+        "section": "functional",
+        "description": "Os filtros e a pesquisa textual ativos devem ser preservados ao navegar para outra tela e retornar à visualização de tarefas (persistência de estado de sessão), ou a visualização deve sempre ser carregada sem filtros ativos ao ser acessada novamente?",
+        "resolutionOptions": [
+          {
+            "id": 45,
+            "text": "Preservar os filtros e a pesquisa textual ativos durante a sessão do usuário, restaurando-os ao retornar à visualização sem necessidade de reaplicação manual."
+          },
+          {
+            "id": 46,
+            "text": "Sempre carregar a visualização sem filtros ativos ao ser acessada novamente, sem preservação do estado de filtros e pesquisa entre navegações."
+          }
+        ],
+        "recommendedOptionId": 45
+      },
+      {
+        "id": 47,
+        "section": "functional",
+        "description": "A pesquisa textual deve abranger apenas o título da tarefa ou também a descrição? Ampliar o escopo da busca para a descrição pode impactar o desempenho das consultas em tenants com alto volume de tarefas.",
+        "resolutionOptions": [
+          {
+            "id": 48,
+            "text": "Realizar a pesquisa textual apenas no título da tarefa, garantindo maior desempenho nas consultas."
+          },
+          {
+            "id": 49,
+            "text": "Realizar a pesquisa textual no título e na descrição da tarefa, ampliando o alcance da busca em detrimento de um possível impacto de desempenho."
+          }
+        ],
+        "recommendedOptionId": 49
+      },
+      {
+        "id": 50,
+        "section": "non-functional",
+        "description": "Deve ser definido um número mínimo de caracteres exigido antes de disparar a pesquisa textual em tempo real, a fim de evitar consultas excessivamente amplas e com baixo desempenho (por exemplo, exigir ao menos 2 ou 3 caracteres antes de iniciar a busca)?",
+        "resolutionOptions": [
+          {
+            "id": 51,
+            "text": "Exigir ao menos 2 caracteres digitados antes de disparar a pesquisa textual em tempo real."
+          },
+          {
+            "id": 52,
+            "text": "Exigir ao menos 3 caracteres digitados antes de disparar a pesquisa textual em tempo real."
+          },
+          {
+            "id": 53,
+            "text": "Não definir número mínimo de caracteres; a pesquisa é disparada a partir do primeiro caractere digitado, controlada apenas pelo debounce."
+          }
+        ],
+        "recommendedOptionId": 51
+      }
+    ],
+    "functional_requirements": [
+      {
+        "group": {
+          "id": 1,
+          "name": "Filtros por Atributo",
+          "items": [
+            {
+              "id": 2,
+              "description": "Permitir ao usuário filtrar as tarefas exibidas por status, apresentando apenas as tarefas que correspondam ao status fixo selecionado dentre os disponíveis no sistema."
+            },
+            {
+              "id": 3,
+              "description": "Permitir ao usuário filtrar as tarefas exibidas por responsável, apresentando apenas as tarefas atribuídas ao colaborador ativo do tenant selecionado."
+            },
+            {
+              "id": 4,
+              "description": "Permitir ao usuário filtrar as tarefas exibidas por nível de prioridade, apresentando apenas as tarefas que correspondam ao nível selecionado dentre os disponíveis no sistema."
+            },
+            {
+              "id": 5,
+              "description": "Permitir ao usuário filtrar as tarefas exibidas por data limite, possibilitando a seleção de condições predefinidas como tarefas em atraso, tarefas sem prazo definido ou tarefas com vencimento em um intervalo específico."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 6,
+          "name": "Filtros Combinados",
+          "items": [
+            {
+              "id": 7,
+              "description": "Permitir a aplicação simultânea de múltiplos filtros combinados, exibindo apenas as tarefas que satisfaçam todos os critérios selecionados ao mesmo tempo."
+            },
+            {
+              "id": 8,
+              "description": "Exibir indicação visual clara dos filtros ativos no momento, permitindo ao usuário identificar quais critérios estão sendo aplicados à visualização corrente."
+            },
+            {
+              "id": 9,
+              "description": "Permitir ao usuário remover filtros individualmente, limpando apenas o critério selecionado sem afetar os demais filtros ativos."
+            },
+            {
+              "id": 10,
+              "description": "Permitir ao usuário limpar todos os filtros ativos de uma só vez, restaurando a exibição completa das tarefas do tenant sem nenhum critério de filtragem aplicado."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 11,
+          "name": "Pesquisa Textual",
+          "items": [
+            {
+              "id": 12,
+              "description": "Disponibilizar campo de pesquisa textual que permita ao usuário buscar tarefas por texto contido no título ou na descrição da tarefa."
+            },
+            {
+              "id": 13,
+              "description": "Atualizar a lista de tarefas exibida em resposta ao texto digitado no campo de pesquisa, apresentando apenas as tarefas cujos atributos correspondam ao termo informado."
+            },
+            {
+              "id": 14,
+              "description": "Permitir a combinação da pesquisa textual com os filtros ativos, de modo que o resultado exibido satisfaça simultaneamente o termo pesquisado e todos os critérios de filtro selecionados."
+            },
+            {
+              "id": 15,
+              "description": "Exibir mensagem informativa ao usuário quando nenhuma tarefa for encontrada para os filtros ou critérios de pesquisa aplicados, orientando-o a ajustar os parâmetros de busca."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 16,
+          "name": "Aplicação nas Visualizações",
+          "items": [
+            {
+              "id": 17,
+              "description": "Aplicar os filtros e a pesquisa textual à visualização em lista tabular, atualizando as linhas exibidas de acordo com os critérios selecionados pelo usuário."
+            },
+            {
+              "id": 18,
+              "description": "Aplicar os filtros à visualização em Kanban, atualizando os cartões exibidos em todas as colunas de acordo com os critérios selecionados pelo usuário."
+            },
+            {
+              "id": 19,
+              "description": "Garantir consistência dos resultados de filtragem e pesquisa entre as visualizações de lista e Kanban, de modo que os mesmos critérios aplicados em uma visualização produzam o mesmo conjunto de tarefas na outra."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 20,
+          "name": "Controle de Acesso e Isolamento",
+          "items": [
+            {
+              "id": 21,
+              "description": "Restringir os resultados de filtragem e pesquisa exclusivamente às tarefas pertencentes ao tenant do usuário autenticado, garantindo que tarefas de outras organizações não sejam retornadas ou exibidas."
+            },
+            {
+              "id": 22,
+              "description": "Impedir que usuários não autenticados ou pertencentes a tenants inativos acessem ou executem operações de filtragem e pesquisa de tarefas na plataforma."
+            }
+          ]
+        }
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "group": {
+          "id": 23,
+          "name": "Desempenho",
+          "items": [
+            {
+              "id": 24,
+              "description": "Executar as operações de filtragem e pesquisa de tarefas com tempo de resposta adequado, garantindo que a atualização da visualização após a aplicação de critérios ocorra de forma fluida e sem atrasos perceptíveis, mesmo em tenants com até 10.000 tarefas."
+            },
+            {
+              "id": 25,
+              "description": "Aplicar mecanismo de debounce nas requisições de pesquisa textual em tempo real, evitando o envio de requisições excessivas ao servidor a cada caractere digitado pelo usuário."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 26,
+          "name": "Segurança e Isolamento",
+          "items": [
+            {
+              "id": 27,
+              "description": "Garantir que as consultas de filtragem e pesquisa de tarefas sejam sempre escopadas ao tenant do usuário autenticado no servidor, impedindo o acesso ou a exposição de dados de outros tenants por meio de manipulação de parâmetros de requisição."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 28,
+          "name": "Usabilidade e Responsividade",
+          "items": [
+            {
+              "id": 29,
+              "description": "Renderizar os controles de filtragem e o campo de pesquisa textual de forma responsiva e adaptativa, garantindo usabilidade adequada em dispositivos móveis (smartphones e tablets) e em desktops."
+            },
+            {
+              "id": 30,
+              "description": "Garantir que os controles de filtragem e pesquisa sejam acessíveis e utilizáveis em dispositivos de toque (touch), sem dependência exclusiva de interações de mouse."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 18,
+  "sourceType": "feature",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-10T21:57:15.241Z",
+  "updatedAt": null
+}

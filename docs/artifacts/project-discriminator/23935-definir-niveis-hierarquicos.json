@@ -1,0 +1,197 @@
+{
+  "id": 23935,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 12,
+        "name": "Configuração de Segurança",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem restrição definida, qualquer usuário pode alterar a configuração, o que torna a configuração pública e vulnerável a falhas de segurança.",
+        "confidence": 0.764,
+        "context_element_id": 2828
+      },
+      {
+        "id": 13,
+        "name": "Confusão de Identidade e Responsabilidade",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem essa regra, dois níveis com o mesmo nome aparecem na mesma organização, confundindo a visualização e dificultando a manutenção.",
+        "confidence": 0.7141,
+        "context_element_id": 2839
+      }
+    ],
+    "attributes": [
+      {
+        "id": 7,
+        "name": "Elementos de interface e funcionalidades que podem ser personalizados",
+        "value": [
+          "colors-and-logos"
+        ],
+        "method": "user-input",
+        "reasoning": "As listagens das níveis das categorias são personalizadas com nome, descrição e cor de identificação visual, caracterizando interface elementos e funcionalidades personalizáveis de cores e logotipos.",
+        "confidence": 0.7439,
+        "context_element_id": 2683
+      },
+      {
+        "id": 9,
+        "name": "Domínio funcional ao qual a estrutura de relacionamento se aplica",
+        "value": [
+          "functional"
+        ],
+        "method": "user-input",
+        "reasoning": "O nível hierárquico é um campo obrigatório no perfil do colaborador, ou pode ser deixado em branco, pertencendo ao domínio funcional.",
+        "confidence": 0.7792,
+        "context_element_id": 2709
+      },
+      {
+        "id": 10,
+        "name": "Profundidade esperada da estrutura hierárquica",
+        "value": [
+          "variable-depth",
+          "unlimited"
+        ],
+        "method": "user-input",
+        "reasoning": "O limite de níveis por tenant é configurável, sem limite mínimo fixo, caracterizando uma estrutura de profundidade variável.\nO tenant pode criar quantos níveis de autorização desejar sem limite definido.",
+        "confidence": 0.8826,
+        "context_element_id": 2712
+      },
+      {
+        "id": 11,
+        "name": "Profundidade máxima esperada da hierarquia de navegação",
+        "value": [
+          "5-or-more-levels",
+          "10",
+          "variable-depth"
+        ],
+        "method": "internal-inference",
+        "reasoning": "O nível hierárquico suporta campos adicionais como descrição, código interno ou cor de identificação visual, com um máximo de 5 níveis de profundidade.\nO limite máximo de níveis por tenant é configurável até 10.\nO número máximo de níveis hierárquicos que podem ser configurados por tenant é variável, dependendo do tenant.",
+        "confidence": 0.7615,
+        "context_element_id": 2725
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 15,
+        "name": "Estabelecer um sistema de rastreabilidade abrangente com logs detalhados de todas as ações de usuários e mudanças do sistema",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem registro de quem fez o que, quando, e o que mudou, a responsabilidade por cada alteração não passa para ninguém, e a prova de que algo mudou não existe.",
+        "confidence": 0.761,
+        "context_element_id": 2925
+      },
+      {
+        "id": 17,
+        "name": "Estabeleça restrições de dependência por meio de camadas e controle de visibilidade entre as camadas arquiteturais",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem controle de visibilidade, um tenant altera o nível hierárquico de outro e o sistema não reconhece a mudança, tornando a integração entre tenants difícil de manter.",
+        "confidence": 0.7323,
+        "context_element_id": 2977
+      },
+      {
+        "id": 18,
+        "name": "Automatize tarefas operacionais repetitivas para reduzir o erro humano e melhorar a consistência",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Repetição de confirmação em cada operação separada tornaria a plataforma lenta sob carga alta e sem retorno ao administrador.",
+        "confidence": 0.8,
+        "context_element_id": 3000
+      },
+      {
+        "id": 20,
+        "name": "Implemente operações em lote para permitir que os usuários executem múltiplas ações semelhantes simultaneamente com uma única confirmação",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Repetição de confirmação em cada operação separada tornaria a plataforma lenta sob carga alta e sem retorno ao administrador.",
+        "confidence": 0.9367,
+        "context_element_id": 3044
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 1,
+        "name": "Padrão de Mutabilidade de Registro",
+        "value": "versionado",
+        "method": "user-input",
+        "reasoning": "Os registros históricos mantêm o nome original, enquanto novos registros e exibições em tempo real utilizam o nome atualizado, caracterizando um padrão de mutabilidade versionado.",
+        "confidence": 0.9338,
+        "context_element_id": 1507
+      },
+      {
+        "id": 2,
+        "name": "Natureza Temporal",
+        "value": "evento histórico",
+        "method": "internal-inference",
+        "reasoning": "Os registros históricos mantêm o nome original, enquanto novos registros e exibições em tempo real utilizam o nome atualizado, caracterizando um histórico de eventos.",
+        "confidence": 0.8258,
+        "context_element_id": 1508
+      },
+      {
+        "id": 4,
+        "name": "Permissões Integradas",
+        "value": "true",
+        "method": "internal-inference",
+        "reasoning": "A atribuição de um nível hierárquico ao colaborador é uma relação de integração de permissões, caracterizando um nível hierárquico.",
+        "confidence": 0.7253,
+        "context_element_id": 1545
+      },
+      {
+        "id": 22,
+        "name": "Nível de Detalhe de Auditoria",
+        "value": "rastreabilidade completa",
+        "method": "user-input",
+        "reasoning": "O registro de toda operação de nível hierárquico, incluindo identificação do executor, timestamp e dados alterados, é feito em conformidade com a rastreabilidade completa.",
+        "confidence": 0.9044,
+        "context_element_id": 4165
+      },
+      {
+        "id": 24,
+        "name": "Escopo de Toggle",
+        "value": "hierárquico",
+        "method": "user-input",
+        "reasoning": "O nível hierárquico é atribuído ao colaborador no momento do cadastro ou pela edição do perfil existente, caracterizando um nível hierárquico.",
+        "confidence": 0.8873,
+        "context_element_id": 4459
+      },
+      {
+        "id": 29,
+        "name": "Estratégia Responsiva",
+        "value": "adaptativo",
+        "method": "internal-inference",
+        "reasoning": "A interface é renderizada adaptativa para dispositivos móveis e desktops, garantindo usabilidade adequada em ambas as plataformas.",
+        "confidence": 0.7684,
+        "context_element_id": 4982
+      },
+      {
+        "id": 30,
+        "name": "Acesso de Modificação",
+        "value": "somente administrador",
+        "method": "user-input",
+        "reasoning": "A funcionalidade de criação, edição e exclusão de níveis hierárquicos é restrita somente a usuários com perfil de administrador do tenant.",
+        "confidence": 0.917,
+        "context_element_id": 5020
+      },
+      {
+        "id": 31,
+        "name": "Suporte a Hierarquia",
+        "value": "true",
+        "method": "user-input",
+        "reasoning": "O sistema exige pelo menos um nível hierárquico configurado no tenant, impedindo a exclusão do último nível existente.",
+        "confidence": 0.876,
+        "context_element_id": 5056
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 5,
+  "active": true,
+  "sourceId": 23584,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T14:58:49.768Z",
+  "updatedAt": null
+}

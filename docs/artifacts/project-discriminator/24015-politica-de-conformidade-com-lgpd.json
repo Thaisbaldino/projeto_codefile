@@ -1,0 +1,275 @@
+{
+  "id": 24015,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 28,
+        "name": "Retenção e Políticas",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem registro de quem deletou o que, a exigência de exclusão não pode ser contestada depois de 2555 dias.",
+        "confidence": 0.8197,
+        "context_element_id": 2849
+      }
+    ],
+    "attributes": [
+      {
+        "id": 18,
+        "name": "Identificador de serviço ou componente que requer padrões de resiliência",
+        "value": [
+          "notification-service"
+        ],
+        "method": "user-input",
+        "reasoning": "O serviço de envio de e-mail é responsável por comunicar o token de recuperação.",
+        "confidence": 0.7849,
+        "context_element_id": 2770
+      },
+      {
+        "id": 21,
+        "name": "Operação de domínio ou caso de uso que o handler processa",
+        "value": [
+          "user-activation"
+        ],
+        "method": "user-input",
+        "reasoning": "A requisição de ativação/ativação de usuário é um domínio operação do sistema.",
+        "confidence": 0.8173,
+        "context_element_id": 2782
+      },
+      {
+        "id": 23,
+        "name": "Principais frameworks de compliance ou regulamentações que devem ser atendidos",
+        "value": [
+          "LGPD"
+        ],
+        "method": "user-input",
+        "reasoning": "O consentimento informado para processamento de dados pessoais deve ser obtido e registrado conforme a LGPD.",
+        "confidence": 0.7408,
+        "context_element_id": 2796
+      },
+      {
+        "id": 24,
+        "name": "Domínio funcional ou área de negócio que requer proteção de segurança",
+        "value": [
+          "customer-data"
+        ],
+        "method": "user-input",
+        "reasoning": "A confidencialidade dos dados pessoais (e-mail) é garantida em trânsito via HTTPS com TLS 1.2 ou superior, protegendo a informação dos clientes.",
+        "confidence": 0.7304,
+        "context_element_id": 2797
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 29,
+        "name": "Implementar rate limiting com throttling configurável por endpoint e amostragem de requisições em cenários de alta carga",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Apenas 5 tentativas em 15 minutos são permitidas, e após isso, as requisições retornam erro 429 Too Many Requests com retry_after_seconds.",
+        "confidence": 0.7936,
+        "context_element_id": 2860
+      },
+      {
+        "id": 31,
+        "name": "Implementar rate limiting com throttling adaptativo para prevenir a sobrecarga do sistema",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Apenas 5 tentativas por 15 minutos e 3 por hora são suficientes para prevenir força bruta e enumeração, sem bloquear o acesso a outras funcionalidades.",
+        "confidence": 0.7118,
+        "context_element_id": 2911
+      },
+      {
+        "id": 33,
+        "name": "Implementar um sistema de detecção de intrusão (IDS) com monitoramento de tráfego de rede e análise de comportamento para identificar padrões suspeitos",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem alerta, o acesso não autorizado passa despercebido até que o incidente seja descoberto por um terceiro.",
+        "confidence": 0.9264,
+        "context_element_id": 2921
+      },
+      {
+        "id": 34,
+        "name": "Implementar monitoramento contínuo de eventos de segurança com SIEM e alertas automáticos para comportamentos anômalos",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem alerta automático, o incidente é descoberto por um terceiro, e a responsabilidade é atribuída a ele, não ao sistema.",
+        "confidence": 0.8289,
+        "context_element_id": 2926
+      },
+      {
+        "id": 35,
+        "name": "Configurar tratamento seguro de erros com logging detalhado que não exponha informações sensíveis, mas permita análise forense",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Mensagens genéricas de erro não revelam se o problema é a senha ou o e-mail, e isso confunde o usuário e obriga reavaliação de cada tentativa.",
+        "confidence": 0.8581,
+        "context_element_id": 2927
+      },
+      {
+        "id": 36,
+        "name": "Implementar identificação única de atores com sistemas de identidade centralizados e gerenciamento unificado de credenciais",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Conflitos de identidade entre diferentes tenants são comuns, e o banco de dados é o único ponto de controle para essa verificação.",
+        "confidence": 0.9735,
+        "context_element_id": 2928
+      },
+      {
+        "id": 38,
+        "name": "Implementar validação rigorosa de entradas com sanitização, whitelists de caracteres permitidos e prevenção contra ataques de injeção",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Rejeitar senhas inadequadas é a regra, não a aceitação de todas, o que tornaria o teste de integração desnecessário.",
+        "confidence": 0.797,
+        "context_element_id": 2936
+      },
+      {
+        "id": 39,
+        "name": "Garantir confidencialidade com controles de acesso granulares baseados na classificação dos dados e no princípio need-to-know",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Uma chave de acesso externa que permite navegar entre tenants é o que permite que um tenant veja o outro.",
+        "confidence": 0.8083,
+        "context_element_id": 2939
+      },
+      {
+        "id": 40,
+        "name": "Configurar segurança específica para APIs e web services com rate limiting, validação de schema e autenticação por endpoint",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Uma tentativa de login ou recuperação de senha repetida em um endpoint abre brecha para o ataque de força bruta ou enumeração de usuários.",
+        "confidence": 0.749,
+        "context_element_id": 2945
+      },
+      {
+        "id": 43,
+        "name": "Usar checksums e funções de hash para verificar a integridade dos dados durante a transmissão e o armazenamento",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Texto simples exposto em rede é fácil de copiar e reutilizar; SHA-256 confirma a integridade sem revelar o conteúdo original.",
+        "confidence": 0.8834,
+        "context_element_id": 2955
+      },
+      {
+        "id": 44,
+        "name": "Implemente event sourcing com um log de eventos imutável para dados críticos de auditoria e reconstrução de estado",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem registro de cada ação, a responsabilidade é questionada quando um incidente ocorre, e a prova é exigida por regulamentação ou processo judicial.",
+        "confidence": 0.777,
+        "context_element_id": 2966
+      },
+      {
+        "id": 47,
+        "name": "Configure controles de privacidade rigorosos incluindo minimização de dados, anonimização automática, controles de acesso granulares e auditoria do uso de informações pessoais sensíveis",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Coleta, armazenamento e processamento de dados pessoais de usuários (nome completo, e-mail) são tratados com restrição de privacidade e controle de acesso.",
+        "confidence": 0.9168,
+        "context_element_id": 3075
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 1,
+        "name": "Processamento Temporal",
+        "value": "lote",
+        "method": "user-input",
+        "reasoning": "O processamento dos eventos é realizado em lotes, caracterizando temporalmente batch.",
+        "confidence": 0.9328,
+        "context_element_id": 1398
+      },
+      {
+        "id": 4,
+        "name": "Privacidade e Proteção de Dados",
+        "value": "true",
+        "method": "user-input",
+        "reasoning": "A referência com dados anonimizados é protegida por uma gama de medidas de privacidade, incluindo anonimização e rastreabilidade.",
+        "confidence": 0.8024,
+        "context_element_id": 1435
+      },
+      {
+        "id": 10,
+        "name": "Padrão de Interação",
+        "value": "confirmação assíncrona",
+        "method": "user-input",
+        "reasoning": "A escrita assíncrona de auditoria é processada em background, sem esperar a resposta do cliente, caracterizando um feedback assíncrono.",
+        "confidence": 0.7282,
+        "context_element_id": 1975
+      },
+      {
+        "id": 11,
+        "name": "Estratégia de Processamento",
+        "value": "mensageria tradicional",
+        "method": "internal-inference",
+        "reasoning": "O evento é enfileirado em fila de mensagens, processado em background e sem impacto direto na latência da API, caracterizando um modelo de mensagens tradicional.",
+        "confidence": 0.9081,
+        "context_element_id": 1984
+      },
+      {
+        "id": 51,
+        "name": "Escopo de Conformidade",
+        "value": "GDPR",
+        "method": "user-input",
+        "reasoning": "A conformidade com a LGPD é exigida em todas as operações.",
+        "confidence": 0.7697,
+        "context_element_id": 4126
+      },
+      {
+        "id": 53,
+        "name": "Gerenciamento de Consentimento",
+        "value": "true",
+        "method": "user-input",
+        "reasoning": "O fluxo de consentimento granular permite que o usuário escolha quais dados pessoais deseja compartilhar, caracterizando gestão de conformidade.",
+        "confidence": 0.8901,
+        "context_element_id": 4166
+      },
+      {
+        "id": 55,
+        "name": "Modo de Execução",
+        "value": "totalmente síncrono",
+        "method": "user-input",
+        "reasoning": "O evento é escrito no banco de dados antes da resposta ser retornada ao cliente, garantindo consistência imediata.",
+        "confidence": 0.7511,
+        "context_element_id": 4208
+      },
+      {
+        "id": 56,
+        "name": "Estratégia de Retenção",
+        "value": "retenção uniforme",
+        "method": "user-input",
+        "reasoning": "A retenção padrão é uniforme de 1095 dias (3 anos), alinhada com a retenção típica de registros administrativos.",
+        "confidence": 0.8647,
+        "context_element_id": 4374
+      },
+      {
+        "id": 57,
+        "name": "Requisito de Auditoria",
+        "value": "observability",
+        "method": "user-input",
+        "reasoning": "O registro de cada operação crítica em log de auditoria é uma exigência de observabilidade.",
+        "confidence": 0.8556,
+        "context_element_id": 4378
+      },
+      {
+        "id": 63,
+        "name": "Nível de Autenticação",
+        "value": "autenticação multifator",
+        "method": "user-input",
+        "reasoning": "A configuração de paralelismo de hash de senha (password_hash_parallelism) é uma característica de autenticação multi-fator.",
+        "confidence": 0.758,
+        "context_element_id": 4828
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 3,
+  "active": true,
+  "sourceId": 23909,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}

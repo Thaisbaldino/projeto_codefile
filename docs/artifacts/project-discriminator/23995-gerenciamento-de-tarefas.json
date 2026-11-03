@@ -1,0 +1,82 @@
+{
+  "id": 23995,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 17,
+        "name": "Contexto situacional onde a interação normalmente ocorre",
+        "value": [
+          "scheduled-tasks"
+        ],
+        "method": "internal-inference",
+        "reasoning": "A tarefa é orquestrada em um ciclo completo, com definição de prazos e status fixos, caracterizando tarefas agendadas.",
+        "confidence": 0.7898,
+        "context_element_id": 2716
+      },
+      {
+        "id": 18,
+        "name": "Momento no processo de negócio ou workflow em que a interação ocorre",
+        "value": [
+          "live-monitoring",
+          "final-submission"
+        ],
+        "method": "internal-inference",
+        "reasoning": "A visualização em lista tabular e Kanban com suporte a filtros combinados, pesquisa textual e destaque automático de tarefas críticas ou atrasadas é uma monitoração em tempo real.\nA conclusão de tarefa marca a tarefa como concluída, correspondendo ao estado final-submission do workflow.",
+        "confidence": 0.7068,
+        "context_element_id": 2729
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 29,
+        "name": "Otimizar algoritmos e estruturas de dados para aumentar a eficiência computacional e reduzir o consumo de recursos",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O custo de computação e armazenamento das operações de tarefa é o que mais cresce em um sistema de grande escala, e a otimização dessas operações é a prioridade.",
+        "confidence": 0.7454,
+        "context_element_id": 2864
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 52,
+        "name": "Estratégia de Escalabilidade",
+        "value": "escalonamento horizontal",
+        "method": "user-input",
+        "reasoning": "A arquitetura é preparada para escalar a 100.000 tarefas por tenant com otimizações futuras, caracterizando escalabilidade horizontal.",
+        "confidence": 0.8447,
+        "context_element_id": 4329
+      },
+      {
+        "id": 65,
+        "name": "Prioridade de Otimização",
+        "value": "equilibrado",
+        "method": "user-input",
+        "reasoning": "A validação combina prioridade, prazo e isolamento, otimizando a prioridade e o prazo em relação ao tempo de execução.",
+        "confidence": 0.7089,
+        "context_element_id": 4627
+      },
+      {
+        "id": 66,
+        "name": "Estratégia de Busca",
+        "value": "busca por palavra-chave",
+        "method": "internal-inference",
+        "reasoning": "A pesquisa de texto é feita com base em palavras-chave, caracterizando um tipo de busca baseada em palavras-chave.",
+        "confidence": 0.703,
+        "context_element_id": 4787
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 5,
+  "active": true,
+  "sourceId": 23714,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}

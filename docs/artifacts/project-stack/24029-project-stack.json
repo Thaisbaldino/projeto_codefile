@@ -1,0 +1,252 @@
+{
+  "id": 24029,
+  "projectId": 4118,
+  "type": "project_stack",
+  "content": {
+    "stacks": [
+      {
+        "id": 1,
+        "stack_id": 21,
+        "reasoning": "A plataforma é uma aplicação web SPA com múltiplas telas interativas (Kanban, lista de tarefas, formulários de cadastro), exigindo um framework de componentes reativo. React é o mais alinhado ao ecossistema TypeScript e às bibliotecas de drag-and-drop necessárias para o Kanban."
+      },
+      {
+        "id": 2,
+        "stack_id": 63,
+        "reasoning": "O discriminador de personalização visual aponta para customização total da UI, e o projeto usa shadcn/ui (baseado em Tailwind). Tailwind CSS fornece o sistema de design utilitário necessário para estilizar as telas densas de lista, Kanban e formulários de forma consistente e responsiva."
+      },
+      {
+        "id": 3,
+        "stack_id": 83,
+        "reasoning": "shadcn/ui é construído sobre Radix UI e Tailwind CSS, oferecendo componentes acessíveis e customizáveis para tabelas, modais, formulários e painéis Kanban sem impor um design system rígido, alinhado ao discriminador de customização total da UI."
+      },
+      {
+        "id": 4,
+        "stack_id": 54,
+        "reasoning": "O projeto possui múltiplas telas com dados assíncronos (listagem de tarefas, usuários, tenants) e operações de cache. TanStack Query gerencia server-state, cache e refetching, essencial para as visualizações de lista e Kanban com filtros e paginação."
+      },
+      {
+        "id": 5,
+        "stack_id": 107,
+        "reasoning": "A aplicação web possui múltiplas rotas protegidas e públicas (login, recuperação de senha, tarefas, usuários, tenants) com guardas de autenticação e autorização. React Router é a solução de roteamento padrão para aplicações React com SPA."
+      },
+      {
+        "id": 6,
+        "stack_id": 117,
+        "reasoning": "Os formulários de criação/edição de tarefa, cadastro de usuário e provisionamento de tenant possuem validações complexas de campos obrigatórios, formato de e-mail e unicidade. React Hook Form oferece performance com mínimo de re-renders e integração nativa com Zod."
+      },
+      {
+        "id": 7,
+        "stack_id": 193,
+        "reasoning": "A interface utiliza ícones para navegação lateral, indicadores de prioridade, status e ações em tabelas e cartões Kanban. Lucide é o conjunto de ícones padrão do shadcn/ui, garantindo consistência visual."
+      },
+      {
+        "id": 8,
+        "stack_id": 164,
+        "reasoning": "O discriminador indica suporte a múltiplos locales (pt-BR, en-US) e o projeto possui datas formatadas por localização. react-i18next integra i18next ao React para internacionalização de labels, mensagens de erro e formatação de datas."
+      },
+      {
+        "id": 9,
+        "stack_id": 136,
+        "reasoning": "O Kanban requer animações de transição ao mover cartões entre colunas e ao aplicar filtros. Auto-Animate adiciona transições de layout automaticamente sem configuração complexa, adequado para a movimentação de cartões e listas."
+      },
+      {
+        "id": 10,
+        "stack_id": 278,
+        "reasoning": "A Unidade de Processamento Backend orquestra handlers temáticos e workers assíncronos com injeção de dependência, validação JWT e isolamento multi-tenant, exigindo NestJS com sua arquitetura modular TypeScript."
+      },
+      {
+        "id": 11,
+        "stack_id": 313,
+        "reasoning": "A API Interna da Plataforma possui contratos REST versionados com envelopes de resposta padronizados e múltiplos grupos de endpoints, exigindo OpenAPI para documentação e validação dos contratos."
+      },
+      {
+        "id": 12,
+        "stack_id": 404,
+        "reasoning": "A integração crítica do projeto é o envio de e-mail transacional para recuperação de senha. Resend é a API de e-mail developer-friendly com suporte a TypeScript e React Email, alinhada ao ecossistema do projeto."
+      },
+      {
+        "id": 13,
+        "stack_id": 358,
+        "reasoning": "O Worker de Envio de E-mail processa mensagens de uma fila com retry, backoff exponencial e circuit breaker. BullMQ é a solução Redis-backed para filas de jobs em Node.js com suporte nativo a retry e dead-letter queue."
+      },
+      {
+        "id": 14,
+        "stack_id": 394,
+        "reasoning": "O Pipeline de Migração de Esquema possui trigger agendado (cron diário às 2h) para limpeza de dados e aplicação de políticas de retenção. node-cron é o scheduler simples e adequado para jobs periódicos em Node.js."
+      },
+      {
+        "id": 15,
+        "stack_id": 466,
+        "reasoning": "O Banco de Dados Relacional armazena tarefas, usuários, tenants, níveis hierárquicos e histórico de status com isolamento por tenant_id, índices compostos e constraints de integridade referencial. PostgreSQL é o banco relacional mais robusto com suporte a UUID, JSONB e índices compostos."
+      },
+      {
+        "id": 16,
+        "stack_id": 497,
+        "reasoning": "O Cache em Nível de Aplicação requer armazenamento de listagens de tarefas, usuários ativos e configurações de tenant com TTL e invalidação síncrona. Redis é o backend de cache distribuído padrão, também usado pelo BullMQ para filas."
+      },
+      {
+        "id": 17,
+        "stack_id": 596,
+        "reasoning": "O Repositório de Tarefas e Repositório de Usuários e Tenants precisam de um ORM TypeScript com migrações, type-safety e suporte a PostgreSQL. Prisma oferece schema-driven code generation, migrations integradas e client type-safe alinhado ao ecossistema NestJS."
+      },
+      {
+        "id": 18,
+        "stack_id": 643,
+        "reasoning": "O Pipeline de Migração de Esquema requer versionamento e aplicação controlada de alterações no esquema relacional. Prisma Migrate é o companion do Prisma ORM, garantindo consistência entre schema e banco de dados."
+      },
+      {
+        "id": 19,
+        "stack_id": 651,
+        "reasoning": "O Cache em Nível de Aplicação usa Redis como backend. ioredis é o cliente Redis full-featured para Node.js com suporte a clusters, pipelines e compatibilidade com BullMQ."
+      },
+      {
+        "id": 20,
+        "stack_id": 910,
+        "reasoning": "O projeto com múltiplos módulos críticos (tarefas, usuários, tenants, autenticação) requer CI/CD automatizado para garantir qualidade e deploys confiáveis, sendo GitHub Actions a solução nativa para repositórios GitHub."
+      },
+      {
+        "id": 21,
+        "stack_id": 874,
+        "reasoning": "O projeto com múltiplos serviços (NestJS, PostgreSQL, Redis) requer containerização para garantir consistência entre ambientes de desenvolvimento, teste e produção."
+      },
+      {
+        "id": 22,
+        "stack_id": 946,
+        "reasoning": "A API REST com versionamento path-based e o frontend estático precisam de um reverse proxy para roteamento, SSL termination e serving de assets estáticos, sendo Nginx a solução padrão."
+      },
+      {
+        "id": 23,
+        "stack_id": 984,
+        "reasoning": "O Controle de Identidade e Acesso armazena segredos sensíveis (JWT_SECRET com RS256, chaves RSA, credenciais de banco) que precisam ser gerenciados pelo HashiCorp Vault com referências vault_reference."
+      },
+      {
+        "id": 24,
+        "stack_id": 792,
+        "reasoning": "O frontend React precisa de um bundler rápido com hot module replacement para desenvolvimento e build otimizado para produção. Vite é o build tool padrão para projetos React modernos com TypeScript."
+      },
+      {
+        "id": 25,
+        "stack_id": 822,
+        "reasoning": "O projeto com requisitos de segurança e conformidade LGPD precisa de linting para detectar padrões inseguros e garantir qualidade de código TypeScript no frontend e backend."
+      },
+      {
+        "id": 26,
+        "stack_id": 833,
+        "reasoning": "O projeto com múltiplos módulos TypeScript (frontend React e backend NestJS) precisa de formatação consistente de código para manter legibilidade e reduzir diffs desnecessários."
+      },
+      {
+        "id": 27,
+        "stack_id": 813,
+        "reasoning": "Todo o projeto usa TypeScript tanto no frontend (React) quanto no backend (NestJS), garantindo type-safety end-to-end entre DTOs, repositórios e componentes de interface."
+      },
+      {
+        "id": 28,
+        "stack_id": 841,
+        "reasoning": "O projeto com frontend e backend TypeScript em um monorepo precisa de um gerenciador de pacotes eficiente com suporte a workspaces, sendo pnpm mais rápido e eficiente em disco que npm."
+      },
+      {
+        "id": 29,
+        "stack_id": 1038,
+        "reasoning": "O requisito de rastreabilidade de ações e auditabilidade das operações inclui o rastreamento de erros em produção, sendo Sentry a solução de error tracking mais adotada para React e Node.js."
+      },
+      {
+        "id": 30,
+        "stack_id": 1008,
+        "reasoning": "A Camada de Observabilidade define um catálogo extenso de métricas (contadores, histogramas, gauges) com endpoint Prometheus em /metrics e scrape interval de 15s, exigindo Prometheus como sistema de coleta."
+      },
+      {
+        "id": 31,
+        "stack_id": 1020,
+        "reasoning": "A Camada de Observabilidade usa protocolo OTLP (porta 4317) para exportação de traces distribuídos, sendo OpenTelemetry o framework CNCF padrão para instrumentação de tracing no NestJS."
+      },
+      {
+        "id": 32,
+        "stack_id": 994,
+        "reasoning": "A Camada de Observabilidade define um schema de log estruturado com campos obrigatórios e proibidos, sendo Loki o sistema de log aggregation da Grafana Labs complementar ao Prometheus já selecionado."
+      },
+      {
+        "id": 33,
+        "stack_id": 1066,
+        "reasoning": "O Controle de Identidade e Acesso requer autenticação própria com JWT RS256, rate limiting, recuperação de senha e arquitetura extensível para SSO/OAuth futuro, sendo Clerk a solução que oferece tudo isso com SDK TypeScript."
+      },
+      {
+        "id": 34,
+        "stack_id": 1092,
+        "reasoning": "As Regras de Controle de Acesso por Perfil implementam RBAC com quatro perfis e isolamento por tenant (domínio), sendo Casbin a biblioteca que suporta RBAC com domínios multi-tenant."
+      },
+      {
+        "id": 35,
+        "stack_id": 1133,
+        "reasoning": "O Controle de Identidade e Acesso especifica explicitamente argon2id com parâmetros m=64MiB, t=3, p=4 para hash de senhas, exigindo a biblioteca argon2 para Node.js."
+      },
+      {
+        "id": 36,
+        "stack_id": 1098,
+        "reasoning": "Os requisitos de segurança e conformidade LGPD exigem análise estática de código para detectar vulnerabilidades como injeção SQL, exposição de dados sensíveis e falhas de autenticação."
+      },
+      {
+        "id": 37,
+        "stack_id": 1110,
+        "reasoning": "A conformidade com LGPD inclui manter dependências atualizadas para evitar vulnerabilidades conhecidas, sendo Dependabot a solução nativa do GitHub para atualização automática de dependências."
+      },
+      {
+        "id": 38,
+        "stack_id": 717,
+        "reasoning": "O Toolkit de Suporte Técnico possui múltiplas funções utilitárias que precisam de testes unitários isolados, sendo Vitest o framework de testes nativo do Vite com API compatível com Jest."
+      },
+      {
+        "id": 39,
+        "stack_id": 732,
+        "reasoning": "O Handler de Usuários e Organizações e o Handler de Tarefas expõem múltiplos endpoints REST que precisam de testes de integração para validar respostas, status codes e isolamento multi-tenant."
+      },
+      {
+        "id": 40,
+        "stack_id": 753,
+        "reasoning": "Os fluxos críticos de login, criação de tarefa e movimentação no Kanban precisam de testes E2E para validar a experiência completa do usuário, sendo Playwright o framework moderno com suporte a múltiplos browsers e dispositivos móveis."
+      },
+      {
+        "id": 41,
+        "stack_id": 765,
+        "reasoning": "O projeto precisa validar o desempenho sob carga de até 5.000 usuários ativos e 10.000 tarefas por tenant, exigindo testes de carga com k6 para simular cenários realistas."
+      },
+      {
+        "id": 42,
+        "stack_id": 1252,
+        "reasoning": "O backend NestJS precisa carregar variáveis de ambiente (DATABASE_URL, JWT_SECRET, EMAIL_API_KEY) de forma segura. dotenv é a solução padrão para carregar variáveis de ambiente de arquivos .env em Node.js."
+      },
+      {
+        "id": 43,
+        "stack_id": 1171,
+        "reasoning": "Os Utilitários de Cálculo Temporal exportam funções de formatação de datas por locale (pt-BR, en-US) e cálculo de expiração de sessões, sendo date-fns a biblioteca funcional mais adequada com suporte a locales."
+      },
+      {
+        "id": 44,
+        "stack_id": 1143,
+        "reasoning": "A Camada de Validação de Entrada aplica validações em múltiplas camadas com schemas de formato, tamanho e enum, sendo Zod a biblioteca TypeScript-first que integra com React Hook Form e NestJS para validação consistente."
+      },
+      {
+        "id": 45,
+        "stack_id": 1181,
+        "reasoning": "A Camada de Observabilidade define um schema de log estruturado JSON com campos obrigatórios e proibidos, sendo Pino o logger JSON de alta performance para Node.js/NestJS que suporta redação de campos sensíveis."
+      },
+      {
+        "id": 46,
+        "stack_id": 1198,
+        "reasoning": "O Conector de Provedor de E-mail faz chamadas HTTP REST para o provedor externo com timeout, retry e circuit breaker, exigindo Axios como cliente HTTP com suporte a interceptors e timeout configurável."
+      },
+      {
+        "id": 47,
+        "stack_id": 1213,
+        "reasoning": "Os Transformadores de DTO realizam múltiplas transformações de objetos (merge, pick, omit, map) que são simplificadas com Lodash como biblioteca utilitária funcional para JavaScript/TypeScript."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": null,
+  "sourceType": null,
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:36:46.031Z",
+  "updatedAt": null
+}

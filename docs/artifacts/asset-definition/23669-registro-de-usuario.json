@@ -1,0 +1,635 @@
+{
+  "id": 23669,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 26,
+          "name": "Dados de Cadastro de Usuário",
+          "format": "{ nome_completo: string, email: string, nivel_hierarquico_id: uuid }",
+          "origin": "Formulário de Cadastro (ASSET-002 Página de Gerenciamento de Usuários)",
+          "trigger": "Submissão do formulário de cadastro por administrador do tenant"
+        },
+        {
+          "id": 27,
+          "name": "Dados de Edição de Perfil",
+          "format": "{ nome_completo?: string, email?: string, nivel_hierarquico_id?: uuid }",
+          "origin": "Formulário de Edição de Perfil (ASSET-002 Página de Gerenciamento de Usuários)",
+          "trigger": "Submissão do formulário de edição por administrador do tenant"
+        },
+        {
+          "id": 28,
+          "name": "Comando de Ativação/Desativação",
+          "format": "{ usuario_id: uuid, acao: enum[ativar|desativar] }",
+          "origin": "Interface de Gerenciamento de Perfis (ASSET-002 Página de Gerenciamento de Usuários)",
+          "trigger": "Clique em botão de ativação ou desativação por administrador do tenant"
+        },
+        {
+          "id": 29,
+          "name": "Requisição de Autenticação",
+          "format": "{ email: string, tenant_id: uuid }",
+          "origin": "Fluxo de Autenticação (ASSET-025 Fluxo de Autenticação)",
+          "trigger": "Tentativa de login do usuário com credenciais"
+        },
+        {
+          "id": 30,
+          "name": "Requisição de Recuperação de Senha",
+          "format": "{ email: string, tenant_id: uuid }",
+          "origin": "Fluxo de Recuperação de Senha (ASSET-026 Fluxo de Recuperação de Senha)",
+          "trigger": "Submissão de solicitação de recuperação de senha"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 40,
+          "name": "Registro de Usuário Persistido",
+          "format": "{ id: uuid, tenant_id: uuid, nome_completo: string, email: string, nivel_hierarquico_id: uuid, status: enum, data_criacao: timestamp, criador_id: uuid, data_ultima_edicao?: timestamp, ultimo_editor_id?: uuid }",
+          "destination": "Banco de Dados Relacional (ASSET-006 Tabela de Usuários)"
+        },
+        {
+          "id": 41,
+          "name": "Evento de Auditoria",
+          "format": "{ tipo_evento: enum[UsuárioCadastrado|PerfilUsuárioEditado|UsuárioAtivado|UsuárioDesativado], usuario_id: uuid, tenant_id: uuid, executor_id: uuid, timestamp: timestamp, dados_alterados?: object }",
+          "destination": "Sistema de Auditoria (ASSET-053 Trilha de Auditoria de Ações)"
+        },
+        {
+          "id": 42,
+          "name": "Confirmação de Sucesso",
+          "format": "{ status: 'sucesso', mensagem: string, usuario_id?: uuid }",
+          "destination": "Interface de Usuário (ASSET-002 Página de Gerenciamento de Usuários)"
+        },
+        {
+          "id": 43,
+          "name": "Mensagem de Erro",
+          "format": "{ status: 'erro', mensagem: string, campo_invalido?: string }",
+          "destination": "Interface de Usuário (ASSET-002 Página de Gerenciamento de Usuários)"
+        },
+        {
+          "id": 44,
+          "name": "Dados de Usuário para Autenticação",
+          "format": "{ id: uuid, email: string, tenant_id: uuid, status: enum[ativo|inativo], hash_senha: string }",
+          "destination": "Fluxo de Autenticação (ASSET-025 Fluxo de Autenticação)"
+        }
+      ],
+      "processing": [
+        {
+          "id": 31,
+          "step": "Validar Campos Obrigatórios",
+          "description": "Verifica se todos os campos obrigatórios (nome_completo, email, nivel_hierarquico_id) estão preenchidos e não vazios."
+        },
+        {
+          "id": 32,
+          "step": "Validar Formato de E-mail",
+          "description": "Valida se o endereço de e-mail informado segue o formato válido de correio eletrônico (RFC 5322 simplificado)."
+        },
+        {
+          "id": 33,
+          "step": "Verificar Unicidade de E-mail por Tenant",
+          "description": "Consulta o banco de dados para garantir que o e-mail não está já cadastrado para outro usuário no mesmo tenant."
+        },
+        {
+          "id": 34,
+          "step": "Validar Nível Hierárquico Ativo",
+          "description": "Verifica se o nível hierárquico referenciado existe e está ativo no tenant do usuário."
+        },
+        {
+          "id": 35,
+          "step": "Validar Isolamento de Tenant",
+          "description": "Garante que o usuário sendo criado/editado pertence ao tenant do administrador executor, impedindo operações cruzadas entre tenants."
+        },
+        {
+          "id": 36,
+          "step": "Persistir Registro de Usuário",
+          "description": "Insere ou atualiza o registro do usuário no banco de dados relacional com dados validados e metadados de auditoria."
+        },
+        {
+          "id": 37,
+          "step": "Registrar Evento de Auditoria",
+          "description": "Emite evento de auditoria (UsuárioCadastrado, PerfilUsuárioEditado, UsuárioAtivado ou UsuárioDesativado) com identificação do executor e timestamp."
+        },
+        {
+          "id": 38,
+          "step": "Invalidar Sessões Ativas (Desativação)",
+          "description": "Quando um usuário é desativado, invalida imediatamente todas as sessões ativas desse usuário para revogar acesso."
+        },
+        {
+          "id": 39,
+          "step": "Consultar Registro para Autenticação",
+          "description": "Busca o registro do usuário pelo e-mail e tenant_id para validar credenciais e status de ativação durante login."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 45,
+        "category": "validation",
+        "description": "O campo nome_completo deve estar preenchido e não pode estar em branco; deve conter ao menos um caractere não-espaço.",
+        "enforcement": "code",
+        "verification": "Validação realizada no handler de cadastro/edição antes de persistir; rejeição com mensagem de erro específica se vazio."
+      },
+      {
+        "id": 46,
+        "category": "validation",
+        "description": "O campo email deve estar preenchido e seguir o formato válido de endereço de correio eletrônico (RFC 5322 simplificado: padrão ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}$).",
+        "enforcement": "code",
+        "verification": "Validação de formato realizada no handler antes de persistir; rejeição com mensagem de erro se formato inválido. Constraint CHECK no banco de dados como camada adicional."
+      },
+      {
+        "id": 47,
+        "category": "invariant",
+        "description": "A combinação (tenant_id, email) deve ser única; não é permitido cadastrar dois usuários com o mesmo e-mail dentro do mesmo tenant.",
+        "enforcement": "db_constraint",
+        "verification": "Constraint UNIQUE (tenant_id, email) no banco de dados; tentativa de inserção duplicada resulta em erro de constraint violation. Handler consulta banco antes de inserir para feedback ao usuário."
+      },
+      {
+        "id": 48,
+        "category": "invariant",
+        "description": "Cada usuário deve estar vinculado a exatamente um tenant e a exatamente um nível hierárquico ativo naquele tenant; campos tenant_id e nivel_hierarquico_id são obrigatórios e não nulos.",
+        "enforcement": "db_constraint",
+        "verification": "Constraint NOT NULL (tenant_id, nivel_hierarquico_id) no banco de dados; constraint FOREIGN KEY garante referência válida a tenant e nível hierárquico existentes."
+      },
+      {
+        "id": 49,
+        "category": "invariant",
+        "description": "O status de um usuário deve ser um dos valores permitidos: 'ativo' ou 'inativo'; nenhum outro valor é aceito.",
+        "enforcement": "db_constraint",
+        "verification": "Constraint CHECK (status IN ('ativo', 'inativo')) no banco de dados; validação de enum no código antes de persistir."
+      },
+      {
+        "id": 50,
+        "category": "authorization",
+        "description": "Apenas usuários com perfil de administrador do tenant podem criar, editar, ativar ou desativar usuários; colaboradores e gestores não possuem acesso a essas operações.",
+        "enforcement": "code",
+        "verification": "Verificação de perfil/role no handler de usuários antes de processar qualquer operação; rejeição com erro de autorização se usuário não é administrador do tenant."
+      },
+      {
+        "id": 51,
+        "category": "authorization",
+        "description": "Um administrador não pode desativar sua própria conta, evitando que um tenant fique sem nenhum administrador ativo.",
+        "enforcement": "code",
+        "verification": "Validação no handler de desativação: se usuario_id == administrador_executor_id, rejeita com mensagem de erro específica."
+      },
+      {
+        "id": 52,
+        "category": "invariant",
+        "description": "Isolamento multi-tenant: um usuário de um tenant não pode ser visualizado, editado ou desativado por administradores de outro tenant; operações são sempre escopadas ao tenant do executor.",
+        "enforcement": "code",
+        "verification": "Validação no handler: antes de qualquer operação, verifica se tenant_id do usuário alvo == tenant_id do administrador executor; rejeição se não corresponder."
+      },
+      {
+        "id": 53,
+        "category": "compliance",
+        "description": "Conformidade com LGPD: dados pessoais do usuário (nome_completo, email) devem ser tratados com princípios de minimização de dados e proteção; acesso restrito a administradores do tenant e sistema.",
+        "enforcement": "code",
+        "verification": "Acesso a dados pessoais é restrito a operações autorizadas (cadastro, edição, autenticação); logs de auditoria registram quem acessou; dados não são expostos em listagens públicas ou APIs não autorizadas."
+      },
+      {
+        "id": 54,
+        "category": "observability",
+        "description": "Toda operação de cadastro, edição, ativação ou desativação de usuário deve ser registrada em log de auditoria com identificação do executor, timestamp, tenant, e dados alterados.",
+        "enforcement": "code",
+        "verification": "Handler emite evento de auditoria (UsuárioCadastrado, PerfilUsuárioEditado, UsuárioAtivado, UsuárioDesativado) após persistência bem-sucedida; evento contém executor_id, timestamp, tenant_id e payload com dados relevantes."
+      },
+      {
+        "id": 55,
+        "category": "idempotency",
+        "description": "Operações de ativação e desativação devem ser idempotentes: ativar um usuário já ativo ou desativar um usuário já inativo não deve resultar em erro, apenas em confirmação de sucesso.",
+        "enforcement": "code",
+        "verification": "Handler verifica status atual antes de executar ativação/desativação; se já no estado desejado, retorna sucesso sem modificar registro ou emitir evento duplicado."
+      },
+      {
+        "id": 56,
+        "category": "invariant",
+        "description": "Quando um usuário é desativado, todas as suas sessões ativas devem ser invalidadas imediatamente, revogando acesso à plataforma sem necessidade de logout manual.",
+        "enforcement": "code",
+        "verification": "Handler de desativação invoca serviço de sessão para invalidar todos os tokens/sessões do usuário; verificação posterior de autenticação rejeita tokens invalidados."
+      },
+      {
+        "id": 57,
+        "category": "validation",
+        "description": "O nível hierárquico atribuído a um usuário deve existir e estar ativo no tenant; não é permitido atribuir níveis inexistentes ou de outros tenants.",
+        "enforcement": "code",
+        "verification": "Handler consulta tabela de níveis hierárquicos antes de persistir; valida que nivel_hierarquico_id existe e pertence ao tenant_id do usuário; rejeição com erro se nível não encontrado."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "O Registro de Usuário é um Business Record que encapsula os dados estruturais de um colaborador cadastrado em um tenant específico da plataforma. Contém identificadores únicos, informações pessoais (nome completo, endereço de e-mail), vínculo organizacional (nível hierárquico, tenant proprietário), status de ativação (ativo/inativo) e metadados de auditoria (data de criação, data de última edição, usuário executor). Serve como entidade central para autenticação, controle de acesso baseado em perfil, atribuição de tarefas e rastreabilidade de ações. O registro é persistido no banco de dados relacional com validações de unicidade de e-mail por tenant, conformidade com LGPD, e integridade referencial com tenant e nível hierárquico. Não contém lógica de negócio complexa (delegada ao domínio), persistência (delegada ao repositório) ou apresentação (delegada às páginas de interface)."
+    },
+    "definition": {
+      "events": [
+        {
+          "id": 2,
+          "name": "UsuárioCadastrado",
+          "description": "Emitido quando um novo usuário é cadastrado com sucesso no tenant por um administrador.",
+          "payload_shape": "{ id: uuid, tenant_id: uuid, nome: string, email: string, nivel_hierarquico_id: uuid, status: enum[ativo|inativo], data_criacao: timestamp, criador_id: uuid }"
+        },
+        {
+          "id": 3,
+          "name": "PerfilUsuárioEditado",
+          "description": "Emitido quando dados cadastrais de um usuário existente são modificados (nome, e-mail, nível hierárquico).",
+          "payload_shape": "{ id: uuid, tenant_id: uuid, campos_alterados: [{ campo: string, valor_anterior: string, valor_novo: string }], data_edicao: timestamp, editor_id: uuid }"
+        },
+        {
+          "id": 4,
+          "name": "UsuárioAtivado",
+          "description": "Emitido quando um usuário previamente desativado é reativado, restaurando seu acesso à plataforma.",
+          "payload_shape": "{ id: uuid, tenant_id: uuid, data_ativacao: timestamp, administrador_executor_id: uuid }"
+        },
+        {
+          "id": 5,
+          "name": "UsuárioDesativado",
+          "description": "Emitido quando um usuário ativo é desativado, revogando imediatamente seu acesso à plataforma.",
+          "payload_shape": "{ id: uuid, tenant_id: uuid, data_desativacao: timestamp, administrador_executor_id: uuid }"
+        }
+      ],
+      "record_spec": {
+        "id": 6,
+        "name": "Usuário",
+        "fields": [
+          {
+            "id": 7,
+            "name": "id",
+            "type": "uuid",
+            "nullable": false,
+            "description": "Identificador único do usuário na plataforma, gerado automaticamente no momento do cadastro."
+          },
+          {
+            "id": 8,
+            "name": "tenant_id",
+            "type": "uuid",
+            "nullable": false,
+            "description": "Referência ao tenant proprietário do usuário, garantindo isolamento de dados entre organizações."
+          },
+          {
+            "id": 9,
+            "name": "nome_completo",
+            "type": "string",
+            "nullable": false,
+            "description": "Nome completo do colaborador, informado no momento do cadastro ou edição do perfil."
+          },
+          {
+            "id": 10,
+            "name": "email",
+            "type": "string",
+            "nullable": false,
+            "description": "Endereço de e-mail único do usuário dentro do tenant, utilizado para autenticação e comunicação."
+          },
+          {
+            "id": 11,
+            "name": "nivel_hierarquico_id",
+            "type": "uuid",
+            "nullable": false,
+            "description": "Referência ao nível hierárquico atribuído ao usuário dentro da estrutura organizacional do tenant."
+          },
+          {
+            "id": 12,
+            "name": "status",
+            "type": "enum[ativo|inativo]",
+            "nullable": false,
+            "description": "Status de ativação do usuário; ativo permite acesso à plataforma, inativo bloqueia login e operações."
+          },
+          {
+            "id": 13,
+            "name": "data_criacao",
+            "type": "timestamp",
+            "nullable": false,
+            "description": "Data e hora de cadastro do usuário, registrada automaticamente pelo sistema no momento da criação."
+          },
+          {
+            "id": 14,
+            "name": "criador_id",
+            "type": "uuid",
+            "nullable": false,
+            "description": "Referência ao usuário administrador do tenant que realizou o cadastro inicial do usuário."
+          },
+          {
+            "id": 15,
+            "name": "data_ultima_edicao",
+            "type": "timestamp",
+            "nullable": true,
+            "description": "Data e hora da última edição dos dados cadastrais do usuário; null se nunca foi editado após criação."
+          },
+          {
+            "id": 16,
+            "name": "ultimo_editor_id",
+            "type": "uuid",
+            "nullable": true,
+            "description": "Referência ao usuário administrador que realizou a última edição do perfil; null se nunca foi editado."
+          }
+        ],
+        "constraints": [
+          {
+            "id": 17,
+            "kind": "primary_key",
+            "expression": "PRIMARY KEY (id)",
+            "description": "Garante unicidade do identificador UUID do usuário."
+          },
+          {
+            "id": 18,
+            "kind": "unique",
+            "expression": "UNIQUE (tenant_id, email)",
+            "description": "Garante unicidade do endereço de e-mail dentro de cada tenant, impedindo duplicação de e-mails na mesma organização."
+          },
+          {
+            "id": 19,
+            "kind": "not_null",
+            "expression": "NOT NULL (nome_completo, email, status, data_criacao, criador_id, tenant_id, nivel_hierarquico_id)",
+            "description": "Garante que campos essenciais de identificação, auditoria e relacionamento do usuário estejam sempre preenchidos."
+          },
+          {
+            "id": 20,
+            "kind": "check",
+            "expression": "CHECK (status IN ('ativo', 'inativo'))",
+            "description": "Valida que o status do usuário é um dos valores permitidos."
+          },
+          {
+            "id": 21,
+            "kind": "check",
+            "expression": "CHECK (email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}$')",
+            "description": "Valida que o e-mail segue formato válido de endereço de correio eletrônico."
+          },
+          {
+            "id": 22,
+            "kind": "foreign_key",
+            "expression": "FOREIGN KEY (tenant_id) REFERENCES tenants(id)",
+            "description": "Garante que o tenant ao qual o usuário pertence existe na tabela de tenants."
+          },
+          {
+            "id": 23,
+            "kind": "foreign_key",
+            "expression": "FOREIGN KEY (nivel_hierarquico_id) REFERENCES niveis_hierarquicos(id)",
+            "description": "Garante que o nível hierárquico atribuído ao usuário existe na tabela de níveis hierárquicos do tenant."
+          },
+          {
+            "id": 24,
+            "kind": "foreign_key",
+            "expression": "FOREIGN KEY (criador_id) REFERENCES usuarios(id)",
+            "description": "Garante que o usuário administrador que criou este registro existe na tabela de usuários."
+          },
+          {
+            "id": 25,
+            "kind": "foreign_key",
+            "expression": "FOREIGN KEY (ultimo_editor_id) REFERENCES usuarios(id)",
+            "description": "Garante que o usuário administrador que editou este registro existe na tabela de usuários (quando não null)."
+          }
+        ]
+      }
+    },
+    "pendencies": [
+      {
+        "id": 75,
+        "section": "definition",
+        "description": "Definição de limite máximo de caracteres para o campo nome_completo não foi especificada nos requisitos. É necessário estabelecer um limite para evitar armazenamento excessivo e garantir usabilidade em interfaces.",
+        "resolutionOptions": [
+          {
+            "id": 76,
+            "text": "Adotar limite de 255 caracteres para nome_completo, alinhado com padrões de banco de dados relacional e usabilidade em formulários web."
+          },
+          {
+            "id": 77,
+            "text": "Adotar limite de 100 caracteres para nome_completo, mais restritivo, adequado para nomes em português e reduzindo consumo de armazenamento."
+          },
+          {
+            "id": 78,
+            "text": "Adotar limite de 500 caracteres para nome_completo, permitindo nomes compostos longos e variações culturais."
+          }
+        ],
+        "recommendedOptionId": 76
+      },
+      {
+        "id": 79,
+        "section": "definition",
+        "description": "O campo email possui limite máximo de 254 caracteres conforme RFC 5321, mas a constraint CHECK no banco de dados não especifica este limite. É necessário validar se a implementação do regex inclui validação de comprimento.",
+        "resolutionOptions": [
+          {
+            "id": 80,
+            "text": "Adicionar constraint CHECK (length(email) <= 254) ao banco de dados para garantir conformidade com RFC 5321."
+          },
+          {
+            "id": 81,
+            "text": "Implementar validação de comprimento apenas no código da aplicação, sem constraint no banco de dados."
+          }
+        ],
+        "recommendedOptionId": 80
+      },
+      {
+        "id": 82,
+        "section": "definition",
+        "description": "Não foi especificado se o campo email deve ser armazenado em minúsculas (normalizado) para garantir que 'JOAO@EMPRESA.COM' e 'joao@empresa.com' sejam tratados como o mesmo e-mail. Isto é importante para evitar duplicação de e-mails com variações de caso.",
+        "resolutionOptions": [
+          {
+            "id": 83,
+            "text": "Normalizar email para minúsculas antes de persistir no banco de dados; adicionar trigger ou aplicar LOWER() na constraint UNIQUE."
+          },
+          {
+            "id": 84,
+            "text": "Armazenar email como informado pelo usuário; implementar validação de unicidade case-insensitive apenas no código da aplicação."
+          }
+        ],
+        "recommendedOptionId": 83
+      },
+      {
+        "id": 85,
+        "section": "rules",
+        "description": "A regra de isolamento multi-tenant (rule 52) valida que tenant_id do usuário alvo == tenant_id do administrador executor, mas não foi especificado se esta validação deve ocorrer também em operações de leitura (consulta de perfil) ou apenas em operações de escrita (edição, ativação, desativação).",
+        "resolutionOptions": [
+          {
+            "id": 86,
+            "text": "Aplicar validação de isolamento em TODAS as operações (leitura e escrita): um administrador só pode consultar usuários do seu próprio tenant."
+          },
+          {
+            "id": 87,
+            "text": "Aplicar validação de isolamento apenas em operações de escrita (edição, ativação, desativação); leitura é permitida para usuários do mesmo tenant sem restrição adicional."
+          }
+        ],
+        "recommendedOptionId": 86
+      },
+      {
+        "id": 88,
+        "section": "non_functional_requirements",
+        "description": "O requisito de performance (nfr 58) especifica p95 <= 500ms e p99 <= 1000ms, mas não foi definido o percentil de sucesso esperado (ex: 99% das operações devem estar dentro do SLA). É necessário estabelecer este critério para validação.",
+        "resolutionOptions": [
+          {
+            "id": 89,
+            "text": "Estabelecer que 99% das operações devem estar dentro do SLA (p99 <= 1000ms); alertar se taxa de sucesso cair abaixo de 99%."
+          },
+          {
+            "id": 90,
+            "text": "Estabelecer que 95% das operações devem estar dentro do SLA (p95 <= 500ms); alertar se taxa de sucesso cair abaixo de 95%."
+          }
+        ],
+        "recommendedOptionId": 89
+      },
+      {
+        "id": 91,
+        "section": "global",
+        "description": "Não foi especificado se o Registro de Usuário deve suportar campos adicionais como telefone, departamento, ou data de nascimento. A feature_definition fornecida menciona apenas nome, e-mail e nível hierárquico. É necessário confirmar se o escopo está completo ou se há extensões planejadas.",
+        "resolutionOptions": [
+          {
+            "id": 92,
+            "text": "Manter escopo mínimo conforme feature_definition: apenas nome_completo, email, nivel_hierarquico_id, status e metadados de auditoria. Extensões futuras serão adicionadas em versões posteriores."
+          },
+          {
+            "id": 93,
+            "text": "Adicionar campos opcionais (nullable) para telefone e departamento no registro, preparando para funcionalidades futuras sem necessidade de migração de esquema."
+          }
+        ],
+        "recommendedOptionId": 92
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 65,
+        "then": "O sistema rejeita o cadastro e exibe mensagem de erro específica indicando que o formato de e-mail é inválido",
+        "type": "unit",
+        "when": "O administrador preenche o campo de e-mail com um valor em formato inválido (ex: 'usuario@' ou 'usuario.com')",
+        "given": "Um administrador do tenant acessa o formulário de cadastro de usuário",
+        "scenario": "Validação de formato de e-mail durante cadastro de usuário",
+        "target_section": "definition"
+      },
+      {
+        "id": 66,
+        "then": "O sistema rejeita o cadastro e exibe mensagem de erro indicando que o e-mail já está cadastrado neste tenant",
+        "type": "unit",
+        "when": "Um administrador do tenant A tenta cadastrar um novo usuário com o mesmo e-mail 'joao@empresa.com'",
+        "given": "Um usuário com e-mail 'joao@empresa.com' já existe no tenant A",
+        "scenario": "Validação de unicidade de e-mail dentro do tenant",
+        "target_section": "definition"
+      },
+      {
+        "id": 67,
+        "then": "O sistema permite o cadastro, pois o e-mail é único apenas dentro do escopo de cada tenant",
+        "type": "unit",
+        "when": "Um administrador do tenant B tenta cadastrar um novo usuário com o mesmo e-mail 'joao@empresa.com'",
+        "given": "Um usuário com e-mail 'joao@empresa.com' existe no tenant A",
+        "scenario": "Isolamento de e-mail entre tenants",
+        "target_section": "definition"
+      },
+      {
+        "id": 68,
+        "then": "O usuário é persistido no banco de dados com status ativo, um evento UsuárioCadastrado é registrado em auditoria com identificação do executor e timestamp, e uma mensagem de sucesso é exibida",
+        "type": "integration",
+        "when": "O administrador preenche o formulário com nome 'Maria Silva', e-mail 'maria@empresa.com', nível hierárquico 'Colaborador' e submete",
+        "given": "Um administrador do tenant A está autenticado e acessa a página de gerenciamento de usuários",
+        "scenario": "Cadastro completo de usuário com persistência e auditoria",
+        "target_section": "flow"
+      },
+      {
+        "id": 69,
+        "then": "O sistema rejeita a edição e exibe mensagem de erro indicando que o novo e-mail já está em uso",
+        "type": "integration",
+        "when": "O administrador tenta alterar o e-mail para 'maria@empresa.com', que já pertence a outro usuário no mesmo tenant",
+        "given": "Um usuário 'joao@empresa.com' existe no tenant A; um administrador acessa o perfil de edição",
+        "scenario": "Edição de perfil de usuário com validação de e-mail único",
+        "target_section": "flow"
+      },
+      {
+        "id": 70,
+        "then": "O usuário é marcado como inativo no banco de dados, todas as sessões ativas de 'joao@empresa.com' são invalidadas, um evento UsuárioDesativado é registrado em auditoria, e uma tentativa de requisição com o token anterior é rejeitada",
+        "type": "integration",
+        "when": "O administrador clica em desativar o usuário 'joao@empresa.com' e confirma a ação",
+        "given": "Um usuário 'joao@empresa.com' está autenticado e ativo no tenant A; um administrador acessa a página de gerenciamento de usuários",
+        "scenario": "Desativação de usuário com invalidação de sessão",
+        "target_section": "flow"
+      },
+      {
+        "id": 71,
+        "then": "O sistema rejeita a ação e exibe mensagem de erro indicando que um administrador não pode desativar sua própria conta",
+        "type": "security",
+        "when": "O administrador tenta desativar sua própria conta clicando em desativar seu próprio perfil",
+        "given": "Um administrador 'admin@empresa.com' está autenticado no tenant A e acessa a página de gerenciamento de usuários",
+        "scenario": "Prevenção de desativação de própria conta de administrador",
+        "target_section": "rules"
+      },
+      {
+        "id": 72,
+        "then": "O sistema rejeita a operação com erro de autorização, impedindo acesso cruzado entre tenants",
+        "type": "security",
+        "when": "O administrador do tenant A tenta acessar ou editar o perfil do usuário do tenant B por manipulação de URL ou API",
+        "given": "Um administrador do tenant A está autenticado; um usuário 'joao@empresa.com' pertence ao tenant B",
+        "scenario": "Isolamento multi-tenant: administrador não pode editar usuários de outro tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 73,
+        "then": "O evento contém payload com campos: id (uuid), tenant_id (uuid), nome (string), email (string), nivel_hierarquico_id (uuid), status (enum), data_criacao (timestamp), criador_id (uuid)",
+        "type": "contract",
+        "when": "O evento UsuárioCadastrado é emitido",
+        "given": "Um novo usuário é cadastrado com sucesso no tenant A",
+        "scenario": "Contrato de evento UsuárioCadastrado",
+        "target_section": "definition"
+      },
+      {
+        "id": 74,
+        "then": "A operação é concluída e uma confirmação é retornada ao administrador em tempo <= 500ms (p95) ou <= 1000ms (p99)",
+        "type": "performance",
+        "when": "O sistema processa a validação, persistência e emissão de evento de auditoria",
+        "given": "Um administrador do tenant A submete um formulário de cadastro de usuário com dados válidos",
+        "scenario": "Operação de cadastro de usuário dentro do SLA de performance",
+        "target_section": "non_functional_requirements"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 58,
+        "target": "p95 <= 500ms, p99 <= 1000ms, mesmo sob carga de até 5.000 usuários ativos na plataforma",
+        "category": "performance",
+        "requirement": "Operações de cadastro, edição, ativação e desativação de usuário devem ser concluídas e retornar confirmação ao administrador em tempo adequado.",
+        "verification": "Testes de carga com simulação de 5.000 usuários simultâneos; medição de latência p95 e p99 em operações CRUD de usuários; monitoramento em produção com alertas se p99 > 1000ms."
+      },
+      {
+        "id": 59,
+        "target": "p95 <= 100ms para consulta de unicidade de e-mail em tenant com até 100 usuários",
+        "category": "performance",
+        "requirement": "Consultas de validação de unicidade de e-mail por tenant devem ser executadas com eficiência, sem bloqueios ou timeouts.",
+        "verification": "Índice UNIQUE (tenant_id, email) no banco de dados garante busca eficiente; testes de performance com 100+ usuários por tenant; monitoramento de query execution time."
+      },
+      {
+        "id": 60,
+        "target": "100% das comunicações via HTTPS com TLS 1.2+; acesso a dados pessoais restrito a operações autorizadas com verificação de role",
+        "category": "security",
+        "requirement": "Dados pessoais do usuário (nome_completo, email) devem ser protegidos contra acesso não autorizado; transmissão deve ocorrer exclusivamente via HTTPS.",
+        "verification": "Auditoria de configuração HTTPS em todos os endpoints; testes de penetração para validar restrição de acesso; logs de auditoria rastreiam quem acessou dados pessoais."
+      },
+      {
+        "id": 61,
+        "target": "Invalidação de sessões ocorre em < 100ms após persistência de desativação",
+        "category": "security",
+        "requirement": "Operações de desativação de usuário devem invalidar imediatamente todas as sessões ativas, impedindo uso continuado da plataforma.",
+        "verification": "Teste de integração: desativar usuário e verificar que token anterior é rejeitado em requisição subsequente; monitoramento de latência de invalidação de sessão."
+      },
+      {
+        "id": 62,
+        "target": "99.5% uptime mensal; RTO <= 15 minutos em caso de falha",
+        "category": "availability",
+        "requirement": "O serviço de gerenciamento de usuários deve estar disponível com alta disponibilidade, dado que sua indisponibilidade impede administradores de gerenciar equipes.",
+        "verification": "Monitoramento contínuo de disponibilidade; testes de failover; alertas automáticos se uptime < 99.5%; documentação de runbook de recuperação."
+      },
+      {
+        "id": 63,
+        "target": "100% das operações registradas em log com executor_id, timestamp, tenant_id, e dados alterados; logs retidos por no mínimo 90 dias",
+        "category": "observability",
+        "requirement": "Todas as operações de cadastro, edição, ativação e desativação de usuário devem ser registradas em log de auditoria com rastreabilidade completa.",
+        "verification": "Verificação de logs de auditoria após cada operação; testes de retenção de logs; alertas se operação não foi registrada."
+      },
+      {
+        "id": 64,
+        "target": "Índices apropriados em campos de busca frequente (tenant_id, email); queries executadas com plano de execução eficiente",
+        "category": "cost",
+        "requirement": "Operações de consulta e persistência de usuários devem ser otimizadas para minimizar consumo de recursos de banco de dados e armazenamento.",
+        "verification": "Análise de plano de execução de queries; monitoramento de I/O de banco de dados; otimização de índices conforme necessário."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 62,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T00:39:29.631Z",
+  "updatedAt": null
+}

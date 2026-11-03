@@ -1,0 +1,40 @@
+{
+  "id": 4118,
+  "name": "Chronos Tasks",
+  "label": "4118 - Chronos Tasks",
+  "description": "Sistema web de gerenciamento de tarefas desenvolvido para organizar e acompanhar atividades de forma simples, intuitiva e eficiente. A plataforma permite o cadastro de usuários com diferentes níveis hierárquicos, atribuição de tarefas entre usuários, definição de prioridades e prazos, além da visualização das atividades em formato de lista ou Kanban. O sistema possui arquitetura voltada para ambiente web, com interface responsiva para dispositivos móveis, priorizando agilidade, usabilidade e produtividade.",
+  "slug": null,
+  "language": "portuguese",
+  "state": "on_going",
+  "createdAt": "2026-08-10T22:37:43.453Z",
+  "deactivatedAt": null,
+  "workspaceId": 929,
+  "workspaceName": "Gabriel Lozorio",
+  "organizationId": 79,
+  "reference": {
+    "reference": [
+      {
+        "id": 1,
+        "function_id": 9,
+        "content": "https://www.notion.com/",
+        "type": "url"
+      },
+      {
+        "id": 2,
+        "function_id": 1,
+        "content": "{\"filename\":\"Ata de Reunião de Kickoff – Sistema de Gerenciamento de Tarefas.md\",\"size\":2977}",
+        "type": "file"
+      }
+    ],
+    "knowledge_area": [
+      "gerenciamento de tarefas",
+      "sistema colaborativo",
+      "interface Kanban",
+      "aplicação web responsiva"
+    ]
+  },
+  "repository": null,
+  "aiAutonomyLevel": "smart",
+  "logo": null,
+  "ownerId": 48
+}

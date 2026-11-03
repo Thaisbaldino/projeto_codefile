@@ -1,0 +1,133 @@
+{
+  "id": 24039,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 6,
+        "name": "Entidade primária que o registro representa ou documenta",
+        "value": [
+          "asset"
+        ],
+        "method": "user-input",
+        "reasoning": "O asset coberto é o produto requisitado, que é o principal entidade representado pelo registro.",
+        "confidence": 0.8277,
+        "context_element_id": 2706
+      },
+      {
+        "id": 7,
+        "name": "Propósito primário da estrutura de relacionamento",
+        "value": [
+          "access-control"
+        ],
+        "method": "internal-inference",
+        "reasoning": "O cálculo de identificação de contexto administrativo restrito é uma estrutura de acesso control.",
+        "confidence": 0.7696,
+        "context_element_id": 2711
+      },
+      {
+        "id": 8,
+        "name": "Domínio funcional ou área de negócio que a página representa",
+        "value": [
+          "content-management"
+        ],
+        "method": "user-input",
+        "reasoning": "A área principal de conteúdo para operações administrativas de tenants é o domínio de gestão de conteúdo.",
+        "confidence": 0.9361,
+        "context_element_id": 2719
+      },
+      {
+        "id": 16,
+        "name": "Domínio funcional ou área de negócio a ser protegida pelo sistema de identidade",
+        "value": [
+          "user-authentication, user-management, task-management"
+        ],
+        "method": "user-input",
+        "reasoning": "A área de rotas protegidas protege o domínio funcional de autenticação, gerenciamento de usuários e tarefas.",
+        "confidence": 0.7566,
+        "context_element_id": 2795
+      },
+      {
+        "id": 17,
+        "name": "Domínio funcional ou área de negócio que requer proteção de segurança",
+        "value": [
+          "user-authentication, user-management, task-management"
+        ],
+        "method": "user-input",
+        "reasoning": "A área de rotas protegidas materializa correlações com features de autenticação, gerenciamento de usuários e tarefas.",
+        "confidence": 0.854,
+        "context_element_id": 2797
+      },
+      {
+        "id": 18,
+        "name": "Relação predominante entre as estruturas de origem e destino das transformações",
+        "value": [
+          "cross-contract-adaptation"
+        ],
+        "method": "user-input",
+        "reasoning": "A mapeamento explicito de features materializadas por uma asset é uma relação de adaptação entre contratos.",
+        "confidence": 0.731,
+        "context_element_id": 2806
+      }
+    ],
+    "best_practices": [],
+    "discriminators": [
+      {
+        "id": 29,
+        "name": "Verificação de Autorização",
+        "value": "true",
+        "method": "user-input",
+        "reasoning": "O status do usuário é verificado e, se inativo, o acesso é redirecionado para /login.",
+        "confidence": 0.8191,
+        "context_element_id": 4206
+      },
+      {
+        "id": 34,
+        "name": "Controle de Acesso a Ferramentas",
+        "value": "baseado em permissões",
+        "method": "user-input",
+        "reasoning": "A função de filtragem percorre nav_tree e remove itens cujas rotas não estão acessíveis conforme user.permissions, caracterizando acesso baseado em permissão.",
+        "confidence": 0.737,
+        "context_element_id": 4671
+      },
+      {
+        "id": 35,
+        "name": "Nível de Autenticação",
+        "value": "autenticação obrigatória",
+        "method": "internal-inference",
+        "reasoning": "A autenticação é exigida em POST /api/auth/login, caracterizando requisito de autenticação.",
+        "confidence": 0.7466,
+        "context_element_id": 4828
+      },
+      {
+        "id": 40,
+        "name": "Modelo de Workspace",
+        "value": "espaços de trabalho contextuais",
+        "method": "user-input",
+        "reasoning": "O contexto de workspace é gerenciado para componentes filhos acessarem durante a renderização, caracterizando um ambiente de trabalho contextual.",
+        "confidence": 0.8034,
+        "context_element_id": 4909
+      },
+      {
+        "id": 45,
+        "name": "Suporte a Workspaces",
+        "value": "true",
+        "method": "user-input",
+        "reasoning": "O contexto de tenant, usuário e permissões são mantidos disponível para os componentes filhos acessarem durante a renderização.",
+        "confidence": 0.8024,
+        "context_element_id": 5060
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 3,
+  "active": true,
+  "sourceId": 23815,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:42:53.755Z",
+  "updatedAt": null
+}

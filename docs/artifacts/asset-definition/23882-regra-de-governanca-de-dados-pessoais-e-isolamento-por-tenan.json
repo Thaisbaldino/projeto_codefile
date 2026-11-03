@@ -1,0 +1,504 @@
+{
+  "id": 23882,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 42,
+          "name": "Requisição de Acesso a Recurso",
+          "format": "HTTP request com headers de autenticação (token JWT) e corpo contendo identificadores de recurso (tarefa_id, usuario_id, tenant_id)",
+          "origin": "Aplicação Web, API Interna, Handler Backend",
+          "trigger": "Usuário autenticado tenta acessar, criar, editar ou excluir um recurso (tarefa, usuário, tenant)"
+        },
+        {
+          "id": 43,
+          "name": "Contexto de Autenticação",
+          "format": "{ usuario_id: uuid, tenant_id: uuid, perfil: enum[colaborador|gestor|administrador_tenant|administrador_plataforma], status: enum[ativo|inativo] }",
+          "origin": "Camada de Autenticação",
+          "trigger": "Extraído do token JWT ou sessão autenticada no momento da requisição"
+        },
+        {
+          "id": 44,
+          "name": "Metadados de Operação",
+          "format": "{ operacao: enum[leitura|escrita|delecao], recurso_tipo: enum[tarefa|usuario|tenant|historico], timestamp: timestamp, ip_origem: string }",
+          "origin": "Camada de Aplicação",
+          "trigger": "Capturado no momento da requisição para fins de auditoria"
+        },
+        {
+          "id": 45,
+          "name": "Políticas de Retenção",
+          "format": "{ retention_days_inactive_users: integer, retention_days_inactive_tenants: integer, retention_days_audit_logs: integer }",
+          "origin": "Configuração do Sistema",
+          "trigger": "Carregado periodicamente ou sob demanda para aplicação de limpeza de dados"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 57,
+          "name": "Decisão de Acesso",
+          "format": "{ permitido: boolean, motivo_negacao?: string, dados_mascarados?: boolean }",
+          "destination": "Camada de Aplicação, API Interna"
+        },
+        {
+          "id": 58,
+          "name": "Resultado de Operação",
+          "format": "HTTP response com status 200 (sucesso), 403 (acesso negado), 404 (recurso não encontrado) ou 500 (erro do servidor)",
+          "destination": "Aplicação Web, Cliente API"
+        },
+        {
+          "id": 59,
+          "name": "Registro de Auditoria",
+          "format": "{ usuario_id: uuid, tenant_id: uuid, operacao: string, recurso_tipo: string, recurso_id: uuid, timestamp: timestamp, resultado: enum[sucesso|negado|erro], ip_origem: string, dados_afetados?: object }",
+          "destination": "Tabela de Logs de Auditoria (persistência)"
+        },
+        {
+          "id": 60,
+          "name": "Alerta de Segurança",
+          "format": "{ tipo_alerta: enum[acesso_negado_repetido|violacao_isolamento|tentativa_enumeracao], usuario_id: uuid, tenant_id: uuid, timestamp: timestamp, detalhes: string }",
+          "destination": "Sistema de Monitoramento, Administrador da Plataforma"
+        },
+        {
+          "id": 61,
+          "name": "Confirmação de Anonimização",
+          "format": "{ usuario_id: uuid, tenant_id: uuid, data_anonimizacao: timestamp, campos_anonimizados: string[], motivo: enum[inatividade_usuario|inatividade_tenant] }",
+          "destination": "Log de Retenção de Dados"
+        }
+      ],
+      "processing": [
+        {
+          "id": 46,
+          "step": "Validar Contexto de Autenticação",
+          "description": "Verificar se o usuário está autenticado, se seu status é ativo, se o tenant é ativo, e extrair identificadores de tenant e perfil do contexto de autenticação."
+        },
+        {
+          "id": 47,
+          "step": "Validar Isolamento de Tenant",
+          "description": "Comparar tenant_id do usuário autenticado com tenant_id do recurso sendo acessado; negar acesso se não corresponderem."
+        },
+        {
+          "id": 48,
+          "step": "Validar Integridade Referencial de Isolamento",
+          "description": "Verificar que todas as referências de usuários (responsável, criador, editor) em um recurso pertencem ao mesmo tenant do recurso."
+        },
+        {
+          "id": 49,
+          "step": "Registrar Tentativa de Acesso em Log de Auditoria",
+          "description": "Registrar identificação do usuário, tenant, tipo de operação, recurso acessado, timestamp e resultado (permitido/negado) em log de auditoria."
+        },
+        {
+          "id": 50,
+          "step": "Aplicar Mascaramento de Dados Pessoais",
+          "description": "Se a operação é leitura de dados pessoais (nome, e-mail) e o usuário não é administrador, mascarar dados sensíveis em resposta."
+        },
+        {
+          "id": 51,
+          "step": "Permitir ou Negar Acesso",
+          "description": "Permitir acesso ao recurso se todas as validações passarem; negar com erro 403 Forbidden se qualquer validação falhar."
+        },
+        {
+          "id": 52,
+          "step": "Executar Operação de Leitura ou Escrita",
+          "description": "Se acesso foi permitido, executar a operação solicitada (SELECT, INSERT, UPDATE, DELETE) no banco de dados."
+        },
+        {
+          "id": 53,
+          "step": "Registrar Operação Concluída em Log de Auditoria",
+          "description": "Registrar resultado final da operação (sucesso/falha), dados afetados (para escrita), e timestamp de conclusão."
+        },
+        {
+          "id": 54,
+          "step": "Aplicar Políticas de Retenção (Agendado)",
+          "description": "Periodicamente (ex.: diariamente), identificar usuários inativos por mais de 90 dias e tenants inativos por mais de 180 dias, anonimizando ou excluindo seus dados pessoais conforme política."
+        },
+        {
+          "id": 55,
+          "step": "Arquivar Registros de Auditoria Antigos",
+          "description": "Periodicamente, arquivar registros de log de auditoria com mais de 90 dias em armazenamento de longo prazo ou excluir conforme política de retenção."
+        },
+        {
+          "id": 56,
+          "step": "Detectar e Alertar Anomalias de Acesso",
+          "description": "Monitorar padrões de acesso; gerar alerta de segurança se múltiplas tentativas de acesso não autorizado são detectadas do mesmo usuário ou IP em curto período."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 62,
+        "category": "authorization",
+        "description": "Toda operação de leitura, escrita ou exclusão de um recurso (tarefa, usuário, tenant, histórico de status) deve validar que o tenant_id do usuário autenticado corresponde ao tenant_id do recurso. Nenhum usuário pode acessar dados de um tenant diferente do seu, independentemente de outras permissões.",
+        "enforcement": "code",
+        "verification": "Verificação em tempo de execução no repositório de acesso a dados (RepositórioTarefas, RepositórioUsuáriosTenants) antes de executar qualquer consulta SQL; validação de tenant_id em cada método de leitura e escrita; testes de integração que tentam acessar recursos de outro tenant e verificam que acesso é negado com erro 403."
+      },
+      {
+        "id": 63,
+        "category": "authorization",
+        "description": "Usuários com status inativo ou pertencentes a tenants com status inativo não podem executar nenhuma operação na plataforma, incluindo leitura de dados. Toda requisição deve validar status do usuário e do tenant antes de permitir acesso.",
+        "enforcement": "code",
+        "verification": "Verificação em middleware de autenticação antes de rotear requisição para handlers; validação de status em cada operação de repositório; testes que tentam acessar plataforma com usuário inativo e verificam que acesso é bloqueado com erro 401 ou 403."
+      },
+      {
+        "id": 64,
+        "category": "invariant",
+        "description": "Toda tarefa deve ter seu responsável, criador e editor (quando aplicável) pertencendo ao mesmo tenant da tarefa. Nenhuma tarefa pode ter usuários de tenants diferentes vinculados a ela.",
+        "enforcement": "db_constraint",
+        "verification": "Constraint de integridade referencial no banco de dados: foreign keys de responsavel_id, criador_id e ultimo_editor_id referenciam tabela usuarios com validação de tenant_id; testes que tentam criar tarefa com responsável de outro tenant e verificam que operação falha com erro de constraint."
+      },
+      {
+        "id": 65,
+        "category": "invariant",
+        "description": "Toda transição de status de tarefa registrada no histórico deve ter seu tenant correspondendo ao tenant da tarefa referenciada. Nenhum registro de histórico pode ser órfão ou pertencer a tenant diferente da tarefa.",
+        "enforcement": "db_constraint",
+        "verification": "Constraint de integridade referencial no banco de dados: foreign keys de tarefa_id e tenant_id em historico_status_tarefas referenciam tarefas com validação de correspondência de tenant; testes que tentam inserir histórico com tenant diferente e verificam que operação falha."
+      },
+      {
+        "id": 66,
+        "category": "compliance",
+        "description": "Toda operação de leitura, escrita ou exclusão de dados pessoais (nome completo, e-mail de usuários) deve ser registrada em log de auditoria com identificação do usuário executor, timestamp, tipo de operação e dados afetados. Logs de auditoria devem ser retidos por no mínimo 90 dias para conformidade com LGPD.",
+        "enforcement": "code",
+        "verification": "Implementação de middleware de auditoria que intercepta todas as operações de dados pessoais e registra em tabela de logs; verificação de que logs contêm campos obrigatórios (usuario_id, timestamp, operacao, dados_afetados); testes que executam operações de dados pessoais e verificam que registros aparecem em log de auditoria dentro de segundos."
+      },
+      {
+        "id": 67,
+        "category": "compliance",
+        "description": "Dados pessoais de usuários inativos por mais de 90 dias devem ser anonimizados ou excluídos conforme política de retenção, mantendo apenas ID e histórico de auditoria para rastreabilidade. Dados pessoais de tenants inativos por mais de 180 dias devem ser anonimizados ou excluídos.",
+        "enforcement": "infra",
+        "verification": "Job agendado (cron) que executa diariamente, identifica usuários e tenants inativos além do período de retenção, e executa anonimização; verificação de que dados pessoais são substituídos por hashes ou valores genéricos; logs de retenção registram cada anonimização com timestamp e motivo; testes que marcam usuário como inativo, aguardam período de retenção, e verificam que dados pessoais foram anonimizados."
+      },
+      {
+        "id": 68,
+        "category": "retention",
+        "description": "Registros de log de auditoria com mais de 90 dias devem ser arquivados em armazenamento de longo prazo ou excluídos conforme política de retenção, garantindo que trilha de auditoria seja mantida por período mínimo exigido por lei.",
+        "enforcement": "infra",
+        "verification": "Job agendado que executa periodicamente, identifica logs com mais de 90 dias, e arquiva ou exclui conforme configuração; verificação de que logs antigos não são mais acessíveis em consultas normais mas podem ser recuperados de arquivo se necessário; testes que verificam que logs expirados são removidos e logs recentes são mantidos."
+      },
+      {
+        "id": 69,
+        "category": "observability",
+        "description": "Toda tentativa de acesso não autorizado (violação de isolamento de tenant, usuário inativo, tenant inativo) deve ser registrada em log de auditoria e monitorada para detecção de padrões anômalos. Múltiplas tentativas de acesso não autorizado do mesmo usuário ou IP em curto período devem gerar alerta de segurança.",
+        "enforcement": "code",
+        "verification": "Implementação de middleware que registra todas as tentativas de acesso negado; sistema de monitoramento que analisa logs em tempo real e detecta múltiplas tentativas de acesso não autorizado; alertas são enviados para administrador da plataforma; testes que simulam múltiplas tentativas de acesso não autorizado e verificam que alerta é gerado."
+      },
+      {
+        "id": 70,
+        "category": "validation",
+        "description": "Dados pessoais (nome completo, e-mail) não devem ser expostos em respostas de API ou visualizações para usuários que não são administradores do tenant. Dados pessoais devem ser mascarados ou omitidos em contextos não-administrativos.",
+        "enforcement": "code",
+        "verification": "Implementação de transformadores de DTO que mascararam dados pessoais antes de serializar resposta; verificação de que APIs retornam dados mascarados para usuários não-administrativos; testes que consultam dados pessoais como usuário colaborador e verificam que dados são mascarados ou omitidos."
+      },
+      {
+        "id": 71,
+        "category": "idempotency",
+        "description": "Operações de anonimização de dados pessoais devem ser idempotentes: executar anonimização múltiplas vezes no mesmo usuário ou tenant não deve causar erros ou corrupção de dados. Anonimização já executada deve ser detectada e operação deve ser pulada.",
+        "enforcement": "code",
+        "verification": "Implementação de flag ou timestamp de anonimização no registro de usuário; verificação de que operação de anonimização verifica se já foi executada antes de prosseguir; testes que executam anonimização múltiplas vezes e verificam que resultado é idêntico e sem erros."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "A Regra de Governança de Dados Pessoais e Isolamento por Tenant é um conjunto de políticas de controle que garante conformidade com LGPD e isolamento completo de dados entre organizações na plataforma multi-tenant de gerenciamento de tarefas. Define e aplica restrições obrigatórias sobre quem pode acessar dados pessoais de usuários (nome, e-mail), como esses dados devem ser tratados (minimização, proteção, retenção), e como o isolamento por tenant é mantido em todas as operações (nenhum usuário de um tenant pode visualizar, modificar ou interferir em dados de outro tenant). Implementa políticas de validação de acesso (verificação de tenant_id em cada consulta), mascaramento de dados sensíveis quando apropriado, limpeza automática de dados obsoletos conforme janelas de retenção, e rastreamento completo de acessos e modificações para auditoria. Atua como camada de controle que intercepta operações de leitura e escrita no banco de dados, nos repositórios de acesso a dados, e nas APIs, garantindo que nenhuma brecha de isolamento ou exposição de dados pessoais ocorra independentemente do ponto de entrada."
+    },
+    "definition": {
+      "policy": {
+        "id": 2,
+        "scope": "Isolamento de Dados por Tenant",
+        "actions": [
+          {
+            "id": 6,
+            "kind": "allow",
+            "description": "Permitir acesso ao recurso quando todas as condições de isolamento são satisfeitas."
+          },
+          {
+            "id": 7,
+            "kind": "deny",
+            "description": "Negar acesso ao recurso quando qualquer condição de isolamento falha, retornando erro 403 Forbidden."
+          },
+          {
+            "id": 8,
+            "kind": "log",
+            "description": "Registrar toda tentativa de acesso (bem-sucedida ou negada) em log de auditoria para rastreabilidade."
+          },
+          {
+            "id": 9,
+            "kind": "alert",
+            "description": "Gerar alerta de segurança quando múltiplas tentativas de acesso não autorizado são detectadas do mesmo usuário ou IP em curto período."
+          }
+        ],
+        "conditions": [
+          {
+            "id": 3,
+            "expression": "tenant_id_do_usuario_autenticado == tenant_id_do_recurso_acessado",
+            "description": "Toda operação de leitura ou escrita deve validar que o tenant do usuário autenticado corresponde ao tenant do recurso sendo acessado (tarefas, usuários, tenants, histórico de status)."
+          },
+          {
+            "id": 4,
+            "expression": "usuario_status == 'ativo' AND tenant_status == 'ativo'",
+            "description": "Usuários inativos ou pertencentes a tenants inativos não podem acessar nenhum recurso, independentemente de outras permissões."
+          },
+          {
+            "id": 5,
+            "expression": "NOT EXISTS (SELECT 1 FROM usuarios u WHERE u.id = usuario_id AND u.tenant_id != tenant_id_do_recurso)",
+            "description": "Nenhum usuário de um tenant pode ser atribuído como responsável, criador ou editor de recursos pertencentes a outro tenant."
+          }
+        ]
+      }
+    },
+    "pendencies": [
+      {
+        "id": 89,
+        "section": "definition",
+        "description": "Necessário definir explicitamente quais campos são considerados 'dados pessoais' para fins de mascaramento e anonimização. Atualmente, apenas nome_completo e email são tratados como dados pessoais, mas pode haver outros campos (endereço, telefone, data de nascimento) que devem ser considerados em versões futuras.",
+        "resolutionOptions": [
+          {
+            "id": 90,
+            "text": "Manter escopo atual: apenas nome_completo e email são dados pessoais; outros campos não são coletados nesta versão."
+          },
+          {
+            "id": 91,
+            "text": "Expandir escopo: definir lista completa de campos pessoais (nome, email, telefone, endereço, data de nascimento) e implementar mascaramento para todos; requer revisão de modelo de dados."
+          },
+          {
+            "id": 92,
+            "text": "Implementar configuração dinâmica: permitir que administrador da plataforma defina quais campos são considerados dados pessoais; requer tabela de configuração e lógica de mascaramento dinâmica."
+          }
+        ],
+        "recommendedOptionId": 90
+      },
+      {
+        "id": 93,
+        "section": "definition",
+        "description": "Necessário definir algoritmo e formato exato de anonimização de dados pessoais. Atualmente, especificado como 'sha256', mas é necessário definir se anonimização é reversível (hash com salt) ou irreversível (hash puro), e como dados anonimizados serão armazenados (substituição em-place ou tabela separada).",
+        "resolutionOptions": [
+          {
+            "id": 94,
+            "text": "Anonimização irreversível com hash SHA256: dados pessoais são substituídos por hash SHA256 puro; não é possível recuperar dados originais; simples de implementar."
+          },
+          {
+            "id": 95,
+            "text": "Anonimização reversível com criptografia: dados pessoais são criptografados com chave mestra; é possível recuperar dados originais se necessário; mais complexo mas oferece flexibilidade."
+          },
+          {
+            "id": 96,
+            "text": "Anonimização com tabela de mapeamento: dados pessoais são substituídos por identificadores genéricos (ex: 'User_001'); mapeamento é mantido em tabela separada com acesso restrito; oferece rastreabilidade."
+          }
+        ],
+        "recommendedOptionId": 94
+      },
+      {
+        "id": 97,
+        "section": "rules",
+        "description": "Necessário definir política de retenção de logs de auditoria após 90 dias. Atualmente, especificado que logs devem ser retidos por 90 dias, mas não está claro se logs expirados devem ser excluídos permanentemente, arquivados em armazenamento de longo prazo, ou mantidos indefinidamente para conformidade legal.",
+        "resolutionOptions": [
+          {
+            "id": 98,
+            "text": "Exclusão permanente: logs com mais de 90 dias são excluídos permanentemente do banco de dados; libera espaço de armazenamento; pode violar requisitos legais de retenção."
+          },
+          {
+            "id": 99,
+            "text": "Arquivamento em longo prazo: logs com mais de 90 dias são movidos para armazenamento de arquivo (ex: S3 Glacier); mantém dados para conformidade legal; requer infraestrutura de arquivo."
+          },
+          {
+            "id": 100,
+            "text": "Retenção indefinida: logs são mantidos indefinidamente no banco de dados; máxima conformidade legal; requer gerenciamento de crescimento de armazenamento."
+          }
+        ],
+        "recommendedOptionId": 99
+      },
+      {
+        "id": 101,
+        "section": "rules",
+        "description": "Necessário definir mecanismo de detecção e resposta a anomalias de acesso. Atualmente, especificado que múltiplas tentativas de acesso não autorizado devem gerar alerta, mas não está definido como alertas são processados, quem é notificado, e qual ação é tomada (bloqueio temporário, bloqueio permanente, investigação manual).",
+        "resolutionOptions": [
+          {
+            "id": 102,
+            "text": "Alerta manual: alertas são registrados em log e enviados para administrador via e-mail; administrador investiga manualmente e toma ação; requer intervenção humana."
+          },
+          {
+            "id": 103,
+            "text": "Bloqueio automático temporário: após 5 tentativas em 15 minutos, usuário é bloqueado por 30 minutos; bloqueio é automático; pode afetar usuários legítimos."
+          },
+          {
+            "id": 104,
+            "text": "Bloqueio automático com revisão: após 5 tentativas em 15 minutos, usuário é bloqueado e alerta é enviado para administrador; administrador pode desbloquear manualmente; oferece segurança com flexibilidade."
+          }
+        ],
+        "recommendedOptionId": 104
+      },
+      {
+        "id": 105,
+        "section": "non_functional_requirements",
+        "description": "Necessário definir SLA (Service Level Agreement) para disponibilidade de validações de isolamento de tenant. Atualmente, especificado como 99.99%, mas não está claro se isso inclui falhas de banco de dados, falhas de rede, ou apenas falhas de aplicação.",
+        "resolutionOptions": [
+          {
+            "id": 106,
+            "text": "SLA de 99.99% para aplicação apenas: não inclui falhas de infraestrutura (banco de dados, rede); aplicação é responsável por 99.99% de disponibilidade."
+          },
+          {
+            "id": 107,
+            "text": "SLA de 99.99% end-to-end: inclui aplicação, banco de dados e rede; requer redundância e failover em todos os níveis."
+          },
+          {
+            "id": 108,
+            "text": "SLA diferenciado: 99.99% para validações críticas (isolamento de tenant), 99.9% para operações secundárias (mascaramento de dados); oferece flexibilidade."
+          }
+        ],
+        "recommendedOptionId": 107
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 78,
+        "then": "A requisição é negada com erro 403 Forbidden; nenhum dado da tarefa do Tenant B é retornado; a tentativa de acesso é registrada em log de auditoria com identificação do usuário, tenant, timestamp e motivo da negação.",
+        "type": "integration",
+        "when": "Um usuário do Tenant A tenta acessar uma tarefa pertencente ao Tenant B através da API de leitura de tarefas.",
+        "given": "Dois tenants (Tenant A e Tenant B) estão cadastrados na plataforma, cada um com usuários e tarefas próprias.",
+        "scenario": "Validação de Isolamento de Tenant em Leitura de Tarefas",
+        "target_section": "rules"
+      },
+      {
+        "id": 79,
+        "then": "A operação é negada com erro de validação; a tarefa não é criada; a tentativa é registrada em log de auditoria; nenhum dado do Tenant B é modificado.",
+        "type": "integration",
+        "when": "A requisição de criação de tarefa é enviada com responsavel_id de um usuário do Tenant B.",
+        "given": "Um usuário do Tenant A está autenticado e tenta criar uma tarefa atribuindo um responsável que pertence ao Tenant B.",
+        "scenario": "Validação de Isolamento de Tenant em Escrita de Tarefas",
+        "target_section": "rules"
+      },
+      {
+        "id": 80,
+        "then": "O acesso é bloqueado com erro 401 Unauthorized ou 403 Forbidden; nenhum recurso é acessível; a tentativa de acesso é registrada em log de auditoria.",
+        "type": "integration",
+        "when": "O usuário desativado tenta fazer login ou acessar qualquer recurso da plataforma.",
+        "given": "Um usuário está cadastrado no Tenant A com status ativo, depois é desativado pelo administrador.",
+        "scenario": "Bloqueio de Acesso para Usuário Inativo",
+        "target_section": "rules"
+      },
+      {
+        "id": 81,
+        "then": "O acesso é bloqueado com erro 403 Forbidden; nenhum recurso do tenant é acessível; todas as tentativas de acesso são registradas em log de auditoria.",
+        "type": "integration",
+        "when": "Qualquer usuário do tenant desativado tenta acessar a plataforma ou qualquer recurso.",
+        "given": "Um tenant está ativo com usuários e tarefas, depois é desativado pelo administrador da plataforma.",
+        "scenario": "Bloqueio de Acesso para Tenant Inativo",
+        "target_section": "rules"
+      },
+      {
+        "id": 82,
+        "then": "A operação é permitida (usuário é administrador); dados pessoais são retornados; a operação é registrada em log de auditoria com identificação do usuário executor, timestamp, tipo de operação (leitura) e dados acessados (nome, e-mail).",
+        "type": "integration",
+        "when": "A operação de leitura de dados pessoais é executada.",
+        "given": "Um usuário administrador do Tenant A acessa o perfil de um colaborador para visualizar nome e e-mail.",
+        "scenario": "Auditoria de Acesso a Dados Pessoais",
+        "target_section": "rules"
+      },
+      {
+        "id": 83,
+        "then": "A operação é permitida (colaborador pode visualizar perfis); dados pessoais (nome completo, e-mail) são mascarados ou omitidos na resposta; apenas informações não-sensíveis (ID, nível hierárquico, status) são retornadas.",
+        "type": "integration",
+        "when": "A requisição de leitura de dados pessoais é enviada.",
+        "given": "Um colaborador (não administrador) do Tenant A tenta visualizar o perfil de outro colaborador.",
+        "scenario": "Mascaramento de Dados Pessoais para Usuário Não-Administrativo",
+        "target_section": "rules"
+      },
+      {
+        "id": 84,
+        "then": "Os dados pessoais do usuário (nome completo, e-mail) são anonimizados ou excluídos; ID do usuário é mantido para rastreabilidade de auditoria; histórico de tarefas criadas ou editadas pelo usuário permanece intacto com referência ao ID anonimizado; a anonimização é registrada em log de retenção.",
+        "type": "integration",
+        "when": "O job agendado de retenção de dados executa.",
+        "given": "Um usuário é desativado e permanece inativo por 90 dias.",
+        "scenario": "Anonimização de Dados Pessoais após Inatividade",
+        "target_section": "rules"
+      },
+      {
+        "id": 85,
+        "then": "Um alerta de segurança é gerado e enviado para administrador da plataforma; todas as tentativas são registradas em log de auditoria; o usuário pode ser bloqueado temporariamente ou permanentemente conforme política de segurança.",
+        "type": "security",
+        "when": "Cinco ou mais tentativas de acesso não autorizado são detectadas do mesmo usuário em 15 minutos.",
+        "given": "Um usuário do Tenant A tenta acessar tarefas do Tenant B múltiplas vezes em curto período.",
+        "scenario": "Detecção de Tentativas Repetidas de Acesso Não Autorizado",
+        "target_section": "rules"
+      },
+      {
+        "id": 86,
+        "then": "Cada registro de histórico tem seu tenant_id correspondendo ao tenant da tarefa; nenhum registro de histórico pode ter tenant_id diferente da tarefa referenciada; integridade referencial é mantida em banco de dados através de constraints.",
+        "type": "integration",
+        "when": "Cada transição de status é registrada no histórico de status de tarefas.",
+        "given": "Uma tarefa do Tenant A tem seu status alterado múltiplas vezes.",
+        "scenario": "Integridade Referencial de Isolamento em Histórico de Status",
+        "target_section": "rules"
+      },
+      {
+        "id": 87,
+        "then": "Validações de isolamento são executadas com latência <= 5ms por requisição; p99 de tempo de resposta total <= 100ms; índices de banco de dados são utilizados eficientemente; nenhuma degradação de performance é observada.",
+        "type": "performance",
+        "when": "Requisições são processadas simultaneamente.",
+        "given": "A plataforma está sob carga de 500 requisições por segundo, cada uma requerendo validação de isolamento de tenant.",
+        "scenario": "Performance de Validações de Isolamento sob Carga",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 88,
+        "then": "100% de conformidade é verificada; dados pessoais são minimizados (apenas nome e e-mail); direito ao esquecimento é implementado (anonimização após 90 dias); rastreabilidade de acessos é mantida (logs de auditoria); nenhuma violação de LGPD é detectada.",
+        "type": "contract",
+        "when": "Verificação de conformidade é executada contra critérios de LGPD.",
+        "given": "Auditoria de conformidade com LGPD é realizada.",
+        "scenario": "Conformidade com Contrato de LGPD",
+        "target_section": "non_functional_requirements"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 72,
+        "target": "100% das validações de isolamento executadas no backend; 0% de confiança em tenant_id fornecido pelo cliente",
+        "category": "security",
+        "requirement": "Todas as operações de validação de isolamento de tenant devem ser executadas no servidor (backend) e nunca confiarem em valores fornecidos pelo cliente. Tenant_id deve ser sempre extraído do contexto de autenticação (token JWT ou sessão), nunca de parâmetros de requisição.",
+        "verification": "Revisão de código que verifica que todas as operações de repositório extraem tenant_id do contexto autenticado; testes de segurança que tentam manipular tenant_id em parâmetros de requisição e verificam que é ignorado; testes de integração que verificam que operações sempre usam tenant_id correto independentemente de parâmetros."
+      },
+      {
+        "id": 73,
+        "target": "100% de conformidade com LGPD; dados pessoais anonimizados dentro de 90 dias de inatividade do usuário",
+        "category": "security",
+        "requirement": "Dados pessoais (nome completo, e-mail) devem ser armazenados em formato seguro no banco de dados. E-mails devem ser indexados para autenticação mas não devem ser expostos em logs ou relatórios não-administrativos. Nomes devem ser anonimizados após período de inatividade.",
+        "verification": "Verificação de que dados pessoais não aparecem em logs de erro ou relatórios públicos; testes que verificam que dados pessoais são anonimizados após período de inatividade; auditoria de conformidade LGPD que verifica retenção de dados pessoais."
+      },
+      {
+        "id": 74,
+        "target": "Latência de validação de isolamento <= 5ms; p99 de tempo de resposta com validação <= 100ms em carga de 500 RPS",
+        "category": "performance",
+        "requirement": "Validações de isolamento de tenant devem ser executadas com latência mínima, não adicionando mais de 5ms ao tempo total de processamento de requisição. Índices de banco de dados devem ser otimizados para consultas de isolamento (tenant_id, status).",
+        "verification": "Testes de performance que medem latência de validações de isolamento; análise de planos de execução SQL para verificar uso de índices; testes de carga que verificam que validações não degradam performance sob carga de 500 RPS."
+      },
+      {
+        "id": 75,
+        "target": "99.99% de disponibilidade de validações de isolamento; 0% de falhas silenciosas que permitam acesso não validado",
+        "category": "availability",
+        "requirement": "Validações de isolamento de tenant devem estar sempre disponíveis e não devem falhar silenciosamente. Se validação não puder ser executada (erro de banco de dados), requisição deve ser negada com erro 500 em vez de permitir acesso não validado.",
+        "verification": "Testes que simulam falhas de banco de dados e verificam que requisições são negadas com erro 500; monitoramento de disponibilidade de validações; alertas quando validações falham ou são puladas."
+      },
+      {
+        "id": 76,
+        "target": "100% de cobertura de auditoria para dados pessoais; logs disponíveis para consulta dentro de 1 segundo; retenção de logs por no mínimo 90 dias",
+        "category": "observability",
+        "requirement": "Todos os acessos a dados pessoais (leitura, escrita, exclusão) devem ser registrados em log de auditoria com identificação do usuário, tenant, timestamp, tipo de operação e dados afetados. Logs de auditoria devem ser consultáveis e analisáveis para investigação de conformidade.",
+        "verification": "Testes que executam operações de dados pessoais e verificam que registros aparecem em log de auditoria; testes de performance que verificam que logs podem ser consultados dentro de 1 segundo; verificação de que logs são retidos por 90 dias."
+      },
+      {
+        "id": 77,
+        "target": "100% de conformidade com LGPD; auditoria de conformidade realizada trimestralmente; 0% de violações de LGPD detectadas",
+        "category": "security",
+        "requirement": "Plataforma deve estar em conformidade com Lei Geral de Proteção de Dados (LGPD) brasileira, incluindo princípios de minimização de dados, proteção de informações pessoais, direito ao esquecimento, e rastreabilidade de acessos. Auditoria de conformidade deve ser realizada periodicamente.",
+        "verification": "Auditoria de conformidade LGPD realizada por terceiros; verificação de que dados pessoais são minimizados (apenas nome e e-mail); verificação de que direito ao esquecimento é implementado (anonimização após inatividade); verificação de que rastreabilidade é mantida (logs de auditoria)."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 50,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T14:11:26.067Z",
+  "updatedAt": null
+}

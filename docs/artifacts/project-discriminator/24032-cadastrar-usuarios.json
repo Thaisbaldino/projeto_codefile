@@ -1,0 +1,155 @@
+{
+  "id": 24032,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 6,
+        "name": "Sistema fonte ou origem dos dados",
+        "value": [
+          "external-api"
+        ],
+        "method": "user-input",
+        "reasoning": "A importação de arquivo CSV ou planilha é feita através de um serviço externo.",
+        "confidence": 0.7097,
+        "context_element_id": 2696
+      },
+      {
+        "id": 8,
+        "name": "Nome do conceito de domínio representado por este bloco de construção",
+        "value": [
+          "customer"
+        ],
+        "method": "user-input",
+        "reasoning": "O nome completo, e-mail e nível hierárquico são os campos obrigatórios, representando o domínio de customer.",
+        "confidence": 0.7352,
+        "context_element_id": 2701
+      },
+      {
+        "id": 9,
+        "name": "Nome ou tipo específico de registro de negócio",
+        "value": [
+          "employee"
+        ],
+        "method": "user-input",
+        "reasoning": "Os campos adicionais incluídos no formulário de cadastro são cargo, telefone e matrícula interna, pertencentes ao domínio de empregado.",
+        "confidence": 0.7832,
+        "context_element_id": 2705
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 19,
+        "name": "Automatizar práticas de segurança com deployment seguro, varredura de vulnerabilidades e aplicação consistente de políticas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem automação, a revisão manual de cada configuração e dependência seria uma tarefa demorada e repetitiva.",
+        "confidence": 0.7394,
+        "context_element_id": 2937
+      },
+      {
+        "id": 22,
+        "name": "Implemente restrições operacionais que limitem as ações do sistema com base em critérios de segurança predefinidos, incluindo rate limits, limites de operação e políticas de acesso restritivas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O limite operacional de 100 usuários por organização é definido por configuração, sem limite fixo, e não é alterável por um usuário.",
+        "confidence": 0.8409,
+        "context_element_id": 3062
+      },
+      {
+        "id": 23,
+        "name": "Configure controles de privacidade rigorosos incluindo minimização de dados, anonimização automática, controles de acesso granulares e auditoria do uso de informações pessoais sensíveis",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A LGPD exige minimização de dados e proteção das informações pessoais, princípios que exigem controle de acesso restrito e tratamento automático.",
+        "confidence": 0.8777,
+        "context_element_id": 3075
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 1,
+        "name": "Modelo de Propriedade de Dados",
+        "value": "true",
+        "method": "user-input",
+        "reasoning": "O administrador é responsável por informar o colaborador manualmente, sem que a comunicação automática seja enviada.",
+        "confidence": 0.7806,
+        "context_element_id": 1439
+      },
+      {
+        "id": 2,
+        "name": "Padrão de Persistência",
+        "value": "persistente",
+        "method": "user-input",
+        "reasoning": "A persistência e confirmação do estado são feitas via ORM (TypeORM, Hibernate ou Entity Framework), caracterizando um padrão de persistência persistente.",
+        "confidence": 0.8958,
+        "context_element_id": 1473
+      },
+      {
+        "id": 3,
+        "name": "Criticidade de Conformidade",
+        "value": "trilha de auditoria obrigatória",
+        "method": "user-input",
+        "reasoning": "A mensagem de confirmação de sucesso ao administrador após a conclusão do cadastro é exigida por um padrão de trilha de auditoria.",
+        "confidence": 0.7157,
+        "context_element_id": 1513
+      },
+      {
+        "id": 25,
+        "name": "Provisionamento de Usuários",
+        "value": "auto-registro",
+        "method": "user-input",
+        "reasoning": "O formulário dedicado para registrar um novo colaborador na plataforma é acessível ao administrador do tenant por meio de self-registration.",
+        "confidence": 0.7839,
+        "context_element_id": 4086
+      },
+      {
+        "id": 27,
+        "name": "Escopo de Toggle",
+        "value": "nível de tenant",
+        "method": "user-input",
+        "reasoning": "A lista de níveis hierárquicos disponíveis é exibida no tenant, caracterizando um escopo de scope de escopo de nível de tenant.",
+        "confidence": 0.7947,
+        "context_element_id": 4459
+      },
+      {
+        "id": 29,
+        "name": "Tipo de Regra",
+        "value": "regra de validação",
+        "method": "internal-inference",
+        "reasoning": "A validação de preenchimento obrigatório dos campos é uma regra de validação.",
+        "confidence": 0.8759,
+        "context_element_id": 4603
+      },
+      {
+        "id": 32,
+        "name": "Nível de Isolamento",
+        "value": "específico por tenant",
+        "method": "internal-inference",
+        "reasoning": "O e-mail deve ser único dentro do tenant, caracterizando uma isolação de nível de entidade de tenant.",
+        "confidence": 0.891,
+        "context_element_id": 5019
+      },
+      {
+        "id": 33,
+        "name": "Modelo de Tenancy",
+        "value": "multi-tenant isolado",
+        "method": "user-input",
+        "reasoning": "O isolamento multi-tenant é o modelo de tenancy modelado aqui.",
+        "confidence": 0.7118,
+        "context_element_id": 5055
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 9,
+  "active": true,
+  "sourceId": 23581,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:42:53.755Z",
+  "updatedAt": null
+}

@@ -1,0 +1,154 @@
+{
+  "id": 23921,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 13,
+        "name": "Confusão de Identidade e Responsabilidade",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem reatribuição, tarefas ficam sem responsável e o sistema perde a referência de quem fez o que, o que torna a manutenção de dados de gestão de equipe difícil.",
+        "confidence": 0.7183,
+        "context_element_id": 2839
+      }
+    ],
+    "attributes": [
+      {
+        "id": 5,
+        "name": "Papel ou grupo responsável por definir e manter esta configuração",
+        "value": [
+          "tenant-admin"
+        ],
+        "method": "user-input",
+        "reasoning": "O suporte a múltiplos administradores por tenant é responsabilidade do time de operações, com o último administrador ativo impedido de ser desativado.",
+        "confidence": 0.8608,
+        "context_element_id": 2681
+      },
+      {
+        "id": 11,
+        "name": "Principais seções ou módulos funcionais da aplicação",
+        "value": [
+          "users"
+        ],
+        "method": "user-input",
+        "reasoning": "As funcionalidades principais do aplicativo são usuários, listagem e visualização de usuários.",
+        "confidence": 0.7151,
+        "context_element_id": 2724
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 16,
+        "name": "Garantir a integridade dos dados implementando controles contra alterações não autorizadas com assinaturas digitais e versionamento",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem confirmação, o novo endereço é alterado sem verificação, o que torna a alteração ilegal e sem rastreio.",
+        "confidence": 0.7174,
+        "context_element_id": 2940
+      },
+      {
+        "id": 17,
+        "name": "Configurar revogação automática de acesso para contas comprometidas com invalidação imediata de tokens e sessões ativas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Uma sessão ativa que continua a funcionar após a revogação de acesso é uma falha de segurança que só é detectada depois de ter feito o que não pode.",
+        "confidence": 0.9747,
+        "context_element_id": 2946
+      },
+      {
+        "id": 21,
+        "name": "Implemente operações em lote para permitir que os usuários executem múltiplas ações semelhantes simultaneamente com uma única confirmação",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A confirmação é retornada ao administrador em tempo adequado mesmo sob carga de até 5.000 usuários ativos na plataforma, com operações de edição, ativação e desativação executadas em batch.",
+        "confidence": 0.781,
+        "context_element_id": 3044
+      },
+      {
+        "id": 22,
+        "name": "Implemente operabilidade por meio de interfaces intuitivas com padrões consistentes, navegação clara e fluxos de trabalho otimizados",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Uma tela que se ajusta ao tamanho do dispositivo é mais fácil de navegar e usar em ambientes móveis e desktops.",
+        "confidence": 0.7114,
+        "context_element_id": 3051
+      },
+      {
+        "id": 24,
+        "name": "Configure controles de privacidade rigorosos incluindo minimização de dados, anonimização automática, controles de acesso granulares e auditoria do uso de informações pessoais sensíveis",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem controle de acesso, qualquer operação de um tenant seria capaz de alterar o perfil de outro, e a regra de negócio não seria aplicada.",
+        "confidence": 0.9203,
+        "context_element_id": 3075
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 1,
+        "name": "Estratégia de Aplicação de Regras",
+        "value": "preventivo",
+        "method": "user-input",
+        "reasoning": "A solicitação de confirmação ao administrador antes de efetivar a desativação de um colaborador é uma estratégia de prevenção de ações acidentais.",
+        "confidence": 0.7131,
+        "context_element_id": 1434
+      },
+      {
+        "id": 2,
+        "name": "Padrão de Mutabilidade de Registro",
+        "value": "imutável",
+        "method": "user-input",
+        "reasoning": "O e-mail é imutável após o cadastro, servindo como identificador permanente do colaborador.",
+        "confidence": 0.9767,
+        "context_element_id": 1507
+      },
+      {
+        "id": 3,
+        "name": "Propósito do Registro",
+        "value": "regra de configuração",
+        "method": "internal-inference",
+        "reasoning": "O registro é definido como um template-definition, caracterizando um registro de configuração.",
+        "confidence": 0.8401,
+        "context_element_id": 1511
+      },
+      {
+        "id": 26,
+        "name": "Nível de Detalhe de Auditoria",
+        "value": "auditoria detalhada",
+        "method": "user-input",
+        "reasoning": "O registro de cada operação de edição, ativação ou desativação inclui identificação do executor, timestamp e dados alterados, em conformidade com os requisitos de rastreabilidade da plataforma.",
+        "confidence": 0.891,
+        "context_element_id": 4165
+      },
+      {
+        "id": 27,
+        "name": "Público de Acesso",
+        "value": "exposto ao cliente",
+        "method": "internal-inference",
+        "reasoning": "A listagem de usuários exibe o perfil individual de um colaborador do tenant, expondo o acesso à interface de usuário.",
+        "confidence": 0.7019,
+        "context_element_id": 4457
+      },
+      {
+        "id": 34,
+        "name": "Consciência de Presença",
+        "value": "presença ativa",
+        "method": "user-input",
+        "reasoning": "A exibição visual clara do status de ativação (ativo/inativo) de cada colaborador na listagem de usuários é caracterizada por presença ativa.",
+        "confidence": 0.7467,
+        "context_element_id": 4953
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 5,
+  "active": true,
+  "sourceId": 23587,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T14:58:49.768Z",
+  "updatedAt": null
+}

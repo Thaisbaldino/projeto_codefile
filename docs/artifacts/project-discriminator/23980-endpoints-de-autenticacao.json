@@ -1,0 +1,84 @@
+{
+  "id": 23980,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 9,
+        "name": "Identificador único que representa uma organização ou cliente no sistema multi-tenant",
+        "value": [
+          "tenant-id"
+        ],
+        "method": "user-input",
+        "reasoning": "O tenant_id do usuário é extraído para garantir que a sessão autenticada esteja vinculada ao tenant correto.",
+        "confidence": 0.8149,
+        "context_element_id": 2682
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 20,
+        "name": "Otimizar algoritmos e estruturas de dados para aumentar a eficiência computacional e reduzir o consumo de recursos",
+        "method": "internal-inference",
+        "reasoning": "Repetir a mesma operação em cada login gera consumos desnecessários e custo sem justificativa.",
+        "confidence": 0.7324,
+        "context_element_id": 2864
+      },
+      {
+        "id": 25,
+        "name": "Configurar autenticação multifator (MFA) obrigatória com tokens, certificados digitais e biometria para todos os acessos críticos",
+        "method": "internal-inference",
+        "reasoning": "Sem MFA, o acesso é concedido sem verificação de identidade, o que torna o sistema vulnerável a invasão e a violação de dados.",
+        "confidence": 0.7748,
+        "context_element_id": 2929
+      },
+      {
+        "id": 33,
+        "name": "Facilite a modificabilidade minimizando o impacto das mudanças por meio de design modular e interfaces estáveis",
+        "method": "user-input",
+        "reasoning": "Sem MFA, a senha é a única barreira; depois, qualquer acesso é possível sem alteração na arquitetura.",
+        "confidence": 0.8282,
+        "context_element_id": 3006
+      },
+      {
+        "id": 35,
+        "name": "Implemente uma cadeia de custódia digital com assinaturas criptográficas, timestamps confiáveis e rastreamento de acesso para evidências e documentos críticos",
+        "method": "internal-inference",
+        "reasoning": "Sem confirmação digital, o acesso a dados sensíveis é fácil de copiar e reutilizar, e a expiração padrão não é suficiente para impedir isso.",
+        "confidence": 0.762,
+        "context_element_id": 3019
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 38,
+        "name": "Política de MFA",
+        "value": "obrigatório",
+        "method": "user-input",
+        "reasoning": "O suporte básico a MFA via TOTP é implementado como obrigatório, com o campo 'totp_code' opcional no payload de login e validação de TOTP após a validação de credenciais.",
+        "confidence": 0.8052,
+        "context_element_id": 4087
+      },
+      {
+        "id": 39,
+        "name": "Modelo de Sessão",
+        "value": "tokens sem estado",
+        "method": "internal-inference",
+        "reasoning": "Os tokens de sessão são sem estado, caracterizando sessões stateless.",
+        "confidence": 0.8557,
+        "context_element_id": 4124
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 23978,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T16:51:36.738Z",
+  "updatedAt": null
+}

@@ -1,0 +1,607 @@
+{
+  "id": 23966,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 36,
+          "name": "Credenciais de Usuário",
+          "format": "application/json { email: string, senha: string }",
+          "origin": "Formulário de Login (interface web)",
+          "trigger": "Submissão do formulário de login pelo usuário"
+        },
+        {
+          "id": 37,
+          "name": "Contexto de Requisição",
+          "format": "{ endereço_ip: string, user_agent: string, timestamp: timestamp }",
+          "origin": "Middleware de Requisição HTTP",
+          "trigger": "Automaticamente capturado em cada requisição HTTP"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 46,
+          "name": "Tokens de Sessão",
+          "format": "application/json { accessToken: string, refreshToken: string, usuario: { id: uuid, nome: string, email: string, tenant_id: uuid }, tenant: { id: uuid, nome: string, slug: string } }",
+          "destination": "Cliente (navegador web)"
+        },
+        {
+          "id": 47,
+          "name": "Mensagem de Erro",
+          "format": "application/json { erro: string, campo_invalido?: string }",
+          "destination": "Interface de Login (exibição ao usuário)"
+        },
+        {
+          "id": 48,
+          "name": "Evento de Auditoria",
+          "format": "application/json { tipo_evento: enum[login_sucesso|login_falha|bloqueio_tentativas], usuario_id?: uuid, tenant_id?: uuid, email: string, timestamp: timestamp, endereco_ip: string, motivo?: string }",
+          "destination": "Trilha de Auditoria (log persistido)"
+        }
+      ],
+      "processing": [
+        {
+          "id": 38,
+          "step": "Validar Entrada e Formato",
+          "description": "Validar preenchimento de campos obrigatórios e formato de e-mail conforme RFC 5322"
+        },
+        {
+          "id": 39,
+          "step": "Verificar Limite de Tentativas",
+          "description": "Consultar contador de tentativas falhadas por e-mail e endereço IP; bloquear se limite atingido"
+        },
+        {
+          "id": 40,
+          "step": "Buscar Usuário e Tenant",
+          "description": "Consultar repositório para localizar usuário por e-mail e extrair tenant_id"
+        },
+        {
+          "id": 41,
+          "step": "Validar Status de Ativação",
+          "description": "Verificar que usuário e tenant estão ativos; retornar erro genérico se inativo"
+        },
+        {
+          "id": 42,
+          "step": "Comparar Credenciais",
+          "description": "Utilizar comparação timing-safe para validar senha contra hash armazenado"
+        },
+        {
+          "id": 43,
+          "step": "Gerar Tokens de Sessão",
+          "description": "Gerar JWT access token (3600s) e refresh token (7 dias) assinados com RS256"
+        },
+        {
+          "id": 44,
+          "step": "Registrar Auditoria",
+          "description": "Registrar em log de auditoria o resultado da autenticação (sucesso ou falha)"
+        },
+        {
+          "id": 45,
+          "step": "Atualizar Contador de Tentativas",
+          "description": "Resetar contador se sucesso; incrementar se falha; bloquear se limite atingido"
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 49,
+        "category": "validation",
+        "description": "Validar que o campo de e-mail está preenchido e não está em branco antes de processar a autenticação",
+        "enforcement": "code",
+        "verification": "Teste unitário que submete formulário com e-mail vazio e valida retorno de mensagem de erro específica 'Campo e-mail é obrigatório'"
+      },
+      {
+        "id": 50,
+        "category": "validation",
+        "description": "Validar que o campo de senha está preenchido e não está em branco antes de processar a autenticação",
+        "enforcement": "code",
+        "verification": "Teste unitário que submete formulário com senha vazia e valida retorno de mensagem de erro específica 'Campo senha é obrigatório'"
+      },
+      {
+        "id": 51,
+        "category": "validation",
+        "description": "Validar que o endereço de e-mail informado segue o formato válido conforme padrão RFC 5322",
+        "enforcement": "code",
+        "verification": "Teste unitário com múltiplos formatos de e-mail inválidos (usuario@, usuario.com, usuario @dominio.com) validando rejeição com mensagem 'Formato de e-mail inválido'"
+      },
+      {
+        "id": 52,
+        "category": "authorization",
+        "description": "Impedir o login de usuários com status inativo, retornando mensagem de erro genérica que não revela que o usuário existe",
+        "enforcement": "code",
+        "verification": "Teste de integração que tenta login com usuário inativo e valida retorno de mensagem genérica 'Credenciais inválidas' (não 'Usuário inativo')"
+      },
+      {
+        "id": 53,
+        "category": "authorization",
+        "description": "Impedir o login quando o tenant ao qual o usuário pertence está inativo, bloqueando acesso de toda a organização",
+        "enforcement": "code",
+        "verification": "Teste de integração que tenta login com usuário de tenant inativo e valida retorno de mensagem de erro 'Acesso negado. Tenant inativo'"
+      },
+      {
+        "id": 54,
+        "category": "validation",
+        "description": "Retornar mensagem de erro genérica e não discriminatória quando as credenciais informadas forem inválidas, sem indicar se o e-mail ou a senha está incorreto",
+        "enforcement": "code",
+        "verification": "Teste de integração que tenta login com e-mail válido + senha incorreta e com e-mail inválido, validando que ambos retornam mensagem idêntica 'Credenciais inválidas'"
+      },
+      {
+        "id": 55,
+        "category": "rate_limit",
+        "description": "Bloquear temporariamente novas tentativas de login após atingir o número máximo de tentativas malsucedidas consecutivas (limite: 5 tentativas, bloqueio: 15 minutos)",
+        "enforcement": "code",
+        "verification": "Teste de integração que realiza 5 tentativas falhadas consecutivas e valida bloqueio temporário com mensagem informativa sobre tempo de espera"
+      },
+      {
+        "id": 56,
+        "category": "observability",
+        "description": "Registrar em log de auditoria toda tentativa de login, bem-sucedida ou malsucedida, incluindo identificação do usuário, tenant, timestamp, endereço IP e resultado",
+        "enforcement": "code",
+        "verification": "Teste de integração que realiza login bem-sucedido e falhado, validando que ambos geram entradas de auditoria com campos obrigatórios preenchidos"
+      },
+      {
+        "id": 57,
+        "category": "compliance",
+        "description": "Garantir que os dados pessoais do usuário tratados no fluxo de autenticação (e-mail) estejam em conformidade com a LGPD, aplicando princípios de minimização de dados",
+        "enforcement": "code",
+        "verification": "Auditoria de código que valida que e-mail é transmitido apenas via HTTPS, armazenado em hash no banco de dados, e não é registrado em logs em texto simples"
+      },
+      {
+        "id": 58,
+        "category": "invariant",
+        "description": "Garantir que a sessão autenticada de um usuário está estritamente vinculada ao seu tenant, impedindo qualquer acesso cruzado a dados ou funcionalidades de outras organizações",
+        "enforcement": "code",
+        "verification": "Teste de integração que autentica usuário em tenant A, tenta acessar dados de tenant B usando o token, e valida rejeição com mensagem 'Acesso negado. Tenant não corresponde'"
+      },
+      {
+        "id": 59,
+        "category": "idempotency",
+        "description": "Garantir que múltiplas submissões do mesmo formulário de login não geram múltiplos tokens ou múltiplas entradas de auditoria duplicadas",
+        "enforcement": "code",
+        "verification": "Teste de integração que submete formulário de login duas vezes em rápida sucessão e valida que apenas uma entrada de auditoria é criada"
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "O Fluxo de Autenticação é um fluxo de negócio que orquestra o processo completo de autenticação de usuários na plataforma multi-tenant, validando credenciais (e-mail e senha), identificando o tenant correto, gerenciando sessões autenticadas, e aplicando proteções contra ataques de força bruta. Coordena a validação de preenchimento e formato de campos de entrada, a verificação de credenciais contra o repositório de usuários, a validação de status de ativação do usuário e do tenant, a geração segura de tokens JWT de sessão com expiração configurada, o registro de auditoria de tentativas de login, e o bloqueio temporário após múltiplas tentativas falhadas. Materializa as funcionalidades de formulário de login, processamento de autenticação, gestão de sessão, controle de tentativas e extensibilidade para SSO/OAuth definidas na feature de autenticação, integrando validações de negócio, regras de conformidade com LGPD, rastreabilidade completa de ações de segurança, e isolamento rigoroso de dados entre tenants."
+    },
+    "definition": {
+      "params": [
+        {
+          "id": 2,
+          "name": "flow_name",
+          "value": "autenticacao-usuario"
+        },
+        {
+          "id": 3,
+          "name": "owner_module",
+          "value": "gestao-usuarios-organizacoes"
+        },
+        {
+          "id": 4,
+          "name": "execution_context",
+          "value": "tenant_scoped_synchronous"
+        },
+        {
+          "id": 5,
+          "name": "primary_actor",
+          "value": "usuario_nao_autenticado"
+        }
+      ],
+      "flow_spec": {
+        "steps": [
+          {
+            "id": 6,
+            "name": "Exibir Formulário de Login",
+            "description": "Apresentar ao usuário um formulário contendo campos obrigatórios de e-mail e senha, com indicação visual de campos requeridos e controle de alternância para visualizar/ocultar senha."
+          },
+          {
+            "id": 7,
+            "name": "Validar Preenchimento de Campos Obrigatórios",
+            "description": "Verificar que os campos de e-mail e senha estão preenchidos e não estão em branco antes de processar a autenticação."
+          },
+          {
+            "id": 8,
+            "name": "Validar Formato de E-mail",
+            "description": "Validar que o endereço de e-mail informado segue o formato válido conforme padrão RFC 5322, rejeitando entradas malformadas."
+          },
+          {
+            "id": 9,
+            "name": "Registrar Tentativa de Login",
+            "description": "Registrar o timestamp e o endereço IP da tentativa de login para fins de auditoria e detecção de padrões suspeitos."
+          },
+          {
+            "id": 10,
+            "name": "Validar Limite de Tentativas Falhadas",
+            "description": "Verificar se o usuário ou endereço IP atingiu o número máximo de tentativas de login malsucedidas consecutivas; se sim, bloquear temporariamente novas tentativas."
+          },
+          {
+            "id": 11,
+            "name": "Buscar Usuário por E-mail",
+            "description": "Consultar o repositório de usuários para localizar um usuário com o e-mail informado, sem especificar o tenant (será identificado pelo e-mail)."
+          },
+          {
+            "id": 12,
+            "name": "Identificar Tenant do Usuário",
+            "description": "Extrair o tenant_id do usuário encontrado, garantindo que a sessão autenticada estará vinculada ao tenant correto."
+          },
+          {
+            "id": 13,
+            "name": "Validar Status de Ativação do Usuário",
+            "description": "Verificar que o usuário encontrado possui status ativo; se inativo, retornar mensagem de erro genérica sem revelar que o usuário existe."
+          },
+          {
+            "id": 14,
+            "name": "Validar Status de Ativação do Tenant",
+            "description": "Verificar que o tenant ao qual o usuário pertence possui status ativo; se inativo, bloquear o acesso de todos os usuários daquela organização."
+          },
+          {
+            "id": 15,
+            "name": "Comparar Senha Informada com Hash Armazenado",
+            "description": "Utilizar algoritmo de comparação seguro (timing-safe) para validar que a senha informada corresponde ao hash armazenado, sem revelar qual campo está incorreto."
+          },
+          {
+            "id": 16,
+            "name": "Validar Credenciais",
+            "description": "Aplicar regras de validação de credenciais para garantir que e-mail e senha estão corretos e que o usuário está ativo no tenant ativo."
+          },
+          {
+            "id": 17,
+            "name": "Gerar Token de Sessão JWT",
+            "description": "Gerar token JWT assinado com algoritmo RS256, contendo identificação do usuário, tenant, perfil e data de expiração (3600 segundos)."
+          },
+          {
+            "id": 18,
+            "name": "Gerar Token de Refresh",
+            "description": "Gerar token de refresh com validade estendida (7 dias) para permitir renovação de sessão sem necessidade de re-autenticação."
+          },
+          {
+            "id": 19,
+            "name": "Registrar Auditoria de Login Bem-sucedido",
+            "description": "Registrar em log de auditoria a autenticação bem-sucedida, incluindo identificação do usuário, tenant, timestamp, endereço IP e resultado da operação."
+          },
+          {
+            "id": 20,
+            "name": "Limpar Contador de Tentativas Falhadas",
+            "description": "Resetar o contador de tentativas de login malsucedidas para o usuário e endereço IP após autenticação bem-sucedida."
+          },
+          {
+            "id": 21,
+            "name": "Redirecionar para Tela Principal",
+            "description": "Redirecionar o usuário autenticado para a tela principal da plataforma correspondente ao seu tenant após login bem-sucedido."
+          },
+          {
+            "id": 22,
+            "name": "Incrementar Contador de Tentativas Falhadas",
+            "description": "Incrementar o contador de tentativas de login malsucedidas para o usuário ou endereço IP quando as credenciais forem inválidas."
+          },
+          {
+            "id": 23,
+            "name": "Registrar Auditoria de Login Falhado",
+            "description": "Registrar em log de auditoria a tentativa de autenticação falhada, incluindo e-mail informado, timestamp, endereço IP e motivo da falha (credenciais inválidas, usuário inativo, tenant inativo)."
+          },
+          {
+            "id": 24,
+            "name": "Retornar Mensagem de Erro Genérica",
+            "description": "Exibir mensagem de erro genérica e não discriminatória ao usuário ('Credenciais inválidas') sem indicar se o e-mail ou a senha está incorreto, a fim de evitar enumeração de usuários."
+          },
+          {
+            "id": 25,
+            "name": "Bloquear Temporariamente Novas Tentativas",
+            "description": "Bloquear novas tentativas de login para o usuário ou endereço IP após atingir o limite máximo de tentativas falhadas, exibindo mensagem informativa sobre o bloqueio e tempo de espera."
+          },
+          {
+            "id": 26,
+            "name": "Tratar Erro de Validação",
+            "description": "Capturar erros de validação (campos obrigatórios, formato de e-mail) e retornar mensagem de erro específica ao usuário."
+          },
+          {
+            "id": 27,
+            "name": "Tratar Erro de Banco de Dados",
+            "description": "Capturar erros de banco de dados ou falhas de consulta e retornar mensagem de erro genérica ao usuário sem revelar detalhes técnicos."
+          }
+        ],
+        "branches": [
+          {
+            "id": 28,
+            "condition": "validacao_campos_falhou",
+            "description": "Desvio para tratamento de erro de validação de campos obrigatórios ou formato",
+            "target_step": 26
+          },
+          {
+            "id": 29,
+            "condition": "limite_tentativas_atingido",
+            "description": "Desvio para bloqueio temporário de novas tentativas",
+            "target_step": 25
+          },
+          {
+            "id": 30,
+            "condition": "usuario_nao_encontrado OR credenciais_invalidas",
+            "description": "Desvio para tratamento de erro de autenticação falhada",
+            "target_step": 22
+          },
+          {
+            "id": 31,
+            "condition": "usuario_inativo OR tenant_inativo",
+            "description": "Desvio para tratamento de erro de acesso bloqueado",
+            "target_step": 22
+          },
+          {
+            "id": 32,
+            "condition": "autenticacao_bem_sucedida",
+            "description": "Fluxo de sucesso: gerar tokens e redirecionar",
+            "target_step": 17
+          },
+          {
+            "id": 33,
+            "condition": "erro_banco_dados",
+            "description": "Desvio para tratamento de erro de banco de dados",
+            "target_step": 27
+          }
+        ],
+        "compensations": [
+          {
+            "id": 34,
+            "action": "Invalidar token JWT gerado em caso de falha na persistência de auditoria",
+            "trigger": "Falha ao registrar auditoria de login bem-sucedido após geração de token"
+          },
+          {
+            "id": 35,
+            "action": "Remover entrada de auditoria de tentativa falhada",
+            "trigger": "Falha crítica que impede conclusão da operação de login"
+          }
+        ]
+      }
+    },
+    "pendencies": [
+      {
+        "id": 77,
+        "section": "definition",
+        "description": "Definir o mecanismo exato de armazenamento e consulta do contador de tentativas de login falhadas (em memória, cache distribuído, ou banco de dados) para suportar ambientes multi-instância",
+        "resolutionOptions": [
+          {
+            "id": 78,
+            "text": "Armazenar contador em cache distribuído (Redis) com chave composta por email+tenant_id e IP, com TTL de 15 minutos"
+          },
+          {
+            "id": 79,
+            "text": "Armazenar contador em tabela de banco de dados dedicada (login_attempts) com índices em email, tenant_id e ip_address"
+          },
+          {
+            "id": 80,
+            "text": "Armazenar contador em memória local da instância com sincronização eventual via evento de fila de mensagens"
+          }
+        ],
+        "recommendedOptionId": 78
+      },
+      {
+        "id": 81,
+        "section": "definition",
+        "description": "Definir a estratégia de rotação de chaves RSA para assinatura de tokens JWT (frequência, processo de rollover, validação de tokens antigos)",
+        "resolutionOptions": [
+          {
+            "id": 82,
+            "text": "Rotação automática a cada 90 dias com período de transição de 7 dias onde ambas as chaves (antiga e nova) são válidas para validação"
+          },
+          {
+            "id": 83,
+            "text": "Rotação manual sob demanda com notificação prévia de 30 dias; período de transição de 14 dias"
+          },
+          {
+            "id": 84,
+            "text": "Rotação contínua com geração de nova chave a cada 30 dias e manutenção de 3 chaves ativas simultaneamente"
+          }
+        ],
+        "recommendedOptionId": 82
+      },
+      {
+        "id": 85,
+        "section": "flow",
+        "description": "Definir o comportamento exato quando um usuário tenta fazer login durante o período de bloqueio temporário (após limite de tentativas atingido): exibir tempo restante de bloqueio ou apenas mensagem genérica?",
+        "resolutionOptions": [
+          {
+            "id": 86,
+            "text": "Exibir mensagem informativa com tempo restante de bloqueio em minutos (ex: 'Acesso bloqueado. Tente novamente em 12 minutos')"
+          },
+          {
+            "id": 87,
+            "text": "Exibir mensagem genérica sem revelar tempo de bloqueio (ex: 'Acesso temporariamente bloqueado. Tente mais tarde')"
+          }
+        ],
+        "recommendedOptionId": 86
+      },
+      {
+        "id": 88,
+        "section": "rules",
+        "description": "Definir se o bloqueio de tentativas de login deve ser por e-mail, por endereço IP, ou por combinação de ambos",
+        "resolutionOptions": [
+          {
+            "id": 89,
+            "text": "Bloqueio por e-mail: 5 tentativas falhadas por e-mail em 15 minutos (protege contra ataques direcionados a usuários específicos)"
+          },
+          {
+            "id": 90,
+            "text": "Bloqueio por IP: 10 tentativas falhadas por IP em 15 minutos (protege contra ataques de força bruta em massa)"
+          },
+          {
+            "id": 91,
+            "text": "Bloqueio combinado: ambos os critérios aplicados simultaneamente (mais restritivo, melhor proteção)"
+          }
+        ],
+        "recommendedOptionId": 91
+      },
+      {
+        "id": 92,
+        "section": "non_functional_requirements",
+        "description": "Definir o tempo de expiração do refresh token e a política de renovação (renovação automática ou manual)",
+        "resolutionOptions": [
+          {
+            "id": 93,
+            "text": "Refresh token com 7 dias de expiração; renovação manual (cliente deve chamar endpoint de refresh antes de expiração)"
+          },
+          {
+            "id": 94,
+            "text": "Refresh token com 30 dias de expiração; renovação automática (novo refresh token emitido a cada uso)"
+          },
+          {
+            "id": 95,
+            "text": "Refresh token com 7 dias de expiração; renovação automática com sliding window (expiração estendida a cada requisição autenticada)"
+          }
+        ],
+        "recommendedOptionId": 93
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 67,
+        "then": "O sistema retorna mensagem de erro específica 'Formato de e-mail inválido' sem processar a autenticação",
+        "type": "unit",
+        "when": "O usuário submete o formulário com e-mail em formato inválido (ex: 'usuario@')",
+        "given": "Um formulário de login com campo de e-mail",
+        "scenario": "Validação de formato de e-mail no formulário de login",
+        "target_section": "rules"
+      },
+      {
+        "id": 68,
+        "then": "O sistema retorna tokens JWT (access token com 3600s de expiração e refresh token com 7 dias) e redireciona para tela principal do tenant A",
+        "type": "integration",
+        "when": "O usuário submete o formulário de login com credenciais corretas",
+        "given": "Um usuário ativo cadastrado no tenant A com e-mail 'usuario@empresa.com' e senha válida",
+        "scenario": "Autenticação bem-sucedida com geração de tokens JWT",
+        "target_section": "flow"
+      },
+      {
+        "id": 69,
+        "then": "O sistema retorna mensagem de erro genérica 'Credenciais inválidas' sem revelar que o usuário está inativo",
+        "type": "security",
+        "when": "O usuário tenta fazer login com credenciais corretas",
+        "given": "Um usuário com status inativo cadastrado no tenant A",
+        "scenario": "Bloqueio de login para usuário inativo",
+        "target_section": "rules"
+      },
+      {
+        "id": 70,
+        "then": "O sistema bloqueia o acesso e retorna mensagem de erro 'Acesso negado. Tenant inativo'",
+        "type": "security",
+        "when": "O usuário tenta fazer login com credenciais corretas",
+        "given": "Um usuário ativo pertencente a um tenant com status inativo",
+        "scenario": "Bloqueio de login para tenant inativo",
+        "target_section": "rules"
+      },
+      {
+        "id": 71,
+        "then": "O sistema retorna a mesma mensagem de erro genérica 'Credenciais inválidas' em ambos os casos",
+        "type": "security",
+        "when": "O usuário submete o formulário com e-mail válido + senha incorreta e depois com e-mail inválido",
+        "given": "Um formulário de login",
+        "scenario": "Proteção contra enumeração de usuários com mensagem genérica",
+        "target_section": "rules"
+      },
+      {
+        "id": 72,
+        "then": "O sistema bloqueia temporariamente novas tentativas de login por 15 minutos e exibe mensagem informativa sobre o bloqueio",
+        "type": "security",
+        "when": "O usuário realiza 5 tentativas de login falhadas consecutivas em menos de 1 minuto",
+        "given": "Um formulário de login",
+        "scenario": "Rate limiting após múltiplas tentativas falhadas",
+        "target_section": "rules"
+      },
+      {
+        "id": 73,
+        "then": "O sistema autentica o usuário e vincula a sessão exclusivamente ao tenant A, impedindo acesso a dados do tenant B",
+        "type": "integration",
+        "when": "Um usuário do tenant A faz login com suas credenciais",
+        "given": "Dois usuários com o mesmo e-mail em tenants diferentes (tenant A e tenant B)",
+        "scenario": "Isolamento multi-tenant na autenticação",
+        "target_section": "flow"
+      },
+      {
+        "id": 74,
+        "then": "O sistema registra em log de auditoria a operação com campos: usuario_id, tenant_id, email, timestamp, endereco_ip, resultado='sucesso'",
+        "type": "integration",
+        "when": "O usuário realiza login bem-sucedido",
+        "given": "Um usuário ativo com credenciais válidas",
+        "scenario": "Registro de auditoria de tentativa de login bem-sucedida",
+        "target_section": "rules"
+      },
+      {
+        "id": 75,
+        "then": "O sistema registra em log de auditoria a operação com campos: email, timestamp, endereco_ip, resultado='falha', motivo_falha='credenciais_invalidas'",
+        "type": "integration",
+        "when": "O usuário realiza login com credenciais inválidas",
+        "given": "Um formulário de login",
+        "scenario": "Registro de auditoria de tentativa de login falhada",
+        "target_section": "rules"
+      },
+      {
+        "id": 76,
+        "then": "O sistema processa todas as autenticações com latência p99 <= 200ms para sucesso e p99 <= 150ms para erro de validação",
+        "type": "performance",
+        "when": "500 usuários realizam login simultaneamente",
+        "given": "Uma plataforma com 5.000 usuários ativos",
+        "scenario": "Desempenho de autenticação sob carga",
+        "target_section": "non_functional_requirements"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 60,
+        "target": "argon2id com m=64MiB, t=3, p=4, salt=16 bytes",
+        "category": "security",
+        "requirement": "Armazenar senhas dos usuários exclusivamente em formato de hash seguro utilizando algoritmo resistente a ataques de força bruta",
+        "verification": "Auditoria de código que valida que nenhuma senha é armazenada em texto simples ou formato reversível; teste de integração que valida hash gerado segue especificação"
+      },
+      {
+        "id": 61,
+        "target": "TLS 1.2 ou superior com cipher suites modernos (TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384)",
+        "category": "security",
+        "requirement": "Transmitir todas as comunicações do fluxo de autenticação exclusivamente por meio de protocolo HTTPS",
+        "verification": "Teste de segurança que valida que requisições HTTP (não HTTPS) para endpoints de autenticação são rejeitadas; auditoria de configuração de servidor"
+      },
+      {
+        "id": 62,
+        "target": "Máximo 5 tentativas falhadas em 15 minutos por e-mail; máximo 10 tentativas falhadas em 15 minutos por IP",
+        "category": "security",
+        "requirement": "Implementar mecanismo de limitação de taxa (rate limiting) nas requisições de login por endereço de e-mail e por endereço IP",
+        "verification": "Teste de integração que realiza múltiplas tentativas de login falhadas e valida bloqueio temporário após limite atingido"
+      },
+      {
+        "id": 63,
+        "target": "p99 <= 200ms para autenticação bem-sucedida; p99 <= 150ms para erro de validação; mesmo sob carga de até 5.000 usuários ativos simultâneos",
+        "category": "performance",
+        "requirement": "Processar a autenticação do usuário e retornar a resposta (sucesso ou erro) em tempo adequado",
+        "verification": "Teste de carga que simula 5.000 usuários autenticando simultaneamente e valida latência p99 dentro do alvo"
+      },
+      {
+        "id": 64,
+        "target": "99.9% de uptime mensal; RTO <= 5 minutos; RPO <= 1 minuto",
+        "category": "availability",
+        "requirement": "Garantir que o serviço de autenticação esteja disponível com alta disponibilidade",
+        "verification": "Monitoramento contínuo de disponibilidade; teste de failover que valida recuperação automática em <= 5 minutos"
+      },
+      {
+        "id": 65,
+        "target": "100% das tentativas de login registradas com campos: usuario_id, tenant_id, email, timestamp, endereco_ip, resultado (sucesso/falha), motivo_falha",
+        "category": "observability",
+        "requirement": "Registrar em log de auditoria toda tentativa de login com informações de contexto",
+        "verification": "Teste de integração que realiza login e valida entrada de auditoria contém todos os campos obrigatórios"
+      },
+      {
+        "id": 66,
+        "target": "RS256 com chaves RSA 2048-bit; token expiration = 3600 segundos; refresh token expiration = 7 dias; key rotation a cada 90 dias",
+        "category": "security",
+        "requirement": "Utilizar tokens JWT assinados com algoritmo RS256 para sessões autenticadas",
+        "verification": "Auditoria de código que valida algoritmo RS256 utilizado; teste que valida expiração de token após 3600 segundos"
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 25,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T15:45:25.448Z",
+  "updatedAt": null
+}

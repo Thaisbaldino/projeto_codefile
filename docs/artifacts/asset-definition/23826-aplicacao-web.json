@@ -1,0 +1,769 @@
+{
+  "id": 23826,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 27,
+          "name": "Credenciais de Usuário",
+          "format": "application/json",
+          "origin": "Formulário de Login",
+          "trigger": "Submissão do formulário de autenticação"
+        },
+        {
+          "id": 28,
+          "name": "Dados de Tarefa",
+          "format": "application/json",
+          "origin": "Formulário de Criação/Edição de Tarefa",
+          "trigger": "Submissão do formulário de tarefa"
+        },
+        {
+          "id": 29,
+          "name": "Critérios de Filtro e Pesquisa",
+          "format": "application/json",
+          "origin": "Painel de Filtros e Pesquisa",
+          "trigger": "Aplicação de filtros ou digitação em campo de pesquisa"
+        },
+        {
+          "id": 30,
+          "name": "Alteração de Status via Drag-and-Drop",
+          "format": "application/json",
+          "origin": "Quadro Kanban",
+          "trigger": "Movimentação de cartão entre colunas"
+        },
+        {
+          "id": 31,
+          "name": "Dados de Usuário",
+          "format": "application/json",
+          "origin": "Formulário de Cadastro/Edição de Usuário",
+          "trigger": "Submissão do formulário de usuário"
+        },
+        {
+          "id": 32,
+          "name": "Dados de Tenant",
+          "format": "application/json",
+          "origin": "Formulário de Provisionamento de Tenant",
+          "trigger": "Submissão do formulário de tenant"
+        },
+        {
+          "id": 33,
+          "name": "Token de Recuperação de Senha",
+          "format": "string",
+          "origin": "Link de E-mail",
+          "trigger": "Clique no link de redefinição de senha"
+        },
+        {
+          "id": 34,
+          "name": "Resposta da API",
+          "format": "application/json",
+          "origin": "API Interna da Plataforma",
+          "trigger": null
+        }
+      ],
+      "outputs": [
+        {
+          "id": 43,
+          "name": "Requisição de Autenticação",
+          "format": "application/json",
+          "destination": "POST /api/auth/login"
+        },
+        {
+          "id": 44,
+          "name": "Requisição de Criação de Tarefa",
+          "format": "application/json",
+          "destination": "POST /api/tasks"
+        },
+        {
+          "id": 45,
+          "name": "Requisição de Edição de Tarefa",
+          "format": "application/json",
+          "destination": "PUT /api/tasks/:task_id"
+        },
+        {
+          "id": 46,
+          "name": "Requisição de Atualização de Status",
+          "format": "application/json",
+          "destination": "PATCH /api/tasks/:task_id/status"
+        },
+        {
+          "id": 47,
+          "name": "Requisição de Listagem de Tarefas",
+          "format": "application/json",
+          "destination": "GET /api/tasks"
+        },
+        {
+          "id": 48,
+          "name": "Requisição de Visualização Kanban",
+          "format": "application/json",
+          "destination": "GET /api/tasks/kanban/board"
+        },
+        {
+          "id": 49,
+          "name": "Requisição de Gerenciamento de Usuários",
+          "format": "application/json",
+          "destination": "POST/GET/PUT /api/users"
+        },
+        {
+          "id": 50,
+          "name": "Requisição de Gerenciamento de Tenants",
+          "format": "application/json",
+          "destination": "POST/GET/PATCH /api/tenants"
+        },
+        {
+          "id": 51,
+          "name": "Interface Renderizada",
+          "format": "HTML/CSS/JavaScript",
+          "destination": "Navegador do Usuário"
+        },
+        {
+          "id": 52,
+          "name": "Evento de Auditoria",
+          "format": "application/json",
+          "destination": "Trilha de Auditoria"
+        }
+      ],
+      "processing": [
+        {
+          "id": 35,
+          "step": "Validação de Entrada",
+          "description": "Valida formato, campos obrigatórios e regras de negócio dos dados capturados do usuário antes de submeter à API."
+        },
+        {
+          "id": 36,
+          "step": "Autenticação",
+          "description": "Submete credenciais à API de autenticação, recebe tokens JWT e armazena em sessão segura."
+        },
+        {
+          "id": 37,
+          "step": "Resolução de Permissões",
+          "description": "Consulta contexto autenticado para determinar quais funcionalidades e dados são acessíveis ao usuário conforme seu perfil e tenant."
+        },
+        {
+          "id": 38,
+          "step": "Renderização Adaptativa",
+          "description": "Renderiza interface responsiva ajustando layout, componentes e visibilidade de elementos conforme o dispositivo (mobile, tablet, desktop) e permissões do usuário."
+        },
+        {
+          "id": 39,
+          "step": "Captura de Intenção do Usuário",
+          "description": "Interpreta ações do usuário (cliques, submissões, drag-and-drop) e as traduz em requisições estruturadas para a API."
+        },
+        {
+          "id": 40,
+          "step": "Isolamento de Dados por Tenant",
+          "description": "Garante que todas as requisições incluem contexto de tenant e que a interface exibe apenas dados pertencentes ao tenant autenticado."
+        },
+        {
+          "id": 41,
+          "step": "Tratamento de Erros",
+          "description": "Interpreta respostas de erro da API e exibe mensagens claras e acionáveis ao usuário, sem expor detalhes técnicos."
+        },
+        {
+          "id": 42,
+          "step": "Atualização de Estado da Interface",
+          "description": "Atualiza componentes da interface em resposta a ações do usuário ou mudanças de estado, mantendo consistência visual entre visualizações (lista, Kanban, detalhe)."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 53,
+        "category": "authorization",
+        "description": "Apenas usuários autenticados com token JWT válido e tenant ativo podem acessar rotas protegidas; usuários não autenticados são redirecionados para /login.",
+        "enforcement": "code",
+        "verification": "Validação de token em cada requisição; teste de acesso negado sem token; teste de redirecionamento para login."
+      },
+      {
+        "id": 54,
+        "category": "authorization",
+        "description": "Usuários com perfil de administrador de tenant podem acessar funcionalidades de gerenciamento de usuários e níveis hierárquicos; colaboradores e gestores têm acesso restrito.",
+        "enforcement": "code",
+        "verification": "Teste de acesso negado para colaborador em /users; teste de acesso permitido para administrador de tenant em /users."
+      },
+      {
+        "id": 55,
+        "category": "authorization",
+        "description": "Apenas administradores da plataforma podem acessar funcionalidades de gerenciamento de tenants (/tenants); acesso restrito a área administrativa interna.",
+        "enforcement": "code",
+        "verification": "Teste de acesso negado para administrador de tenant em /tenants; teste de acesso permitido para administrador da plataforma."
+      },
+      {
+        "id": 56,
+        "category": "invariant",
+        "description": "Todos os dados exibidos na interface pertencem exclusivamente ao tenant do usuário autenticado; nenhum dado de outro tenant é visível ou acessível.",
+        "enforcement": "code",
+        "verification": "Teste de isolamento: usuário do tenant A não vê tarefas do tenant B; validação de tenant_id em todas as requisições."
+      },
+      {
+        "id": 57,
+        "category": "validation",
+        "description": "Formulários de entrada (login, criação de tarefa, cadastro de usuário) validam campos obrigatórios, formatos (e-mail, data) e limites de caracteres antes de submeter à API.",
+        "enforcement": "code",
+        "verification": "Teste de validação: submissão com campo vazio exibe erro; submissão com e-mail inválido exibe erro; submissão com dados válidos prossegue."
+      },
+      {
+        "id": 58,
+        "category": "validation",
+        "description": "Campo de e-mail em formulários de login e cadastro valida formato RFC 5322 e rejeita entradas inválidas com mensagem de erro específica.",
+        "enforcement": "code",
+        "verification": "Teste com e-mail válido (user@example.com); teste com e-mail inválido (user@, @example.com, user.example.com); validação ocorre antes de submissão."
+      },
+      {
+        "id": 59,
+        "category": "idempotency",
+        "description": "Operações de criação de tarefa, usuário e tenant são idempotentes; requisições duplicadas com mesmos dados não criam registros duplicados.",
+        "enforcement": "code",
+        "verification": "Teste de submissão dupla de formulário de criação de tarefa; verificar que apenas um registro é criado."
+      },
+      {
+        "id": 60,
+        "category": "observability",
+        "description": "Todas as ações críticas do usuário (login, criação/edição de tarefa, gerenciamento de usuário) são registradas em log de auditoria com timestamp, usuário executor e dados alterados.",
+        "enforcement": "code",
+        "verification": "Verificar trilha de auditoria após ação de criação de tarefa; confirmar presença de user_id, timestamp, dados da tarefa."
+      },
+      {
+        "id": 61,
+        "category": "compliance",
+        "description": "Dados pessoais de usuários (nome, e-mail) são tratados em conformidade com LGPD; transmissão exclusivamente via HTTPS; armazenamento em sessão segura com expiração.",
+        "enforcement": "infra",
+        "verification": "Verificar que todas as requisições usam HTTPS; verificar que tokens são armazenados em cookies HttpOnly; verificar expiração de sessão após 60 minutos de inatividade."
+      },
+      {
+        "id": 62,
+        "category": "rate_limit",
+        "description": "Tentativas de login são limitadas a 5 falhas em 15 minutos por IP; após limite, usuário recebe mensagem de bloqueio temporário.",
+        "enforcement": "network",
+        "verification": "Teste de 5 tentativas falhadas de login; verificar que 6ª tentativa retorna erro 429 com retry_after_seconds."
+      },
+      {
+        "id": 63,
+        "category": "invariant",
+        "description": "Interface renderiza de forma responsiva em dispositivos móveis (320px), tablets (768px) e desktops (1024px+); layout adapta-se sem quebra de funcionalidade.",
+        "enforcement": "code",
+        "verification": "Teste visual em viewport 320px (mobile); teste em viewport 768px (tablet); teste em viewport 1024px (desktop); verificar que todos os controles são acessíveis em cada tamanho."
+      },
+      {
+        "id": 64,
+        "category": "invariant",
+        "description": "Usuários desativados não podem realizar login; tentativa de login com usuário inativo retorna erro genérico sem revelar status.",
+        "enforcement": "code",
+        "verification": "Teste de login com usuário ativo (sucesso); teste de login com usuário inativo (erro genérico); verificar que mensagem não revela que usuário está inativo."
+      },
+      {
+        "id": 65,
+        "category": "invariant",
+        "description": "Tenants desativados bloqueiam acesso de todos os seus usuários; tentativa de login retorna erro indicando que tenant está inativo.",
+        "enforcement": "code",
+        "verification": "Teste de login com tenant ativo (sucesso); teste de login com tenant inativo (erro); verificar que sessão ativa é invalidada quando tenant é desativado."
+      },
+      {
+        "id": 66,
+        "category": "invariant",
+        "description": "Alteração de status de tarefa via Kanban (drag-and-drop) é validada no servidor; requisições manipuladas que tentam alterar status de tarefa de outro tenant são rejeitadas.",
+        "enforcement": "code",
+        "verification": "Teste de drag-and-drop válido (tarefa move para coluna correta); teste de requisição manipulada com tenant_id diferente (rejeitada)."
+      },
+      {
+        "id": 67,
+        "category": "invariant",
+        "description": "Filtros e pesquisa de tarefas retornam apenas tarefas do tenant autenticado; manipulação de parâmetros de requisição não expõe dados de outros tenants.",
+        "enforcement": "code",
+        "verification": "Teste de filtro por responsável (retorna apenas usuários do tenant); teste de pesquisa textual (retorna apenas tarefas do tenant); teste de manipulação de tenant_id em parâmetros (rejeitada)."
+      },
+      {
+        "id": 68,
+        "category": "invariant",
+        "description": "Mensagens de erro não expõem detalhes técnicos ou informações sensíveis; erros de validação indicam qual campo falhou, erros de autenticação são genéricos.",
+        "enforcement": "code",
+        "verification": "Teste de erro de validação (mensagem específica por campo); teste de erro de autenticação (mensagem genérica); verificar que stack trace não é exibido."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "A Aplicação Web é o canal de experiência do usuário que materializa todas as funcionalidades da plataforma de gerenciamento de tarefas através de uma interface web responsiva e adaptativa. Compõe-se de páginas especializadas (login, recuperação de senha, gerenciamento de usuários, gerenciamento de tenants, tarefas), uma estrutura de navegação principal que organiza rotas públicas e protegidas com guardas de autenticação e autorização, layouts reutilizáveis com slots para composição modular, superfícies interativas (formulários, painéis Kanban, filtros de pesquisa), e mecanismos de isolamento de dados por tenant integrados em cada ponto de interação. Funciona como o ponto de contato entre usuários e o sistema, capturando intenções de usuário (criação de tarefas, autenticação, gerenciamento de colaboradores), renderizando visualizações adaptadas ao perfil e contexto do usuário, e transmitindo requisições autenticadas para o backend através da API interna."
+    },
+    "definition": {
+      "params": [
+        {
+          "id": 11,
+          "name": "base_url",
+          "value": "/api"
+        },
+        {
+          "id": 12,
+          "name": "api_version",
+          "value": "v1"
+        },
+        {
+          "id": 13,
+          "name": "session_timeout_minutes",
+          "value": "60"
+        },
+        {
+          "id": 14,
+          "name": "responsive_breakpoints",
+          "value": "mobile: 320px, tablet: 768px, desktop: 1024px"
+        },
+        {
+          "id": 15,
+          "name": "default_language",
+          "value": "pt-BR"
+        },
+        {
+          "id": 16,
+          "name": "theme_mode",
+          "value": "light"
+        }
+      ],
+      "channel": {
+        "id": 2,
+        "modality": "text",
+        "platform": "web",
+        "capabilities": [
+          {
+            "id": 3,
+            "name": "Autenticação e Gestão de Sessão"
+          },
+          {
+            "id": 4,
+            "name": "Gerenciamento de Usuários e Tenants"
+          },
+          {
+            "id": 5,
+            "name": "Criação e Edição de Tarefas"
+          },
+          {
+            "id": 6,
+            "name": "Visualização em Lista e Kanban"
+          },
+          {
+            "id": 7,
+            "name": "Filtragem e Pesquisa de Tarefas"
+          },
+          {
+            "id": 8,
+            "name": "Isolamento de Dados por Tenant"
+          },
+          {
+            "id": 9,
+            "name": "Responsividade em Dispositivos Móveis"
+          },
+          {
+            "id": 10,
+            "name": "Rastreabilidade de Ações"
+          }
+        ]
+      },
+      "entrypoints": [
+        {
+          "id": 17,
+          "kind": "page",
+          "name": "Página de Login",
+          "surface_ref": "login_page"
+        },
+        {
+          "id": 18,
+          "kind": "page",
+          "name": "Página de Recuperação de Senha",
+          "surface_ref": "password_recovery_page"
+        },
+        {
+          "id": 19,
+          "kind": "page",
+          "name": "Página de Tarefas",
+          "surface_ref": "tasks_page"
+        },
+        {
+          "id": 20,
+          "kind": "page",
+          "name": "Página de Gerenciamento de Usuários",
+          "surface_ref": "users_management_page"
+        },
+        {
+          "id": 21,
+          "kind": "page",
+          "name": "Página de Gerenciamento de Tenants",
+          "surface_ref": "tenants_management_page"
+        },
+        {
+          "id": 22,
+          "kind": "action",
+          "name": "Ação de Criar Tarefa",
+          "surface_ref": "create_task_action"
+        },
+        {
+          "id": 23,
+          "kind": "action",
+          "name": "Ação de Editar Tarefa",
+          "surface_ref": "edit_task_action"
+        },
+        {
+          "id": 24,
+          "kind": "action",
+          "name": "Ação de Atualizar Status de Tarefa",
+          "surface_ref": "update_task_status_action"
+        },
+        {
+          "id": 25,
+          "kind": "action",
+          "name": "Ação de Filtrar Tarefas",
+          "surface_ref": "filter_tasks_action"
+        },
+        {
+          "id": 26,
+          "kind": "action",
+          "name": "Ação de Pesquisar Tarefas",
+          "surface_ref": "search_tasks_action"
+        }
+      ]
+    },
+    "pendencies": [
+      {
+        "id": 96,
+        "section": "definition",
+        "description": "Definição de níveis de prioridade de tarefas não foi fornecida nos inputs. É necessário especificar quais são os níveis válidos (ex: Baixa, Média, Alta, Urgente) e sua ordem de apresentação na interface.",
+        "resolutionOptions": [
+          {
+            "id": 97,
+            "text": "Usar 4 níveis padrão: Baixa, Média, Alta, Urgente (em ordem crescente de criticidade)"
+          },
+          {
+            "id": 98,
+            "text": "Usar 3 níveis: Baixa, Normal, Alta"
+          },
+          {
+            "id": 99,
+            "text": "Consultar project_scope ou feature_definition para extrair definição de prioridades"
+          }
+        ],
+        "recommendedOptionId": 97
+      },
+      {
+        "id": 100,
+        "section": "definition",
+        "description": "Status fixos de tarefas não foram explicitamente definidos. É necessário especificar quais são os status disponíveis e sua ordem de apresentação no Kanban (ex: A Fazer, Em Andamento, Concluído).",
+        "resolutionOptions": [
+          {
+            "id": 101,
+            "text": "Usar 3 status fixos: A Fazer, Em Andamento, Concluído"
+          },
+          {
+            "id": 102,
+            "text": "Usar 4 status: A Fazer, Em Andamento, Em Revisão, Concluído"
+          },
+          {
+            "id": 103,
+            "text": "Consultar project_scope para extrair definição de status de tarefas"
+          }
+        ],
+        "recommendedOptionId": 101
+      },
+      {
+        "id": 104,
+        "section": "definition",
+        "description": "Estrutura de dados de resposta de erro da API não foi fornecida. É necessário definir o formato exato do envelope de erro (códigos de erro, estrutura de detalhes, headers de resposta).",
+        "resolutionOptions": [
+          {
+            "id": 105,
+            "text": "Usar envelope de erro padrão definido em asset_definition de API Interna (asset 5): { error: { code, message, details }, meta: { timestamp, request_id } }"
+          },
+          {
+            "id": 106,
+            "text": "Definir envelope customizado específico para a aplicação web"
+          }
+        ],
+        "recommendedOptionId": 105
+      },
+      {
+        "id": 107,
+        "section": "flow",
+        "description": "Mecanismo de paginação para listagem de tarefas não foi especificado. É necessário definir se será cursor-based pagination, offset-based pagination ou infinite scroll.",
+        "resolutionOptions": [
+          {
+            "id": 108,
+            "text": "Usar cursor-based pagination conforme definido em API Interna (asset 5): limit, cursor, sort_by, sort_order"
+          },
+          {
+            "id": 109,
+            "text": "Usar offset-based pagination: offset, limit"
+          },
+          {
+            "id": 110,
+            "text": "Usar infinite scroll com carregamento automático de próxima página"
+          }
+        ],
+        "recommendedOptionId": 108
+      },
+      {
+        "id": 111,
+        "section": "non_functional_requirements",
+        "description": "Tempo máximo de expiração de sessão não foi explicitamente definido. É necessário especificar após quanto tempo de inatividade a sessão deve expirar.",
+        "resolutionOptions": [
+          {
+            "id": 112,
+            "text": "Usar 60 minutos de inatividade (alinhado com access_token_ttl_seconds = 3600 do IAM)"
+          },
+          {
+            "id": 113,
+            "text": "Usar 30 minutos de inatividade"
+          },
+          {
+            "id": 114,
+            "text": "Usar 24 horas de inatividade"
+          }
+        ],
+        "recommendedOptionId": 112
+      },
+      {
+        "id": 115,
+        "section": "definition",
+        "description": "Comportamento de tratamento de erros de rede (timeout, conexão perdida) não foi especificado. É necessário definir como a interface deve reagir quando a API não responde.",
+        "resolutionOptions": [
+          {
+            "id": 116,
+            "text": "Exibir mensagem de erro genérica ao usuário e oferecer botão de retry"
+          },
+          {
+            "id": 117,
+            "text": "Implementar retry automático com backoff exponencial (máximo 3 tentativas)"
+          },
+          {
+            "id": 118,
+            "text": "Exibir mensagem de erro específica indicando tipo de falha (timeout, conexão recusada, etc.)"
+          }
+        ],
+        "recommendedOptionId": 117
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 83,
+        "then": "O usuário é autenticado, redirecionado para a página de tarefas, e consegue visualizar suas tarefas do tenant",
+        "type": "integration",
+        "when": "O usuário preenche o formulário de login com credenciais válidas e submete",
+        "given": "Um usuário não autenticado acessa a aplicação web",
+        "scenario": "Fluxo completo de autenticação e acesso a tarefas",
+        "target_section": "flow"
+      },
+      {
+        "id": 84,
+        "then": "A requisição é rejeitada com erro 403 Forbidden; nenhum dado do tenant B é retornado",
+        "type": "security",
+        "when": "O usuário tenta acessar tarefas do tenant B manipulando parâmetros de requisição",
+        "given": "Um usuário do tenant A está autenticado",
+        "scenario": "Prevenção de acesso não autorizado a dados de outro tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 85,
+        "then": "O formulário exibe mensagem de erro específica indicando formato inválido; submissão é bloqueada",
+        "type": "unit",
+        "when": "O usuário digita um e-mail em formato inválido (ex: user@) e tenta submeter",
+        "given": "Um usuário acessa o formulário de login",
+        "scenario": "Validação de formato de e-mail em formulário de login",
+        "target_section": "definition"
+      },
+      {
+        "id": 86,
+        "then": "A tarefa é criada no tenant A; um usuário do tenant B não consegue visualizar a tarefa criada",
+        "type": "integration",
+        "when": "O usuário preenche os campos obrigatórios (título, responsável, prioridade) e submete",
+        "given": "Um usuário do tenant A está autenticado e acessa o formulário de criação de tarefa",
+        "scenario": "Criação de tarefa com isolamento de tenant",
+        "target_section": "flow"
+      },
+      {
+        "id": 87,
+        "then": "A lista é atualizada exibindo apenas tarefas atribuídas ao colaborador selecionado; filtro ativo é indicado visualmente",
+        "type": "integration",
+        "when": "O usuário aplica filtro por responsável selecionando um colaborador específico",
+        "given": "Um usuário está na página de tarefas com 100 tarefas exibidas",
+        "scenario": "Filtragem de tarefas por responsável",
+        "target_section": "flow"
+      },
+      {
+        "id": 88,
+        "then": "O cartão move para a coluna de destino; status da tarefa é atualizado no servidor; alteração é refletida em todas as visualizações",
+        "type": "integration",
+        "when": "O usuário arrasta um cartão de tarefa da coluna 'A Fazer' para a coluna 'Em Andamento'",
+        "given": "Um usuário está visualizando o quadro Kanban com tarefas em diferentes colunas",
+        "scenario": "Alteração de status de tarefa via Kanban",
+        "target_section": "flow"
+      },
+      {
+        "id": 89,
+        "then": "A 6ª tentativa retorna erro 429 com mensagem de bloqueio temporário e retry_after_seconds",
+        "type": "security",
+        "when": "O usuário realiza 5 tentativas falhadas em 15 minutos",
+        "given": "Um usuário tenta fazer login com credenciais inválidas",
+        "scenario": "Rate limiting em tentativas de login",
+        "target_section": "rules"
+      },
+      {
+        "id": 90,
+        "then": "A página carrega em tempo adequado (p95 <= 2s); paginação ou lazy loading é implementado para evitar carregamento de todos os registros",
+        "type": "performance",
+        "when": "Um usuário acessa a página de tarefas",
+        "given": "Um tenant possui 10.000 tarefas no banco de dados",
+        "scenario": "Carregamento de listagem de tarefas com 10.000 registros",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 91,
+        "then": "A resposta segue o envelope padrão com data[], pagination{}, meta{timestamp, request_id, version}; status 200",
+        "type": "contract",
+        "when": "A API processa a requisição",
+        "given": "Um cliente faz requisição GET /api/tasks com parâmetros válidos",
+        "scenario": "Contrato de resposta de API para listagem de tarefas",
+        "target_section": "definition"
+      },
+      {
+        "id": 92,
+        "then": "Layout adapta-se ao tamanho da tela; todos os controles são acessíveis; funcionalidade não é comprometida",
+        "type": "integration",
+        "when": "O usuário navega entre páginas e interage com formulários",
+        "given": "Um usuário acessa a aplicação em um smartphone (viewport 320px)",
+        "scenario": "Responsividade em dispositivo móvel",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 93,
+        "then": "Ambas as tentativas retornam mensagem de erro genérica idêntica; nenhuma diferença revela se e-mail existe",
+        "type": "security",
+        "when": "O atacante tenta login com e-mail inexistente vs. e-mail existente com senha errada",
+        "given": "Um atacante tenta descobrir quais e-mails estão cadastrados",
+        "scenario": "Prevenção de enumeração de usuários em login",
+        "target_section": "rules"
+      },
+      {
+        "id": 94,
+        "then": "O usuário é criado no tenant; mensagem de confirmação é exibida; novo usuário aparece na listagem",
+        "type": "integration",
+        "when": "O administrador cria um novo usuário preenchendo nome, e-mail e nível hierárquico",
+        "given": "Um administrador de tenant acessa a página de gerenciamento de usuários",
+        "scenario": "Gerenciamento de usuários por administrador de tenant",
+        "target_section": "flow"
+      },
+      {
+        "id": 95,
+        "then": "O acesso é bloqueado; usuário é redirecionado para página de tarefas; mensagem de acesso negado é exibida",
+        "type": "integration",
+        "when": "O navegador tenta carregar a página de gerenciamento de usuários",
+        "given": "Um colaborador (não administrador) tenta acessar a URL /users",
+        "scenario": "Acesso negado para colaborador em funcionalidade administrativa",
+        "target_section": "rules"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 69,
+        "target": "p95 <= 3s em conexão 4G (10 Mbps download, 5 Mbps upload, 50ms latência)",
+        "category": "performance",
+        "requirement": "Carregamento inicial da página de login deve ocorrer em tempo adequado, com renderização completa em menos de 3 segundos em conexão 4G.",
+        "verification": "Teste de performance com Lighthouse ou WebPageTest; medir Time to Interactive (TTI) e First Contentful Paint (FCP)."
+      },
+      {
+        "id": 70,
+        "target": "p95 <= 2s para carregamento inicial; p95 <= 500ms para aplicação de filtros",
+        "category": "performance",
+        "requirement": "Listagem de tarefas deve carregar e renderizar em tempo adequado mesmo com até 10.000 tarefas no tenant.",
+        "verification": "Teste de performance com 10.000 tarefas; medir tempo de carregamento inicial e tempo de resposta após aplicação de filtros."
+      },
+      {
+        "id": 71,
+        "target": "p95 <= 2s para carregamento; 60 FPS durante drag-and-drop",
+        "category": "performance",
+        "requirement": "Quadro Kanban deve renderizar e permitir interação fluida (drag-and-drop) mesmo com até 10.000 tarefas.",
+        "verification": "Teste de performance com 10.000 tarefas; medir FPS durante operação de drag-and-drop usando DevTools."
+      },
+      {
+        "id": 72,
+        "target": "p95 <= 1s para login; p95 <= 500ms para logout; p95 <= 500ms para refresh de token",
+        "category": "performance",
+        "requirement": "Operações de autenticação (login, logout, refresh de token) devem completar em tempo adequado.",
+        "verification": "Teste de performance de endpoints de autenticação; medir latência de rede + processamento."
+      },
+      {
+        "id": 73,
+        "target": "Tempo de resposta da API permanece <= 1s no p95 sob carga de 5.000 usuários simultâneos",
+        "category": "scalability",
+        "requirement": "Interface deve suportar até 5.000 usuários ativos simultâneos na plataforma sem degradação perceptível.",
+        "verification": "Teste de carga com 5.000 usuários simultâneos; medir latência de endpoints críticos (login, listagem de tarefas)."
+      },
+      {
+        "id": 74,
+        "target": "100% das requisições via HTTPS; TLS 1.2+ obrigatório",
+        "category": "security",
+        "requirement": "Todas as comunicações entre navegador e servidor devem usar HTTPS com TLS 1.2 ou superior.",
+        "verification": "Verificar certificado SSL/TLS; teste de acesso via HTTP (deve ser redirecionado para HTTPS); teste de suporte a TLS 1.2+."
+      },
+      {
+        "id": 75,
+        "target": "Access token e refresh token armazenados em cookies HttpOnly com flag Secure",
+        "category": "security",
+        "requirement": "Tokens JWT devem ser armazenados em cookies HttpOnly, impedindo acesso via JavaScript e mitigando ataques XSS.",
+        "verification": "Inspecionar cookies no navegador; verificar que tokens não são acessíveis via document.cookie; verificar flags HttpOnly e Secure."
+      },
+      {
+        "id": 76,
+        "target": "argon2id com m=64MiB, t=3, p=4",
+        "category": "security",
+        "requirement": "Senhas de usuários devem ser armazenadas com hash seguro (argon2id) com parâmetros resistentes a força bruta.",
+        "verification": "Verificar algoritmo de hash no banco de dados; confirmar parâmetros de argon2id; teste de que senhas não podem ser recuperadas do hash."
+      },
+      {
+        "id": 77,
+        "target": "100% dos campos de entrada validados; rejeição de payloads malformados",
+        "category": "security",
+        "requirement": "Validação de entrada deve sanitizar e validar todos os dados capturados do usuário antes de submeter à API.",
+        "verification": "Teste de injeção de SQL (deve ser rejeitado); teste de XSS (deve ser sanitizado); teste de campos obrigatórios vazios (deve ser rejeitado)."
+      },
+      {
+        "id": 78,
+        "target": "99.9% uptime (máximo 43 minutos de downtime por mês)",
+        "category": "availability",
+        "requirement": "Serviço de autenticação deve estar disponível com alta disponibilidade, pois sua indisponibilidade bloqueia acesso de todos os usuários.",
+        "verification": "Monitoramento contínuo de disponibilidade; teste de failover; teste de recuperação após falha."
+      },
+      {
+        "id": 79,
+        "target": "99.5% uptime (máximo 3.6 horas de downtime por mês)",
+        "category": "availability",
+        "requirement": "Interface web deve estar disponível com alta disponibilidade para suportar acesso de até 5.000 usuários simultâneos.",
+        "verification": "Monitoramento de disponibilidade; teste de carga; teste de recuperação após falha."
+      },
+      {
+        "id": 80,
+        "target": "100% das requisições com request_id; correlação de logs entre frontend e backend",
+        "category": "observability",
+        "requirement": "Todas as requisições devem incluir request_id único para rastreamento de ponta a ponta.",
+        "verification": "Verificar presença de request_id em headers de requisição; verificar que request_id aparece em logs do backend."
+      },
+      {
+        "id": 81,
+        "target": "100% dos erros registrados com contexto; tempo de diagnóstico <= 5 minutos",
+        "category": "observability",
+        "requirement": "Erros de aplicação devem ser registrados com contexto suficiente para diagnóstico (stack trace, dados de entrada, estado da aplicação).",
+        "verification": "Verificar logs de erro; confirmar presença de stack trace, dados de entrada, estado da aplicação."
+      },
+      {
+        "id": 82,
+        "target": "Consumo de banda <= 100 MB por usuário ativo por mês; CPU <= 50% em carga normal",
+        "category": "cost",
+        "requirement": "Uso de recursos (CPU, memória, banda) deve ser otimizado para minimizar custos de infraestrutura.",
+        "verification": "Monitoramento de consumo de recursos; análise de otimizações possíveis (compressão, cache, lazy loading)."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 1,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T05:54:22.435Z",
+  "updatedAt": null
+}

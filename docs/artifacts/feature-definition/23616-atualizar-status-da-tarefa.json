@@ -1,0 +1,317 @@
+{
+  "id": 23616,
+  "projectId": 4118,
+  "type": "feature_definition",
+  "content": {
+    "pendencies": [
+      {
+        "id": 39,
+        "section": "functional",
+        "description": "Quais são os status fixos exatos disponíveis no sistema e sua ordenação lógica de progressão? O brief menciona exemplos como 'A Fazer', 'Em Andamento' e 'Concluído', mas os valores definitivos e a quantidade de status precisam ser confirmados para garantir consistência entre todas as features de gerenciamento de tarefas.",
+        "resolutionOptions": [
+          {
+            "id": 40,
+            "text": "Adotar três status fixos em ordem de progressão: A Fazer, Em Andamento e Concluído."
+          },
+          {
+            "id": 41,
+            "text": "Adotar quatro status fixos em ordem de progressão: A Fazer, Em Andamento, Em Revisão e Concluído."
+          },
+          {
+            "id": 42,
+            "text": "Adotar cinco status fixos em ordem de progressão: Backlog, A Fazer, Em Andamento, Em Revisão e Concluído."
+          }
+        ],
+        "recommendedOptionId": 40
+      },
+      {
+        "id": 43,
+        "section": "functional",
+        "description": "A restrição de alteração de status apenas ao responsável e ao criador da tarefa deve ser mantida, ou qualquer usuário autenticado e ativo do tenant pode alterar o status de qualquer tarefa, independentemente de vínculo com ela? A definição deve ser consistente com a política de permissões adotada nas features de prioridade e prazo.",
+        "resolutionOptions": [
+          {
+            "id": 44,
+            "text": "Qualquer usuário autenticado e ativo do tenant pode alterar o status de qualquer tarefa, independentemente de ser o criador ou o responsável, alinhado com a política adotada nas features de prioridade e prazo."
+          },
+          {
+            "id": 45,
+            "text": "Apenas o responsável atual e o criador da tarefa podem alterar o status; outros colaboradores do tenant não têm permissão para modificar esse atributo."
+          }
+        ],
+        "recommendedOptionId": 44
+      },
+      {
+        "id": 46,
+        "section": "functional",
+        "description": "Existem transições de status restritas ou proibidas pelo sistema (por exemplo, não é permitido retornar de 'Concluído' para 'Em Andamento', ou toda transição entre qualquer par de status é permitida livremente)?",
+        "resolutionOptions": [
+          {
+            "id": 47,
+            "text": "Todas as transições entre quaisquer status fixos são permitidas livremente, sem restrição de fluxo direcional."
+          },
+          {
+            "id": 48,
+            "text": "Definir transições permitidas em uma máquina de estados: por exemplo, 'Concluído' não pode retornar a 'A Fazer' ou 'Em Andamento' sem ação explícita de reabertura."
+          },
+          {
+            "id": 49,
+            "text": "Permitir todas as transições, mas exibir confirmação adicional ao usuário quando a transição for regressiva (por exemplo, de 'Concluído' para 'Em Andamento'), prevenindo ações acidentais."
+          }
+        ],
+        "recommendedOptionId": 47
+      },
+      {
+        "id": 50,
+        "section": "functional",
+        "description": "A funcionalidade de arrastar e soltar (drag and drop) no Kanban para alterar o status é obrigatória nesta versão, ou é uma melhoria desejável que pode ser postergada caso represente complexidade técnica significativa? A alteração de status via formulário de edição já seria suficiente para o MVP?",
+        "resolutionOptions": [
+          {
+            "id": 51,
+            "text": "O drag and drop no Kanban é obrigatório nesta versão; a movimentação visual de cartões entre colunas é parte essencial da experiência de uso do quadro Kanban."
+          },
+          {
+            "id": 52,
+            "text": "O drag and drop é desejável, mas a alteração de status via formulário de edição é suficiente para o MVP; o drag and drop pode ser implementado em versão posterior."
+          }
+        ],
+        "recommendedOptionId": 51
+      },
+      {
+        "id": 53,
+        "section": "functional",
+        "description": "O histórico de transições de status deve ser exibido ao usuário na interface (por exemplo, na visualização detalhada da tarefa como uma linha do tempo de mudanças), ou é registrado apenas internamente para fins de auditoria e rastreabilidade, sem exposição na UI?",
+        "resolutionOptions": [
+          {
+            "id": 54,
+            "text": "O histórico de transições é registrado apenas internamente para fins de auditoria; não há exibição do histórico na interface do usuário nesta versão."
+          },
+          {
+            "id": 55,
+            "text": "Exibir o histórico de transições de status na visualização detalhada da tarefa, apresentando uma linha do tempo com status anterior, novo status, executor e data/hora de cada mudança."
+          }
+        ],
+        "recommendedOptionId": 54
+      },
+      {
+        "id": 56,
+        "section": "non-functional",
+        "description": "Qual deve ser o tempo máximo aceitável para que a atualização do status de uma tarefa seja refletida na interface de outros usuários que estejam visualizando o mesmo quadro Kanban ou lista simultaneamente? O sistema deve suportar atualização em tempo real (WebSocket/SSE) ou a atualização ocorre apenas no próximo carregamento da página pelo outro usuário?",
+        "resolutionOptions": [
+          {
+            "id": 57,
+            "text": "Não implementar atualização em tempo real para outros usuários nesta versão; a alteração de status é refletida para o usuário executor imediatamente, e os demais usuários visualizam a mudança no próximo carregamento ou atualização manual da página."
+          },
+          {
+            "id": 58,
+            "text": "Implementar atualização em tempo real via WebSocket ou Server-Sent Events (SSE), propagando a mudança de status para todos os usuários que estejam visualizando o mesmo quadro ou lista simultaneamente."
+          }
+        ],
+        "recommendedOptionId": 57
+      }
+    ],
+    "functional_requirements": [
+      {
+        "group": {
+          "id": 1,
+          "name": "Seleção e Alteração de Status",
+          "items": [
+            {
+              "id": 2,
+              "description": "Exibir campo de seleção de status da tarefa no formulário de edição, apresentando os status fixos disponíveis no sistema para escolha pelo usuário."
+            },
+            {
+              "id": 3,
+              "description": "Permitir ao responsável pela tarefa ou ao seu criador alterar o status atual para qualquer outro status fixo disponível no sistema, refletindo o progresso real da atividade."
+            },
+            {
+              "id": 4,
+              "description": "Apresentar os status fixos do sistema em ordem lógica de progressão do ciclo de vida da tarefa, facilitando a compreensão do fluxo de trabalho pelo usuário."
+            },
+            {
+              "id": 5,
+              "description": "Exibir o status atual da tarefa como valor pré-selecionado no campo de seleção ao abrir o formulário de edição, permitindo ao usuário identificar o estado corrente antes de realizar a alteração."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 6,
+          "name": "Validações de Status",
+          "items": [
+            {
+              "id": 7,
+              "description": "Validar que o status selecionado corresponde a um dos valores fixos definidos pelo sistema, rejeitando entradas fora do conjunto permitido."
+            },
+            {
+              "id": 8,
+              "description": "Validar que o campo de status não está vazio antes de permitir o salvamento da alteração, exibindo mensagem de erro específica quando nenhum status estiver selecionado."
+            },
+            {
+              "id": 9,
+              "description": "Exibir mensagem de erro clara e descritiva ao usuário quando a alteração de status não puder ser concluída por falha de validação ou erro do sistema."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 10,
+          "name": "Persistência e Confirmação",
+          "items": [
+            {
+              "id": 11,
+              "description": "Persistir o novo status da tarefa imediatamente após a confirmação pelo usuário, refletindo a alteração em todas as visualizações da plataforma (lista, Kanban e detalhe da tarefa)."
+            },
+            {
+              "id": 12,
+              "description": "Registrar automaticamente a data e hora da alteração de status no momento da persistência, sem necessidade de intervenção do usuário, compondo o histórico de transições da tarefa."
+            },
+            {
+              "id": 13,
+              "description": "Registrar o usuário executor da alteração de status no momento da persistência, associando a mudança ao colaborador responsável pela ação."
+            },
+            {
+              "id": 14,
+              "description": "Exibir mensagem de confirmação de sucesso ao usuário após a alteração de status ser concluída com êxito."
+            },
+            {
+              "id": 15,
+              "description": "Atualizar a posição da tarefa na visualização Kanban imediatamente após a alteração de status, movendo o cartão para a coluna correspondente ao novo status sem necessidade de recarregar a página manualmente."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 16,
+          "name": "Alteração via Kanban",
+          "items": [
+            {
+              "id": 17,
+              "description": "Permitir a alteração de status da tarefa por meio do arrastar e soltar (drag and drop) do cartão entre as colunas fixas do quadro Kanban, atualizando o status da tarefa de acordo com a coluna de destino."
+            },
+            {
+              "id": 18,
+              "description": "Validar que a coluna de destino no Kanban corresponde a um status fixo válido do sistema antes de persistir a alteração realizada via drag and drop."
+            },
+            {
+              "id": 19,
+              "description": "Exibir feedback visual imediato ao usuário durante a operação de arrastar e soltar no Kanban, indicando a coluna de destino válida antes de confirmar a ação."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 20,
+          "name": "Controle de Acesso à Alteração de Status",
+          "items": [
+            {
+              "id": 21,
+              "description": "Restringir a alteração de status de uma tarefa ao seu responsável atual e ao seu criador, impedindo que outros colaboradores do tenant modifiquem o status de tarefas às quais não estão vinculados."
+            },
+            {
+              "id": 22,
+              "description": "Impedir que usuários não autenticados ou pertencentes a tenants inativos acessem ou executem operações de alteração de status em tarefas."
+            },
+            {
+              "id": 23,
+              "description": "Garantir que a alteração de status de uma tarefa de um tenant não seja executável por usuários de outros tenants, respeitando o isolamento multi-tenant."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 24,
+          "name": "Modelo de Dados Extensível para Status",
+          "items": [
+            {
+              "id": 25,
+              "description": "Projetar o modelo de dados de status da tarefa de forma a suportar a adição futura de status configuráveis por tenant, sem necessidade de reestruturação significativa do esquema de dados."
+            },
+            {
+              "id": 26,
+              "description": "Armazenar o status da tarefa como referência a uma entidade de status independente, e não como valor textual fixo embutido diretamente no registro da tarefa, viabilizando a personalização futura de colunas por tenant."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 27,
+          "name": "Histórico de Transições de Status",
+          "items": [
+            {
+              "id": 28,
+              "description": "Registrar cada transição de status da tarefa no histórico de status, armazenando o status anterior, o novo status, o usuário executor e o timestamp da alteração."
+            },
+            {
+              "id": 29,
+              "description": "Garantir que o histórico de transições de status da tarefa seja preservado mesmo após alterações subsequentes, permitindo a rastreabilidade completa do ciclo de vida da atividade."
+            }
+          ]
+        }
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "group": {
+          "id": 30,
+          "name": "Segurança e Conformidade",
+          "items": [
+            {
+              "id": 31,
+              "description": "Registrar em log de auditoria toda operação de alteração de status de tarefa, incluindo identificação do usuário executor, tenant, timestamp, identificação da tarefa e os valores de status anterior e novo, em conformidade com os requisitos de rastreabilidade da plataforma."
+            },
+            {
+              "id": 32,
+              "description": "Garantir que o status e o histórico de transições de uma tarefa de um tenant não sejam visíveis, acessíveis ou interferentes nos dados de nenhum outro tenant, respeitando o isolamento multi-tenant."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 33,
+          "name": "Usabilidade e Responsividade",
+          "items": [
+            {
+              "id": 34,
+              "description": "Renderizar os controles de alteração de status (campo de seleção e interação Kanban) de forma responsiva e adaptativa, garantindo usabilidade adequada em dispositivos móveis (smartphones e tablets) e em desktops."
+            },
+            {
+              "id": 35,
+              "description": "Garantir que a operação de arrastar e soltar no Kanban seja substituída por interação alternativa equivalente em dispositivos de toque (touch), como toque longo seguido de seleção de coluna de destino."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 36,
+          "name": "Desempenho",
+          "items": [
+            {
+              "id": 37,
+              "description": "Concluir a operação de persistência da alteração de status e retornar a confirmação ao usuário em tempo adequado, mesmo sob carga de até 5.000 usuários ativos e 10.000 tarefas por tenant na plataforma."
+            },
+            {
+              "id": 38,
+              "description": "Atualizar a interface do usuário (lista e Kanban) após a alteração de status sem recarregamento completo da página, garantindo navegação fluida e responsiva conforme os requisitos de experiência do usuário."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 12,
+  "sourceType": "feature",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-10T21:20:25.560Z",
+  "updatedAt": null
+}

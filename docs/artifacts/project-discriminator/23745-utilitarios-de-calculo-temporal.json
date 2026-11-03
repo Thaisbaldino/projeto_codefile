@@ -1,0 +1,114 @@
+{
+  "id": 23745,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 6,
+        "name": "Conjunto de idiomas e configurações regionais suportados pelo sistema",
+        "value": [
+          "pt-BR, en-US",
+          "en-US, pt-BR, es-ES, fr-FR, zh-CN",
+          "pt-BR",
+          "en-US"
+        ],
+        "method": "user-input",
+        "reasoning": "A arquitetura suporta inicialmente apenas pt-BR e en-US.\nA plataforma suporta o conjunto completo de localidades suportadas: en-US, pt-BR, es-ES, fr-FR e zh-CN.\nO locale deve ser um código de localização válido, como 'pt-BR' ou 'en-US', para garantir a correção de mensagens e configurações regionais. A formatação de data é aplicada em base à localização pt-BR.\nO locale deve ser um código de localização válido, como 'pt-BR' ou 'en-US', para garantir a correção de mensagens e configurações regionais.",
+        "confidence": 0.9001,
+        "context_element_id": 2684
+      },
+      {
+        "id": 7,
+        "name": "Regras de negócio específicas de região ou mercado que o sistema deve implementar",
+        "value": [
+          "business-hour-definitions",
+          "date-formats"
+        ],
+        "method": "user-input",
+        "reasoning": "A consulta de project_discriminator ou project_scope identifica a estratégia de fuso horário definida, um requisito de mercado específico.\nA função formatDateForDisplay retorna strings de data em formato português, com padrão de data fixo.",
+        "confidence": 0.7976,
+        "context_element_id": 2685
+      },
+      {
+        "id": 8,
+        "name": "Domínio funcional ou área de negócio da aplicação",
+        "value": [
+          "project-management"
+        ],
+        "method": "user-input",
+        "reasoning": "A consulta de project_scope identifica as localidades necessárias para os usuários da plataforma, pertencente ao domínio de gerenciamento de projetos.",
+        "confidence": 0.809,
+        "context_element_id": 2722
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 12,
+        "name": "Implementar processamento paralelo e concorrência assíncrona em operações que não requerem coordenação entre serviços",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Cálculo temporal sob carga de 10.000 invocações simultâneas de isDateOverdue com datas variadas é uma operação que não requer coordenação entre serviços.",
+        "confidence": 0.7971,
+        "context_element_id": 2867
+      },
+      {
+        "id": 19,
+        "name": "Incorpore asserções executáveis que possam ser verificadas automaticamente durante a execução",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Repetir a mesma entrada em várias execuções confirma que o resultado é idêntico, sem depender de condições ou parâmetros externos.",
+        "confidence": 0.8816,
+        "context_element_id": 2995
+      },
+      {
+        "id": 20,
+        "name": "Execute operações por meio de código versionado e automatizado em vez de processos manuais",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Execução automática ou agendada de funções de cálculo temporal alteraria o comportamento passivo do toolkit, eis que não é o caso.",
+        "confidence": 0.8061,
+        "context_element_id": 3007
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 24,
+        "name": "Modo de Regionalização",
+        "value": "orientado a preferências do usuário",
+        "method": "user-input",
+        "reasoning": "A preferência de localização do usuário é determinada pela preferência de usuário ou pela header Accept-Language, um mecanismo de preferência de usuário.",
+        "confidence": 0.8955,
+        "context_element_id": 5058
+      },
+      {
+        "id": 25,
+        "name": "Modelo de Determinismo",
+        "value": "estritamente determinístico",
+        "method": "user-input",
+        "reasoning": "As funções de cálculo temporal retornam sempre o mesmo resultado para as mesmas entradas, caracterizando um modelo de determinismo estrito.",
+        "confidence": 0.8517,
+        "context_element_id": 5142
+      },
+      {
+        "id": 26,
+        "name": "Foco de Processamento",
+        "value": "formatação",
+        "method": "user-input",
+        "reasoning": "A data é formatada para exibição, com a localização definindo o formato padrão.",
+        "confidence": 0.7608,
+        "context_element_id": 5159
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 3,
+  "active": true,
+  "sourceId": 23659,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T03:39:46.089Z",
+  "updatedAt": null
+}

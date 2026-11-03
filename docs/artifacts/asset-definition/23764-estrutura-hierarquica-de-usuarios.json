@@ -1,0 +1,417 @@
+{
+  "id": 23764,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 8,
+          "name": "Requisição de Criação de Nível Hierárquico",
+          "format": "Formulário com nome do nível",
+          "origin": "Administrador do Tenant",
+          "trigger": "Ação manual do administrador"
+        },
+        {
+          "id": 9,
+          "name": "Requisição de Edição de Nível Hierárquico",
+          "format": "Formulário com nome e posição do nível",
+          "origin": "Administrador do Tenant",
+          "trigger": "Ação manual do administrador"
+        },
+        {
+          "id": 10,
+          "name": "Requisição de Exclusão de Nível Hierárquico",
+          "format": "Confirmação de exclusão",
+          "origin": "Administrador do Tenant",
+          "trigger": "Ação manual do administrador"
+        },
+        {
+          "id": 11,
+          "name": "Requisição de Listagem de Níveis",
+          "format": "Consulta de níveis configurados",
+          "origin": "Administrador do Tenant ou Criador de Tarefa",
+          "trigger": "Carregamento de página ou formulário"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 19,
+          "name": "Confirmação de Criação de Nível",
+          "format": "Mensagem de sucesso com dados do nível criado",
+          "destination": "Interface do Administrador"
+        },
+        {
+          "id": 20,
+          "name": "Confirmação de Edição de Nível",
+          "format": "Mensagem de sucesso com dados atualizados do nível",
+          "destination": "Interface do Administrador"
+        },
+        {
+          "id": 21,
+          "name": "Confirmação de Exclusão de Nível",
+          "format": "Mensagem de sucesso indicando remoção do nível",
+          "destination": "Interface do Administrador"
+        },
+        {
+          "id": 22,
+          "name": "Lista de Níveis Hierárquicos",
+          "format": "Array de níveis com id, nome e posição ordenados",
+          "destination": "Formulário de Cadastro de Usuário ou Interface de Gerenciamento"
+        },
+        {
+          "id": 23,
+          "name": "Mensagem de Erro de Validação",
+          "format": "Mensagem descritiva indicando motivo da falha (nome vazio, duplicado, usuários vinculados, etc.)",
+          "destination": "Interface do Administrador"
+        }
+      ],
+      "processing": [
+        {
+          "id": 12,
+          "step": "Validar Autorização do Administrador",
+          "description": "Verifica se o usuário autenticado possui perfil de administrador do tenant antes de permitir operações de criação, edição ou exclusão de níveis."
+        },
+        {
+          "id": 13,
+          "step": "Validar Unicidade de Nome do Nível",
+          "description": "Verifica se o nome do nível hierárquico já existe no tenant, impedindo duplicação de nomes na mesma organização."
+        },
+        {
+          "id": 14,
+          "step": "Validar Preenchimento de Campos Obrigatórios",
+          "description": "Valida que o campo de nome do nível não está vazio e atende aos critérios de comprimento mínimo e máximo."
+        },
+        {
+          "id": 15,
+          "step": "Validar Ausência de Usuários Vinculados",
+          "description": "Verifica se o nível hierárquico a ser excluído possui usuários ativos vinculados, impedindo exclusão se houver dependências."
+        },
+        {
+          "id": 16,
+          "step": "Persistir Alterações de Nível Hierárquico",
+          "description": "Registra a criação, edição ou exclusão do nível hierárquico no banco de dados, vinculado ao tenant do administrador executor."
+        },
+        {
+          "id": 17,
+          "step": "Registrar Auditoria de Operação",
+          "description": "Registra em log de auditoria a operação realizada, incluindo identificação do administrador, timestamp e dados alterados."
+        },
+        {
+          "id": 18,
+          "step": "Atualizar Ordenação de Níveis",
+          "description": "Persiste a posição relativa dos níveis hierárquicos, garantindo que a ordenação seja refletida em todas as visualizações."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 24,
+        "category": "validation",
+        "description": "O nome de um nível hierárquico não pode estar vazio ou conter apenas espaços em branco.",
+        "enforcement": "code",
+        "verification": "Validação no formulário e no backend antes de persistir; rejeição com mensagem de erro específica se o campo estiver vazio."
+      },
+      {
+        "id": 25,
+        "category": "invariant",
+        "description": "Cada nível hierárquico dentro de um tenant deve possuir um nome único, impedindo a criação de dois níveis com o mesmo identificador na mesma organização.",
+        "enforcement": "db_constraint",
+        "verification": "Constraint UNIQUE (tenant_id, nome) na tabela de níveis hierárquicos; tentativa de inserção duplicada resulta em erro de banco de dados."
+      },
+      {
+        "id": 26,
+        "category": "authorization",
+        "description": "Apenas usuários com perfil de administrador do tenant podem criar, editar ou excluir níveis hierárquicos; colaboradores e gestores sem perfil de administrador não têm acesso a essas operações.",
+        "enforcement": "code",
+        "verification": "Verificação de perfil do usuário autenticado antes de cada operação; rejeição com erro de autorização se o usuário não for administrador."
+      },
+      {
+        "id": 27,
+        "category": "invariant",
+        "description": "Um nível hierárquico não pode ser excluído se houver usuários ativos vinculados a ele; a exclusão é permitida apenas quando nenhum colaborador está associado ao nível.",
+        "enforcement": "code",
+        "verification": "Consulta à tabela de usuários antes de permitir exclusão; se houver registros com referência ao nível, exibição de mensagem de erro impedindo a operação."
+      },
+      {
+        "id": 28,
+        "category": "invariant",
+        "description": "A ordenação relativa dos níveis hierárquicos dentro de um tenant deve ser persistida e refletida consistentemente em todas as telas que exibem ou utilizam a hierarquia.",
+        "enforcement": "db_constraint",
+        "verification": "Campo de posição/ordem na tabela de níveis hierárquicos; verificação de consistência entre a ordem armazenada e a exibida nas visualizações."
+      },
+      {
+        "id": 29,
+        "category": "invariant",
+        "description": "Cada nível hierárquico pertence exclusivamente a um tenant; níveis de um tenant não podem ser acessados, modificados ou visualizados por usuários de outro tenant.",
+        "enforcement": "code",
+        "verification": "Filtro por tenant_id em todas as consultas de níveis hierárquicos; validação de escopo no backend antes de retornar dados ou permitir operações."
+      },
+      {
+        "id": 30,
+        "category": "observability",
+        "description": "Toda operação de criação, edição ou exclusão de nível hierárquico deve ser registrada em log de auditoria, incluindo identificação do administrador executor, timestamp, identificação do tenant e dados alterados.",
+        "enforcement": "code",
+        "verification": "Registro em tabela de auditoria após cada operação bem-sucedida; verificação de logs para rastreabilidade de mudanças na estrutura hierárquica."
+      },
+      {
+        "id": 31,
+        "category": "compliance",
+        "description": "Os dados de níveis hierárquicos, embora não sejam dados pessoais diretos, devem ser tratados em conformidade com LGPD quando associados a usuários; a exclusão de um nível não deve comprometer a rastreabilidade histórica de usuários que estiveram vinculados a ele.",
+        "enforcement": "code",
+        "verification": "Manutenção de histórico de associações usuário-nível em tabela de auditoria; garantia de que exclusão de nível não remove registros históricos de usuários."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "A Estrutura Hierárquica de Usuários define e mantém a organização em níveis dentro de cada tenant, estabelecendo a composição hierárquica que governa como colaboradores são posicionados na estrutura organizacional. Compreende um conjunto de níveis hierárquicos (ex.: Colaborador, Gestor, Diretor) com ordenação relativa, relacionamentos de composição entre níveis, e validações que garantem a integridade da hierarquia. Não restringe a atribuição de tarefas entre níveis — a hierarquia é puramente organizacional e de visualização. Mantém isolamento multi-tenant, unicidade de nomes de níveis por tenant, e rastreabilidade de criação e edição de níveis. Não contém lógica de autenticação, persistência de dados transacionais, ou execução de processos de negócio."
+    },
+    "definition": {
+      "hierarchies": [
+        {
+          "id": 2,
+          "name": "Estrutura Organizacional do Tenant",
+          "levels": [
+            {
+              "id": 3,
+              "name": "Colaborador",
+              "depth": 1
+            },
+            {
+              "id": 4,
+              "name": "Gestor / Líder de Equipe",
+              "depth": 2
+            },
+            {
+              "id": 5,
+              "name": "Diretor",
+              "depth": 3
+            }
+          ]
+        }
+      ],
+      "relationships": [
+        {
+          "id": 6,
+          "name": "Composição Hierárquica",
+          "semantics": "composition",
+          "to_entity": "NívelHierárquico",
+          "cardinality": "1-n",
+          "from_entity": "NívelHierárquico"
+        },
+        {
+          "id": 7,
+          "name": "Atribuição de Nível a Usuário",
+          "semantics": "association",
+          "to_entity": "NívelHierárquico",
+          "cardinality": "n-1",
+          "from_entity": "Usuário"
+        }
+      ]
+    },
+    "pendencies": [
+      {
+        "id": 46,
+        "section": "definition",
+        "description": "Definição precisa dos valores de profundidade (depth) dos níveis hierárquicos. O schema atual declara 'depth: integer' mas não especifica se é calculado automaticamente, atribuído manualmente, ou derivado da posição relativa. Necessário clarificar a semântica e o algoritmo de cálculo.",
+        "resolutionOptions": [
+          {
+            "id": 47,
+            "text": "Depth é calculado automaticamente como a posição ordinal do nível (1 para o primeiro, 2 para o segundo, etc.), sem necessidade de entrada manual do administrador."
+          },
+          {
+            "id": 48,
+            "text": "Depth é atribuído manualmente pelo administrador no momento da criação ou edição do nível, permitindo estruturas hierárquicas não-lineares."
+          },
+          {
+            "id": 49,
+            "text": "Depth é derivado da posição relativa dentro de uma árvore hierárquica explícita, onde cada nível pode ter um nível pai, formando uma estrutura de composição verdadeira."
+          }
+        ],
+        "recommendedOptionId": 47
+      },
+      {
+        "id": 50,
+        "section": "definition",
+        "description": "Clarificação sobre a semântica do relacionamento 'Composição Hierárquica' entre NívelHierárquico e NívelHierárquico. O schema atual declara cardinality '1-n' e semantics 'composition', mas não especifica se um nível pode ter múltiplos níveis filhos ou se a hierarquia é linear (cada nível tem no máximo um nível pai).",
+        "resolutionOptions": [
+          {
+            "id": 51,
+            "text": "Hierarquia linear: cada nível tem no máximo um nível pai e um nível filho, formando uma cadeia simples (Colaborador → Gestor → Diretor)."
+          },
+          {
+            "id": 52,
+            "text": "Hierarquia em árvore: cada nível pode ter múltiplos níveis filhos, permitindo estruturas organizacionais mais complexas com múltiplos ramos."
+          },
+          {
+            "id": 53,
+            "text": "Hierarquia plana: não há relacionamento de composição entre níveis; cada nível é independente e a ordenação é apenas posicional, sem relação pai-filho."
+          }
+        ],
+        "recommendedOptionId": 53
+      },
+      {
+        "id": 54,
+        "section": "rules",
+        "description": "Definição de regras de validação para o comprimento máximo do nome de um nível hierárquico. O schema atual não especifica limites de caracteres, apenas que o campo é obrigatório.",
+        "resolutionOptions": [
+          {
+            "id": 55,
+            "text": "Nome do nível deve ter entre 1 e 50 caracteres, permitindo identificadores concisos e legíveis."
+          },
+          {
+            "id": 56,
+            "text": "Nome do nível deve ter entre 1 e 100 caracteres, permitindo descrições mais detalhadas do nível hierárquico."
+          },
+          {
+            "id": 57,
+            "text": "Nome do nível deve ter entre 1 e 255 caracteres, sem limite prático para a maioria dos casos de uso."
+          }
+        ],
+        "recommendedOptionId": 55
+      },
+      {
+        "id": 58,
+        "section": "definition",
+        "description": "Necessário confirmar se a estrutura hierárquica é configurável por tenant (cada tenant pode ter seus próprios níveis) ou se é global (todos os tenants compartilham a mesma hierarquia). O schema atual assume isolamento por tenant, mas isso deve ser explicitamente confirmado.",
+        "resolutionOptions": [
+          {
+            "id": 59,
+            "text": "Estrutura hierárquica é configurável por tenant: cada organização pode definir seus próprios níveis, nomes e ordenação, com isolamento completo."
+          },
+          {
+            "id": 60,
+            "text": "Estrutura hierárquica é global: todos os tenants compartilham a mesma hierarquia padrão definida pela plataforma, sem possibilidade de customização por tenant."
+          }
+        ],
+        "recommendedOptionId": 59
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 38,
+        "then": "O sistema rejeita a criação e exibe mensagem de erro indicando que o nome já existe no tenant",
+        "type": "unit",
+        "when": "O administrador tenta criar um novo nível com o mesmo nome 'Gestor'",
+        "given": "Um tenant com um nível hierárquico chamado 'Gestor' já cadastrado",
+        "scenario": "Validação de unicidade de nome de nível hierárquico dentro de um tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 39,
+        "then": "O sistema exibe mensagem de erro específica indicando que o nome é obrigatório",
+        "type": "unit",
+        "when": "O administrador tenta enviar o formulário sem preencher o campo de nome",
+        "given": "O formulário de criação de nível hierárquico está aberto",
+        "scenario": "Validação de campo obrigatório de nome do nível",
+        "target_section": "rules"
+      },
+      {
+        "id": 40,
+        "then": "O sistema impede a exclusão e exibe mensagem de erro informando que há usuários vinculados",
+        "type": "unit",
+        "when": "O administrador tenta excluir o nível 'Colaborador'",
+        "given": "Um nível hierárquico 'Colaborador' possui 5 usuários ativos vinculados",
+        "scenario": "Prevenção de exclusão de nível com usuários vinculados",
+        "target_section": "rules"
+      },
+      {
+        "id": 41,
+        "then": "O sistema retorna apenas os níveis da Empresa A, sem exposição dos níveis da Empresa B",
+        "type": "integration",
+        "when": "Um usuário autenticado da Empresa A solicita a listagem de níveis",
+        "given": "Dois tenants (Empresa A e Empresa B) cada um com seus próprios níveis hierárquicos",
+        "scenario": "Isolamento multi-tenant na listagem de níveis hierárquicos",
+        "target_section": "definition"
+      },
+      {
+        "id": 42,
+        "then": "A nova ordenação é persistida e refletida em todas as visualizações (formulário de cadastro, listagem de usuários, etc.)",
+        "type": "integration",
+        "when": "O administrador altera a ordem para Diretor (posição 1), Gestor (posição 2), Colaborador (posição 3) e salva",
+        "given": "Um tenant com três níveis: Colaborador (posição 1), Gestor (posição 2), Diretor (posição 3)",
+        "scenario": "Persistência de ordenação de níveis hierárquicos",
+        "target_section": "definition"
+      },
+      {
+        "id": 43,
+        "then": "O sistema bloqueia o acesso e retorna erro de autorização",
+        "type": "security",
+        "when": "O usuário tenta acessar a funcionalidade de criação de nível hierárquico",
+        "given": "Um usuário com perfil de colaborador (não administrador) está autenticado",
+        "scenario": "Autorização de administrador para operações de nível hierárquico",
+        "target_section": "rules"
+      },
+      {
+        "id": 44,
+        "then": "A API retorna status 200 com array de níveis ordenados por posição, contendo id, nome e depth",
+        "type": "contract",
+        "when": "O tenant existe e o usuário está autenticado com acesso ao tenant",
+        "given": "Um cliente da API solicita GET /tenants/{tenantId}/niveis-hierarquicos",
+        "scenario": "Contrato de API para listagem de níveis hierárquicos",
+        "target_section": "flow"
+      },
+      {
+        "id": 45,
+        "then": "A resposta é retornada em tempo <= 100ms (p95)",
+        "type": "performance",
+        "when": "A API de listagem de níveis é chamada",
+        "given": "Um tenant com 100 usuários ativos e 10 níveis hierárquicos configurados",
+        "scenario": "Desempenho de carregamento de níveis em tenant com múltiplos usuários",
+        "target_section": "non_functional_requirements"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 32,
+        "target": "p95 <= 100ms para consulta de níveis de um tenant",
+        "category": "performance",
+        "requirement": "Carregamento da lista de níveis hierárquicos deve ocorrer em tempo adequado, mesmo em tenants com até 100 usuários ativos.",
+        "verification": "Teste de carga com 100 usuários; medição de tempo de resposta da API de listagem de níveis."
+      },
+      {
+        "id": 33,
+        "target": "p95 <= 200ms para operações CRUD de níveis hierárquicos",
+        "category": "performance",
+        "requirement": "Operações de criação, edição e exclusão de níveis hierárquicos devem ser concluídas e retornar confirmação ao administrador em tempo adequado.",
+        "verification": "Teste de carga com múltiplas operações simultâneas; medição de tempo de resposta das APIs de criação, edição e exclusão."
+      },
+      {
+        "id": 34,
+        "target": "Suporte a 50 tenants com até 10 níveis hierárquicos cada",
+        "category": "scalability",
+        "requirement": "A estrutura hierárquica deve suportar crescimento do número de tenants até 50 organizações no primeiro ano, cada uma com sua própria hierarquia independente.",
+        "verification": "Teste de escalabilidade com 50 tenants; verificação de isolamento de dados e desempenho mantido."
+      },
+      {
+        "id": 35,
+        "target": "100% de conformidade com isolamento de tenant em todas as operações",
+        "category": "security",
+        "requirement": "Isolamento multi-tenant deve ser garantido; níveis hierárquicos de um tenant não devem ser acessíveis por usuários de outro tenant.",
+        "verification": "Teste de segurança tentando acessar níveis de outro tenant; validação de que requisições são bloqueadas ou retornam dados apenas do tenant autenticado."
+      },
+      {
+        "id": 36,
+        "target": "99.5% de disponibilidade da API de níveis hierárquicos",
+        "category": "availability",
+        "requirement": "A funcionalidade de gerenciamento de níveis hierárquicos deve estar disponível com alta disponibilidade, dado que sua indisponibilidade impede o cadastro de novos usuários.",
+        "verification": "Monitoramento de uptime da API; alertas para degradação ou indisponibilidade."
+      },
+      {
+        "id": 37,
+        "target": "100% de cobertura de auditoria para operações de CRUD de níveis",
+        "category": "observability",
+        "requirement": "Todas as operações de gerenciamento de níveis hierárquicos devem ser rastreáveis através de logs de auditoria, permitindo investigação de mudanças na estrutura organizacional.",
+        "verification": "Verificação de logs de auditoria para cada operação realizada; confirmação de que todos os campos obrigatórios (administrador, timestamp, dados) estão registrados."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 63,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T04:04:00.737Z",
+  "updatedAt": null
+}

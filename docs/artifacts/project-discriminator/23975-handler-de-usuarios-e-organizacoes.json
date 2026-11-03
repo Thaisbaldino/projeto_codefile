@@ -1,0 +1,325 @@
+{
+  "id": 23975,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 33,
+        "name": "Degradação de Desempenho",
+        "method": "internal-inference",
+        "reasoning": "Uso excessivo de CPU, memória ou I/O de banco de dados durante teste de carga resulta em falha de SLA e perda de clientes.",
+        "confidence": 0.7614,
+        "context_element_id": 2811
+      },
+      {
+        "id": 34,
+        "name": "Gargalos e Timeouts",
+        "method": "internal-inference",
+        "reasoning": "Uma tentativa que chega ao limite de tentativas é bloqueada por 1 hora, e o sistema não consegue atender a outra demanda que depende dela.",
+        "confidence": 0.8125,
+        "context_element_id": 2813
+      },
+      {
+        "id": 35,
+        "name": "Autenticação e Controle de Acesso",
+        "method": "internal-inference",
+        "reasoning": "Apenas administradores do tenant podem desativar usuários, e qualquer tentativa de desativar sem autorização é bloqueada, evitando acesso indevido a dados sensíveis.",
+        "confidence": 0.8781,
+        "context_element_id": 2824
+      },
+      {
+        "id": 36,
+        "name": "Validação de Entrada e Injeção",
+        "method": "internal-inference",
+        "reasoning": "E-mail com caracteres de injeção SQL é aceito e pode executar código SQL, comprometendo a integridade dos dados e a confiabilidade do sistema.",
+        "confidence": 0.7889,
+        "context_element_id": 2825
+      },
+      {
+        "id": 37,
+        "name": "Duplicação e Baixo Reúso",
+        "method": "internal-inference",
+        "reasoning": "Duplicidade de slug em dois tenants compartilha o mesmo registro, e a persistência de um deles já impede que o outro seja salvo.",
+        "confidence": 0.7981,
+        "context_element_id": 2840
+      },
+      {
+        "id": 38,
+        "name": "Auditoria e Rastreabilidade",
+        "method": "internal-inference",
+        "reasoning": "Sem contexto suficiente, a investigação de falha é feita com base em palavras-chave e não em dados concretos, o que torna a responsabilidade de cada equipe imprecisa.",
+        "confidence": 0.755,
+        "context_element_id": 2848
+      }
+    ],
+    "attributes": [
+      {
+        "id": 23,
+        "name": "Principais propriedades ou campos que caracterizam o registro",
+        "value": [
+          "id, nome_completo, email, nivel_hierarquico_id, status, data_criacao",
+          "nome",
+          "status",
+          "data_criacao",
+          "id, nome_completo, status, data_criacao"
+        ],
+        "method": "user-input",
+        "reasoning": "Os campos retornados são id, nome completo, email, nível hierárquico, status e data de criação.\nOs campos do registro são nome, status e data_criacao.\nOs campos do registro são nome, status e data_criacao.\nOs campos do registro são nome, status e data_criacao.\nO registro caracteriza-se pelas propriedades id, nome completo, status e data de criação.",
+        "confidence": 0.741,
+        "context_element_id": 2708
+      },
+      {
+        "id": 26,
+        "name": "Tipo principal de falha ou degradação que o padrão deve mitigar",
+        "value": [
+          "service-unavailability",
+          "internal-server-error"
+        ],
+        "method": "internal-inference",
+        "reasoning": "A mensagem de erro 'Falha ao buscar usuário' indica falha de serviço.\nA falha ao desativar o tenant é classificada como erro de servidor interno.",
+        "confidence": 0.8431,
+        "context_element_id": 2771
+      },
+      {
+        "id": 27,
+        "name": "SLA ou tolerância a falhas esperada",
+        "value": [
+          "99.9% uptime, p99 <= 500ms mesmo durante falhas de dependências",
+          "p99 <= 500ms para operações de usuário e p99 <= 1000ms para operações de tenant",
+          "< 1% response time",
+          "p99 <= 500ms",
+          "internal-server-error",
+          "p99 <= 1000ms",
+          "best-effort"
+        ],
+        "method": "user-input",
+        "reasoning": "A disponibilidade é de 99,9% com p99 de latência de operação de até 500ms mesmo durante falhas de dependências.\nO SLA exigido é de p99 de 500ms para operações de usuário e 1000ms para operações de tenant.\nA taxa de erro das requisições de cadastro de usuário sob carga é inferior a 1%, com p99 de 500ms.\nA SLA exigida é que o p99 de tempo de resposta dos dados seja menor ou igual a 500ms.\nA falha ao provisionar o tenant é classificada como erro de servidor interno.\nA SLA exigida é que o p99 de tempo de resposta não ultrapasse 1000ms.\nO erro 'Falha ao buscar tenant' é tratado como best-effort, sem SLA específica.",
+        "confidence": 0.7443,
+        "context_element_id": 2772
+      },
+      {
+        "id": 28,
+        "name": "Categorias de incidentes e problemas operacionais tratados",
+        "value": [
+          "internal-server-error"
+        ],
+        "method": "user-input",
+        "reasoning": "A mensagem de erro informa que a falha ocorreu ao listar os níveis hierárquicos.",
+        "confidence": 0.7251,
+        "context_element_id": 2776
+      },
+      {
+        "id": 30,
+        "name": "Operação de domínio ou caso de uso que o handler processa",
+        "value": [
+          "authenticate-user",
+          "update-user-profile",
+          "update-hierarchy-level",
+          "user-customer",
+          "tenant",
+          "user-registration",
+          "users"
+        ],
+        "method": "internal-inference",
+        "reasoning": "O Handler de Usuários e Organizações processa requisições autenticadas via JWT, validando entrada conforme regras de negócio.\nA operação processada é editar os dados cadastrais de um usuário existente, caracterizando o uso de update-user-profile.\nA operação processada é editar um nível hierárquico existente, com validação de unicidade de nome por tenant.\nO handler trata de um usuário-customer, ou seja, o cadastro de um novo usuário no mesmo tenant com o mesmo e-mail já cadastrado.\nO handler cria o tenant, o entidade principal processada.\nO formulário de cadastro de usuário é o uso de domínio processado pelo handler.\nA chamada GET /api/users é processada pelo handler, manipulando o entidade principal do domínio, o usuário.",
+        "confidence": 0.7061,
+        "context_element_id": 2782
+      },
+      {
+        "id": 31,
+        "name": "Entidade de domínio principal tratada pelo handler",
+        "value": [
+          "user",
+          "tenant"
+        ],
+        "method": "user-input",
+        "reasoning": "O handler trata de um usuário, o cadastro de um novo usuário no mesmo tenant com o mesmo e-mail já cadastrado.\nO handler trata o tenant como entidade principal.",
+        "confidence": 0.7227,
+        "context_element_id": 2783
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 39,
+        "name": "Implementar rate limiting com throttling configurável por endpoint e amostragem de requisições em cenários de alta carga",
+        "method": "user-input",
+        "reasoning": "Sem limite, o serviço se torna vulnerável a tentativas de abuso de múltiplas operações em tempo recorde, e a falha é notificada apenas na 101ª requisição.",
+        "confidence": 0.7352,
+        "context_element_id": 2860
+      },
+      {
+        "id": 40,
+        "name": "Definir timeouts configuráveis para todas as operações críticas e monitorar orçamentos de tempo por transação/endpoint",
+        "method": "user-input",
+        "reasoning": "Uma tentativa de operação de banco de dados que chega a 5 segundos sem sucesso é a quebra do sistema em um momento crítico.\nSem especificação clara, o tempo de bloqueio após o limite de tentativas de login é desconhecido, o que torna a reação de segurança indevida.",
+        "confidence": 0.7055,
+        "context_element_id": 2863
+      },
+      {
+        "id": 41,
+        "name": "Implementar validação rigorosa de entradas e prevenção de condições que levem a exceções",
+        "method": "user-input",
+        "reasoning": "Sem validação, o slug é aceito sem saber se está seguindo o padrão permitido, e a regra de negócio é violada por acidente.",
+        "confidence": 0.9147,
+        "context_element_id": 2909
+      },
+      {
+        "id": 42,
+        "name": "Configurar tratamento seguro de erros com logging detalhado que não exponha informações sensíveis, mas permita análise forense",
+        "method": "internal-inference",
+        "reasoning": "Sem registro completo, a equipe responsável não consegue identificar o erro e precisaria recorrer a depuração manual para entender o que deu errado.",
+        "confidence": 0.9148,
+        "context_element_id": 2927
+      },
+      {
+        "id": 43,
+        "name": "Implementar identificação única de atores com sistemas de identidade centralizados e gerenciamento unificado de credenciais",
+        "method": "internal-inference",
+        "reasoning": "Sem identificador único, cada operação de criação seria confundida com outra, e a integração com sistemas externos ficaria sem referência.",
+        "confidence": 0.889,
+        "context_element_id": 2928
+      },
+      {
+        "id": 44,
+        "name": "Implementar autorização granular com RBAC, ABAC e ACLs baseada no princípio do menor privilégio e Zero Trust",
+        "method": "internal-inference",
+        "reasoning": "Rejeitar a operação com 403 quando o usuário não tem o perfil correto é a regra de negócio que garante privilégios restritos.",
+        "confidence": 0.878,
+        "context_element_id": 2930
+      },
+      {
+        "id": 45,
+        "name": "Implementar criptografia robusta para dados em trânsito e em repouso usando algoritmos aprovados e gerenciamento seguro de chaves",
+        "method": "user-input",
+        "reasoning": "Rejeitar requisições HTTP não criptografadas é a única maneira de impedir que o tráfego fique em rede aberta.",
+        "confidence": 0.8846,
+        "context_element_id": 2933
+      },
+      {
+        "id": 46,
+        "name": "Implementar validação rigorosa de entradas com sanitização, whitelists de caracteres permitidos e prevenção contra ataques de injeção",
+        "method": "internal-inference",
+        "reasoning": "Sem nome completo, email ou nível hierarquico, o cadastro de usuário não pode ser salvo e o usuário não pode ser ativo.",
+        "confidence": 0.8449,
+        "context_element_id": 2936
+      },
+      {
+        "id": 47,
+        "name": "Configurar revogação automática de acesso para contas comprometidas com invalidação imediata de tokens e sessões ativas",
+        "method": "user-input",
+        "reasoning": "A sessão do usuário ou do tenant é invalidada imediatamente, preservando o estado do token e mantendo a sessão ativa do usuário/tenant.",
+        "confidence": 0.9584,
+        "context_element_id": 2946
+      },
+      {
+        "id": 48,
+        "name": "Implementar bloqueio automático de recursos sob ataque com isolamento temporário e redirecionamento de tráfego",
+        "method": "user-input",
+        "reasoning": "Uma tentativa falha em 15 minutos é o limite mínimo para bloqueio, e o tempo é fixado por padrão.",
+        "confidence": 0.8973,
+        "context_element_id": 2947
+      },
+      {
+        "id": 49,
+        "name": "Implementar validação de dados em múltiplas camadas com verificações de tipo, formato, faixa e regras de negócio antes da persistência",
+        "method": "user-input",
+        "reasoning": "Preenchimento obrigatório de campos obriga o usuário a preencher corretamente, evitando que o registro seja refeito depois.",
+        "confidence": 0.8315,
+        "context_element_id": 2954
+      },
+      {
+        "id": 50,
+        "name": "Implementar mecanismos de resolução de conflitos com estratégias como last-writer-wins, vector clocks ou merge semântico",
+        "method": "user-input",
+        "reasoning": "Uma tentativa de criação de um tenant com o mesmo slug já em uso em outra plataforma resulta em um erro de conflito.",
+        "confidence": 0.8444,
+        "context_element_id": 2957
+      },
+      {
+        "id": 51,
+        "name": "Implemente operações idempotentes que podem ser executadas múltiplas vezes sem efeitos colaterais",
+        "method": "user-input",
+        "reasoning": "Repetir o mesmo cadastro em duas requisições resulta em duplicatas, e a segunda não consegue sobreviver a rejeição.",
+        "confidence": 0.9292,
+        "context_element_id": 2968
+      },
+      {
+        "id": 52,
+        "name": "Incorpore asserções executáveis que possam ser verificadas automaticamente durante a execução",
+        "method": "internal-inference",
+        "reasoning": "Rejeitar a consulta sem verificar se o nível existe e pertence ao tenant do executor é uma falha de validação automática.",
+        "confidence": 0.7285,
+        "context_element_id": 2995
+      },
+      {
+        "id": 53,
+        "name": "Implemente Policy Enforcement Points em gateways e APIs para validar requisições contra regras de conformidade antes da execução",
+        "method": "internal-inference",
+        "reasoning": "Rejeitar requisições sem token, com token inválido ou expirado, é a regra de negócio que garante que todas retornem 401 Unauthorized.",
+        "confidence": 0.8645,
+        "context_element_id": 3010
+      },
+      {
+        "id": 54,
+        "name": "Gere automaticamente trilhas de auditoria capturando todas as operações críticas com timestamps, identificação do usuário, dados antes/depois e contexto da operação",
+        "method": "user-input",
+        "reasoning": "Sem registro de cada operação, a responsabilidade por cada ação não pode ser atribuída, e a prova de que a operação ocorreu não existe.",
+        "confidence": 0.9393,
+        "context_element_id": 3012
+      },
+      {
+        "id": 55,
+        "name": "Implemente Event Sourcing para conformidade, armazenando todos os eventos de mudança de estado como uma sequência imutável com versionamento e capacidade de replay",
+        "method": "internal-inference",
+        "reasoning": "Sem registro de quem fez, auditoria não pode apontar quem alterou o registro e quando.",
+        "confidence": 0.7251,
+        "context_element_id": 3017
+      },
+      {
+        "id": 56,
+        "name": "Implemente funcionalidade de pausar e retomar para operações longas, preservando o estado da sessão e permitindo a continuação após interrupções",
+        "method": "internal-inference",
+        "reasoning": "A invalidação de sessão é assíncrona, então o usuário pode continuar a operação sem esperar o resultado.",
+        "confidence": 0.7114,
+        "context_element_id": 3043
+      },
+      {
+        "id": 57,
+        "name": "Implemente restrições operacionais que limitem as ações do sistema com base em critérios de segurança predefinidos, incluindo rate limits, limites de operação e políticas de acesso restritivas",
+        "method": "internal-inference",
+        "reasoning": "Sem testes de acesso entre tenants, o sistema não confirma se um usuário de um tenant consegue acessar ou modificar dados de outro, e a violação não é detectada.",
+        "confidence": 0.752,
+        "context_element_id": 3062
+      },
+      {
+        "id": 58,
+        "name": "Configure controles de privacidade rigorosos incluindo minimização de dados, anonimização automática, controles de acesso granulares e auditoria do uso de informações pessoais sensíveis",
+        "method": "internal-inference",
+        "reasoning": "A ausência de password_hash em respostas de API e redação de dados sensíveis são requisitos de compliance exigidos por regulamentações e políticas.",
+        "confidence": 0.7866,
+        "context_element_id": 3075
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 76,
+        "name": "Foco de Transformação",
+        "value": "serialização",
+        "method": "user-input",
+        "reasoning": "A entidade de domínio é convertida para representação de API, removendo dados sensíveis e formatando datas conforme localização, um processo de serialização.",
+        "confidence": 0.7386,
+        "context_element_id": 5149
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 23972,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T16:20:19.360Z",
+  "updatedAt": null
+}

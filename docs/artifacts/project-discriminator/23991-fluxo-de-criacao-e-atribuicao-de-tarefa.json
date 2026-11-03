@@ -1,0 +1,204 @@
+{
+  "id": 23991,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 17,
+        "name": "Degradação de Desempenho",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "A carga normal de 5.000 usuários ativos e 10.000 tarefas por tenant, juntamente com a exigência de SLA de desempenho, torna a performance um obstáculo crítico.",
+        "confidence": 0.8564,
+        "context_element_id": 2811
+      },
+      {
+        "id": 18,
+        "name": "Gargalos e Timeouts",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Carga de 5.000 usuários ativos e 10.000 tarefas por tenant é um cenário de teste de performance que simula o comportamento de produção.",
+        "confidence": 0.7096,
+        "context_element_id": 2813
+      },
+      {
+        "id": 19,
+        "name": "Falhas de Execução e Idempotência",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem a persistência, o erro de auditoria não consegue reverter o estado original, e o usuário fica preso sem saber o que fez errado.",
+        "confidence": 0.8647,
+        "context_element_id": 2819
+      },
+      {
+        "id": 20,
+        "name": "Falhas Silenciosas e Falsos Positivos",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem alerta, a falha de responsável não encontrada se espalha sem que ninguém saiba o que aconteceu, e a correção só chega depois que o problema já está em produção.",
+        "confidence": 0.8262,
+        "context_element_id": 2820
+      },
+      {
+        "id": 21,
+        "name": "Autenticação e Controle de Acesso",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem token válido, o acesso ao formulário é bloqueado, e a tentativa de criar tarefa sem autenticação é rejeitada com erro 401 Unauthorized.",
+        "confidence": 0.9085,
+        "context_element_id": 2824
+      },
+      {
+        "id": 22,
+        "name": "Ordenação e Duplicação de Mensagens",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem prioridade definida, o sistema processaria a mensagem de erro de forma aleatória, sem garantir que a mensagem fosse entregue antes de outra.",
+        "confidence": 0.7366,
+        "context_element_id": 2833
+      },
+      {
+        "id": 23,
+        "name": "Duplicação e Baixo Reúso",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem deduplicação automática, múltiplas submissões do mesmo formulário geram múltiplas tarefas, e o cliente deve implementar a deduplicação para evitar bugs e reavaliações.",
+        "confidence": 0.8147,
+        "context_element_id": 2840
+      },
+      {
+        "id": 24,
+        "name": "Auditoria e Rastreabilidade",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem registro de auditoria, a falha de criação não pode ser investigada, e a responsabilidade fica com o sistema.",
+        "confidence": 0.9253,
+        "context_element_id": 2848
+      }
+    ],
+    "attributes": [
+      {
+        "id": 10,
+        "name": "Entidade primária que o registro representa ou documenta",
+        "value": [
+          "user"
+        ],
+        "method": "user-input",
+        "reasoning": "O responsável é um registro do repositório de usuários, representando o papel de usuário.",
+        "confidence": 0.7211,
+        "context_element_id": 2706
+      },
+      {
+        "id": 11,
+        "name": "Perfil primário do usuário ou participante que interage com esta superfície",
+        "value": [
+          "administrators and managers"
+        ],
+        "method": "user-input",
+        "reasoning": "O status inicial é 'A Fazer' por padrão, mas pode ser sobrescrito por usuários com perfil de administrador ou gestor.",
+        "confidence": 0.7477,
+        "context_element_id": 2728
+      },
+      {
+        "id": 13,
+        "name": "SLA ou tolerância a falhas esperada",
+        "value": [
+          "p95 <= 500ms, p99 <= 1000ms",
+          "p95 <= 50ms para busca de usuário por ID e tenant_id",
+          "99.9% uptime"
+        ],
+        "method": "user-input",
+        "reasoning": "A operação completa de confirmação de tarefa, com validação, persistência e auditoria, é concluída em tempo de p95 de <= 500ms e p99 de <= 1000ms sob carga normal.\nA busca de usuário por ID e tenant_id tem p95 de latência menor ou igual a 50ms.\nA disponibilidade do fluxo de criação de tarefa é definida com SLA de 99,9% de disponibilidade.",
+        "confidence": 0.8473,
+        "context_element_id": 2772
+      },
+      {
+        "id": 15,
+        "name": "Operação de domínio ou caso de uso que o handler processa",
+        "value": [
+          "consulta de tarefa"
+        ],
+        "method": "user-input",
+        "reasoning": "A validação de responsável inativo é feita durante a consulta de tarefa, não durante a criação do formulário.",
+        "confidence": 0.7062,
+        "context_element_id": 2782
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 25,
+        "name": "Particionar dados com base em padrões de acesso para melhorar a escalabilidade e o desempenho de consultas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Crescimento progressivo de volume de tarefas sem degradação de desempenho é o requisito central, e o sharding por tenant_id é a estratégia de escalabilidade escolhida.",
+        "confidence": 0.8363,
+        "context_element_id": 2872
+      },
+      {
+        "id": 26,
+        "name": "Implementar tolerância a falhas garantindo operação contínua mesmo na presença de falhas de componentes",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem reavaliar o estado, o sistema corre o risco de manter a mesma entidade em dois registros, o que torna a reconciliação manual impossível.",
+        "confidence": 0.7734,
+        "context_element_id": 2900
+      },
+      {
+        "id": 27,
+        "name": "Implementar validação rigorosa de entradas e prevenção de condições que levem a exceções",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem validação, o título chega ao sistema sem saber se está correto, e a correção só acontece depois que o conteúdo já foi produzido.",
+        "confidence": 0.8956,
+        "context_element_id": 2909
+      },
+      {
+        "id": 28,
+        "name": "Definir metas de disponibilidade mensuráveis com SLA/SLO e monitoramento de conformidade",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A indisponibilidade de 43 minutos por mês é superior a 99,9%, o que garante que a criação de tarefas seja sempre acessível.",
+        "confidence": 0.9648,
+        "context_element_id": 2916
+      },
+      {
+        "id": 30,
+        "name": "Implementar validação de dados em múltiplas camadas com verificações de tipo, formato, faixa e regras de negócio antes da persistência",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "A data limite é uma informação que deve ser aceita e validada antes de ser armazenada, não depois.\nA validação do responsável é feita com base em um UUID válido selecionado da lista de colaboradores ativos do tenant, caracterizando uma validação de formato.",
+        "confidence": 0.841,
+        "context_element_id": 2954
+      },
+      {
+        "id": 31,
+        "name": "Implemente operações idempotentes que podem ser executadas múltiplas vezes sem efeitos colaterais",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Cada submissão do formulário gera nova tarefa com UUID único, e múltiplas submissões do mesmo formulário resultam em múltiplas tarefas criadas, sem que a aplicação faça nada sobre isso.",
+        "confidence": 0.8234,
+        "context_element_id": 2968
+      },
+      {
+        "id": 32,
+        "name": "Gere automaticamente trilhas de auditoria capturando todas as operações críticas com timestamps, identificação do usuário, dados antes/depois e contexto da operação",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Registro automático de cada operação de criação em trilha de auditoria garante que qualquer incidente possa ser investigado com base em quem fez o quê quando.",
+        "confidence": 0.9465,
+        "context_element_id": 3012
+      }
+    ],
+    "discriminators": [],
+    "business_questions": []
+  },
+  "version": 2,
+  "active": true,
+  "sourceId": 23981,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T17:51:19.459Z",
+  "updatedAt": null
+}

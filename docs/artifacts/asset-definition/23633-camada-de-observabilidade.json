@@ -1,0 +1,1263 @@
+{
+  "id": 23633,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 148,
+          "name": "Logs de Aplicação",
+          "format": "JSON estruturado com campos obrigatórios (timestamp, level, logger_name, message, tenant_id, user_id, request_id, trace_id)",
+          "origin": "Handlers de requisição, workers de background, middleware de autenticação",
+          "trigger": "Contínuo — cada operação de negócio (login, criação de tarefa, etc.) emite logs"
+        },
+        {
+          "id": 149,
+          "name": "Métricas de Negócio",
+          "format": "Formato Prometheus (contadores, histogramas, gauges com labels)",
+          "origin": "Contadores e histogramas instrumentados em handlers de API, operações de banco de dados, fluxos de autenticação",
+          "trigger": "Contínuo — cada operação incrementa contadores ou registra latência"
+        },
+        {
+          "id": 150,
+          "name": "Rastreamentos Distribuídos",
+          "format": "Formato OpenTelemetry (trace_id, span_id, parent_span_id, atributos contextuais)",
+          "origin": "Instrumentação de spans em handlers de requisição, chamadas de banco de dados, envio de e-mail",
+          "trigger": "Contínuo — cada requisição de API gera uma árvore de spans"
+        },
+        {
+          "id": 151,
+          "name": "Eventos de Erro",
+          "format": "Logs estruturados com nível ERROR, stack trace, contexto de erro",
+          "origin": "Exceções capturadas em handlers, validações falhadas, operações de banco de dados com erro",
+          "trigger": "Sob demanda — quando uma operação falha"
+        },
+        {
+          "id": 152,
+          "name": "Sinais de Saúde do Sistema",
+          "format": "Métricas de gauge (conexões ativas, memória, CPU) e eventos de status",
+          "origin": "Health check endpoints, monitoramento de pool de conexões, status de cache",
+          "trigger": "Periódico — a cada intervalo de scrape (15 segundos)"
+        },
+        {
+          "id": 153,
+          "name": "Eventos de Auditoria",
+          "format": "Logs estruturados com user_id, tenant_id, ação, timestamp, dados alterados",
+          "origin": "Trilha de auditoria de ações (criação/edição/exclusão de usuários, tarefas, tenants)",
+          "trigger": "Sob demanda — quando uma ação auditável é executada"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 162,
+          "name": "Dashboard de Monitoramento",
+          "format": "Visualizações em tempo real: gráficos de taxa de requisição, latência, taxa de erro, contagem de usuários/tarefas/tenants, alertas ativos",
+          "destination": "Interface web de operações (ex: Grafana, Kibana)"
+        },
+        {
+          "id": 163,
+          "name": "Notificações de Alerta",
+          "format": "Mensagens estruturadas com severidade, descrição do alerta, métrica que disparou, recomendação de ação",
+          "destination": "Canais de notificação (e-mail, Slack, PagerDuty)"
+        },
+        {
+          "id": 164,
+          "name": "Visualizações de Rastreamento",
+          "format": "Árvore de spans com latência de cada operação, atributos contextuais, erros capturados",
+          "destination": "Interface de rastreamento distribuído (ex: Jaeger UI)"
+        },
+        {
+          "id": 165,
+          "name": "Métricas Agregadas",
+          "format": "Séries temporais com labels (tenant_id, endpoint, status), valores de contadores/histogramas/gauges",
+          "destination": "Armazenamento de séries temporais (Prometheus, InfluxDB)"
+        },
+        {
+          "id": 166,
+          "name": "Trilha de Auditoria",
+          "format": "Registros estruturados com user_id, tenant_id, ação, timestamp, dados alterados, resultado",
+          "destination": "Índice de auditoria (Elasticsearch, banco de dados relacional)"
+        },
+        {
+          "id": 167,
+          "name": "Relatórios de Incidente",
+          "format": "Documento estruturado com timeline, impacto, métricas afetadas, recomendações",
+          "destination": "Sistema de gestão de incidentes, e-mail para operações"
+        },
+        {
+          "id": 168,
+          "name": "Indicadores de Status do Sistema",
+          "format": "Status agregado (operacional, degradado, indisponível), componentes afetados, ETA de resolução",
+          "destination": "Página de status pública, dashboard interno"
+        }
+      ],
+      "processing": [
+        {
+          "id": 154,
+          "step": "Ingestão e Parsing de Telemetria",
+          "description": "Recebe logs, métricas e rastreamentos do OTLP gRPC, valida formato, extrai campos obrigatórios (tenant_id, user_id, trace_id), aplica política de PII (redação de e-mail, tokens)"
+        },
+        {
+          "id": 155,
+          "step": "Agregação de Métricas",
+          "description": "Agrupa contadores e histogramas por labels (tenant_id, status, endpoint), calcula percentis (p50, p95, p99) de latência, atualiza gauges de estado (sessões ativas, tarefas em atraso)"
+        },
+        {
+          "id": 156,
+          "step": "Correlação de Rastreamentos",
+          "description": "Stitches spans distribuídos usando trace_id, reconstrói árvore de chamadas (requisição → handler → banco de dados → e-mail), calcula latência end-to-end"
+        },
+        {
+          "id": 157,
+          "step": "Detecção de Anomalias",
+          "description": "Identifica padrões anormais: taxa de erro elevada (> 5%), latência p99 acima do limiar (> 5000ms), múltiplas tentativas de login falhadas (> 5 em 5 minutos), tentativas de violação de isolamento multi-tenant"
+        },
+        {
+          "id": 158,
+          "step": "Avaliação de Regras de Alerta",
+          "description": "Aplica regras de alerta (ex: taxa de erro > 5% por 5 minutos, p99 latência > 5000ms, tentativas de login suspeitas), gera eventos de alerta quando condições são atendidas"
+        },
+        {
+          "id": 159,
+          "step": "Renderização de Dashboard",
+          "description": "Constrói visualizações em tempo real: gráficos de taxa de requisição, distribuição de latência, contagem de tarefas por status/tenant, alertas ativos, histórico de eventos"
+        },
+        {
+          "id": 160,
+          "step": "Armazenamento de Telemetria",
+          "description": "Persiste logs (30 dias), métricas (90 dias), rastreamentos (7 dias) em backend de armazenamento (ex: Elasticsearch, Prometheus, Jaeger), aplica políticas de retenção"
+        },
+        {
+          "id": 161,
+          "step": "Geração de Relatórios de Incidente",
+          "description": "Compila dados de logs, métricas e rastreamentos para incidentes detectados, gera relatório com timeline, impacto estimado, recomendações de remediação"
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 169,
+        "category": "observability",
+        "description": "Toda operação de negócio (login, criação de tarefa, edição de usuário, etc.) DEVE emitir log estruturado com campos obrigatórios: timestamp, level, logger_name, message, tenant_id, user_id, request_id, trace_id. Logs sem tenant_id ou user_id DEVEM ser rejeitados ou marcados como incompletos.",
+        "enforcement": "code",
+        "verification": "Validação no middleware de logging: rejeita logs sem campos obrigatórios; auditoria mensal de cobertura de logs (% de operações com logs completos) deve ser >= 99%"
+      },
+      {
+        "id": 170,
+        "category": "compliance",
+        "description": "Nenhum dado sensível (senha, token de autenticação, token de sessão, número de cartão de crédito) PODE ser emitido em logs, métricas ou rastreamentos. Política de PII: redação automática de e-mail (primeiros 2 caracteres + ***), user_id (hash), tenant_id (hash).",
+        "enforcement": "code",
+        "verification": "Scanning automático de logs em tempo real: ferramenta de detecção de PII rejeita logs contendo padrões de senha/token/cartão; auditoria trimestral de amostra de logs (1000 registros) para verificar conformidade"
+      },
+      {
+        "id": 171,
+        "category": "retention",
+        "description": "Logs DEVEM ser retidos por 30 dias; métricas por 90 dias; rastreamentos por 7 dias. Dados mais antigos DEVEM ser automaticamente excluídos ou arquivados em armazenamento de longo prazo (ex: S3 Glacier).",
+        "enforcement": "infra",
+        "verification": "Política de retenção configurada no backend de armazenamento (Elasticsearch, Prometheus); auditoria mensal de espaço em disco e conformidade de retenção"
+      },
+      {
+        "id": 172,
+        "category": "observability",
+        "description": "Toda requisição de API DEVE gerar um rastreamento distribuído com trace_id único, span_id, parent_span_id, e atributos contextuais (tenant_id, user_id, endpoint, método HTTP, status). Spans de banco de dados DEVEM incluir operação (SELECT/INSERT/UPDATE/DELETE), tabela, duração.",
+        "enforcement": "code",
+        "verification": "Instrumentação OTEL em todos os handlers de API e operações de banco de dados; teste de cobertura: 100% das requisições devem gerar rastreamentos; auditoria mensal de amostra de rastreamentos"
+      },
+      {
+        "id": 173,
+        "category": "observability",
+        "description": "Métricas de negócio DEVEM ser coletadas para todas as operações críticas: login (sucesso/falha), criação/atualização/conclusão de tarefa, criação/ativação/desativação de usuário, provisionamento/ativação/desativação de tenant. Cada métrica DEVE incluir labels de segmentação (tenant_id, status, prioridade, etc.).",
+        "enforcement": "code",
+        "verification": "Instrumentação de contadores/histogramas em handlers; teste de cobertura: 100% das operações críticas devem emitir métricas; auditoria mensal de completude de labels"
+      },
+      {
+        "id": 174,
+        "category": "observability",
+        "description": "Detecção de anomalias DEVE ser executada continuamente: taxa de erro > 5% por 5 minutos, latência p99 > 5000ms, múltiplas tentativas de login falhadas (> 5 em 5 minutos), tentativas de violação de isolamento multi-tenant. Anomalias DEVEM gerar alertas com severidade apropriada.",
+        "enforcement": "code",
+        "verification": "Regras de alerta configuradas no sistema de alertas; teste de detecção: injetar cenários anormais e verificar se alertas são disparados em <= 1 minuto; auditoria mensal de taxa de falsos positivos (deve ser < 5%)"
+      },
+      {
+        "id": 175,
+        "category": "observability",
+        "description": "Trilha de auditoria DEVE registrar todas as ações auditáveis: criação/edição/exclusão de usuário, ativação/desativação de usuário, criação/edição/conclusão de tarefa, provisionamento/ativação/desativação de tenant. Cada registro DEVE incluir user_id, tenant_id, ação, timestamp, dados anteriores e novos.",
+        "enforcement": "code",
+        "verification": "Middleware de auditoria em todos os handlers de ação auditável; teste de cobertura: 100% das ações auditáveis devem gerar registros; auditoria mensal de amostra de registros de auditoria"
+      },
+      {
+        "id": 176,
+        "category": "observability",
+        "description": "Sampling de rastreamentos DEVE ser configurado para reduzir overhead: 100% para logs (sem sampling), 10% para rastreamentos (1 em cada 10 requisições amostrado). Sampling DEVE ser ajustável sem redeploy.",
+        "enforcement": "code",
+        "verification": "Parâmetro de sampling configurável em runtime; teste de overhead: latência adicionada pela instrumentação deve ser < 5% em carga normal; auditoria mensal de taxa de sampling efetiva"
+      },
+      {
+        "id": 177,
+        "category": "observability",
+        "description": "Exporter de telemetria DEVE usar OTLP gRPC como protocolo primário (endpoint: http://observability-collector:4317, timeout: 5000ms, retry: exponential backoff com max 3 tentativas). Fallback para Prometheus pull (porta 9090, intervalo de scrape 15s) quando push falhar.",
+        "enforcement": "code",
+        "verification": "Configuração de exporter validada no startup; teste de failover: desativar collector primário e verificar se fallback é ativado em <= 10s; auditoria mensal de taxa de sucesso de export (deve ser >= 99.9%)"
+      },
+      {
+        "id": 178,
+        "category": "observability",
+        "description": "Dashboard de monitoramento DEVE exibir métricas em tempo real com latência <= 30 segundos. Alertas DEVEM ser notificados em <= 1 minuto após detecção de anomalia.",
+        "enforcement": "infra",
+        "verification": "Teste de latência de dashboard: medir tempo entre emissão de métrica e exibição no dashboard; teste de latência de alerta: medir tempo entre detecção de anomalia e notificação; ambos devem atender aos SLOs"
+      },
+      {
+        "id": 179,
+        "category": "observability",
+        "description": "Isolamento multi-tenant DEVE ser respeitado em toda telemetria: logs, métricas e rastreamentos de um tenant NÃO PODEM ser acessíveis por outro tenant. Queries de observabilidade DEVEM ser automaticamente escopadas ao tenant do usuário autenticado.",
+        "enforcement": "code",
+        "verification": "Validação de escopo de tenant em todas as queries de observabilidade; teste de segurança: tentar acessar dados de outro tenant e verificar se acesso é negado; auditoria mensal de tentativas de violação"
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "A Camada de Observabilidade fornece visibilidade completa e em tempo real do comportamento interno do sistema de gerenciamento de tarefas. Ela coleta, processa e apresenta dados de telemetria (logs, métricas, rastreamentos distribuídos) provenientes de todas as operações da plataforma — autenticação, gerenciamento de usuários, criação e atualização de tarefas, isolamento multi-tenant — permitindo monitoramento operacional contínuo, detecção proativa de anomalias, análise de desempenho e auditoria de conformidade. A camada integra sinais de log estruturado, métricas de negócio e infraestrutura, e rastreamentos distribuídos em um pipeline centralizado que alimenta dashboards, alertas e relatórios de incidentes."
+    },
+    "definition": {
+      "params": [
+        {
+          "id": 2,
+          "name": "sampling_rate_logs",
+          "value": "100"
+        },
+        {
+          "id": 3,
+          "name": "sampling_rate_traces",
+          "value": "10"
+        },
+        {
+          "id": 4,
+          "name": "retention_logs_days",
+          "value": "30"
+        },
+        {
+          "id": 5,
+          "name": "retention_metrics_days",
+          "value": "90"
+        },
+        {
+          "id": 6,
+          "name": "retention_traces_days",
+          "value": "7"
+        },
+        {
+          "id": 7,
+          "name": "pii_policy",
+          "value": "redact_email_user_id_tenant_id"
+        },
+        {
+          "id": 8,
+          "name": "alert_fatigue_threshold",
+          "value": "5_alerts_per_minute"
+        }
+      ],
+      "signals": {
+        "log_schema": {
+          "optional_fields": [
+            {
+              "id": 17,
+              "field_name": "context"
+            },
+            {
+              "id": 18,
+              "field_name": "error_stack_trace"
+            },
+            {
+              "id": 19,
+              "field_name": "duration_ms"
+            },
+            {
+              "id": 20,
+              "field_name": "http_status_code"
+            },
+            {
+              "id": 21,
+              "field_name": "operation_name"
+            }
+          ],
+          "required_fields": [
+            {
+              "id": 9,
+              "field_name": "timestamp"
+            },
+            {
+              "id": 10,
+              "field_name": "level"
+            },
+            {
+              "id": 11,
+              "field_name": "logger_name"
+            },
+            {
+              "id": 12,
+              "field_name": "message"
+            },
+            {
+              "id": 13,
+              "field_name": "tenant_id"
+            },
+            {
+              "id": 14,
+              "field_name": "user_id"
+            },
+            {
+              "id": 15,
+              "field_name": "request_id"
+            },
+            {
+              "id": 16,
+              "field_name": "trace_id"
+            }
+          ],
+          "forbidden_fields": [
+            {
+              "id": 22,
+              "field_name": "password"
+            },
+            {
+              "id": 23,
+              "field_name": "auth_token"
+            },
+            {
+              "id": 24,
+              "field_name": "session_token"
+            },
+            {
+              "id": 25,
+              "field_name": "credit_card"
+            }
+          ]
+        },
+        "event_catalog": {
+          "values": [
+            {
+              "id": 117,
+              "event_name": "user_created",
+              "description": "Evento disparado quando um novo usuário é criado no tenant"
+            },
+            {
+              "id": 118,
+              "event_name": "user_activated",
+              "description": "Evento disparado quando um usuário é ativado"
+            },
+            {
+              "id": 119,
+              "event_name": "user_deactivated",
+              "description": "Evento disparado quando um usuário é desativado"
+            },
+            {
+              "id": 120,
+              "event_name": "user_profile_updated",
+              "description": "Evento disparado quando o perfil de um usuário é atualizado"
+            },
+            {
+              "id": 121,
+              "event_name": "login_successful",
+              "description": "Evento disparado quando um usuário realiza login com sucesso"
+            },
+            {
+              "id": 122,
+              "event_name": "login_failed",
+              "description": "Evento disparado quando uma tentativa de login falha"
+            },
+            {
+              "id": 123,
+              "event_name": "password_reset_requested",
+              "description": "Evento disparado quando um usuário solicita recuperação de senha"
+            },
+            {
+              "id": 124,
+              "event_name": "password_reset_completed",
+              "description": "Evento disparado quando a redefinição de senha é concluída com sucesso"
+            },
+            {
+              "id": 125,
+              "event_name": "tenant_provisioned",
+              "description": "Evento disparado quando um novo tenant é provisionado"
+            },
+            {
+              "id": 126,
+              "event_name": "tenant_activated",
+              "description": "Evento disparado quando um tenant é ativado"
+            },
+            {
+              "id": 127,
+              "event_name": "tenant_deactivated",
+              "description": "Evento disparado quando um tenant é desativado"
+            },
+            {
+              "id": 128,
+              "event_name": "task_created",
+              "description": "Evento disparado quando uma nova tarefa é criada"
+            },
+            {
+              "id": 129,
+              "event_name": "task_updated",
+              "description": "Evento disparado quando uma tarefa é atualizada"
+            },
+            {
+              "id": 130,
+              "event_name": "task_status_changed",
+              "description": "Evento disparado quando o status de uma tarefa é alterado"
+            },
+            {
+              "id": 131,
+              "event_name": "task_completed",
+              "description": "Evento disparado quando uma tarefa é marcada como concluída"
+            },
+            {
+              "id": 132,
+              "event_name": "task_reassigned",
+              "description": "Evento disparado quando uma tarefa é reatribuída a outro responsável"
+            },
+            {
+              "id": 133,
+              "event_name": "api_error",
+              "description": "Evento disparado quando uma requisição de API resulta em erro (status >= 400)"
+            },
+            {
+              "id": 134,
+              "event_name": "database_error",
+              "description": "Evento disparado quando uma operação de banco de dados falha"
+            },
+            {
+              "id": 135,
+              "event_name": "email_sent",
+              "description": "Evento disparado quando um e-mail é enviado com sucesso"
+            },
+            {
+              "id": 136,
+              "event_name": "email_failed",
+              "description": "Evento disparado quando o envio de e-mail falha"
+            },
+            {
+              "id": 137,
+              "event_name": "authentication_error",
+              "description": "Evento disparado quando ocorre erro na autenticação"
+            },
+            {
+              "id": 138,
+              "event_name": "authorization_error",
+              "description": "Evento disparado quando um usuário tenta acessar um recurso sem permissão"
+            },
+            {
+              "id": 139,
+              "event_name": "tenant_isolation_violation_attempt",
+              "description": "Evento disparado quando é detectada uma tentativa de violação do isolamento multi-tenant"
+            },
+            {
+              "id": 140,
+              "event_name": "rate_limit_exceeded",
+              "description": "Evento disparado quando um cliente excede o limite de taxa de requisições"
+            },
+            {
+              "id": 141,
+              "event_name": "suspicious_activity_detected",
+              "description": "Evento disparado quando atividade suspeita é detectada (múltiplas tentativas de login falhadas, etc.)"
+            }
+          ]
+        },
+        "metric_catalog": {
+          "gauges": [
+            {
+              "id": 100,
+              "name": "active_sessions_count",
+              "labels": [
+                {
+                  "id": 101,
+                  "label_name": "tenant_id"
+                }
+              ],
+              "description": "Número de sessões ativas no momento, segmentado por tenant"
+            },
+            {
+              "id": 102,
+              "name": "active_users_count",
+              "labels": [
+                {
+                  "id": 103,
+                  "label_name": "tenant_id"
+                }
+              ],
+              "description": "Número de usuários ativos (com status ativo) no momento, segmentado por tenant"
+            },
+            {
+              "id": 104,
+              "name": "total_tasks_count",
+              "labels": [
+                {
+                  "id": 105,
+                  "label_name": "tenant_id"
+                },
+                {
+                  "id": 106,
+                  "label_name": "status"
+                }
+              ],
+              "description": "Número total de tarefas no momento, segmentado por tenant e status"
+            },
+            {
+              "id": 107,
+              "name": "overdue_tasks_count",
+              "labels": [
+                {
+                  "id": 108,
+                  "label_name": "tenant_id"
+                }
+              ],
+              "description": "Número de tarefas com prazo vencido no momento, segmentado por tenant"
+            },
+            {
+              "id": 109,
+              "name": "high_priority_tasks_count",
+              "labels": [
+                {
+                  "id": 110,
+                  "label_name": "tenant_id"
+                }
+              ],
+              "description": "Número de tarefas com prioridade elevada no momento, segmentado por tenant"
+            },
+            {
+              "id": 111,
+              "name": "database_connection_pool_active",
+              "labels": [],
+              "description": "Número de conexões ativas no pool de conexões do banco de dados no momento"
+            },
+            {
+              "id": 112,
+              "name": "database_connection_pool_idle",
+              "labels": [],
+              "description": "Número de conexões ociosas no pool de conexões do banco de dados no momento"
+            },
+            {
+              "id": 113,
+              "name": "cache_size_bytes",
+              "labels": [
+                {
+                  "id": 114,
+                  "label_name": "cache_name"
+                }
+              ],
+              "description": "Tamanho atual do cache em bytes, segmentado por nome do cache"
+            },
+            {
+              "id": 115,
+              "name": "memory_usage_bytes",
+              "labels": [],
+              "description": "Uso de memória da aplicação em bytes no momento"
+            },
+            {
+              "id": 116,
+              "name": "cpu_usage_percent",
+              "labels": [],
+              "description": "Uso de CPU da aplicação em percentual no momento"
+            }
+          ],
+          "counters": [
+            {
+              "id": 26,
+              "name": "auth_login_attempts_total",
+              "labels": [
+                {
+                  "id": 27,
+                  "label_name": "tenant_id"
+                },
+                {
+                  "id": 28,
+                  "label_name": "result"
+                }
+              ],
+              "description": "Número total de tentativas de login, segmentado por tenant e resultado (sucesso/falha)"
+            },
+            {
+              "id": 29,
+              "name": "auth_login_failures_total",
+              "labels": [
+                {
+                  "id": 30,
+                  "label_name": "tenant_id"
+                },
+                {
+                  "id": 31,
+                  "label_name": "reason"
+                }
+              ],
+              "description": "Número total de falhas de autenticação, segmentado por tenant e motivo (credenciais inválidas, usuário inativo, tenant inativo)"
+            },
+            {
+              "id": 32,
+              "name": "user_created_total",
+              "labels": [
+                {
+                  "id": 33,
+                  "label_name": "tenant_id"
+                }
+              ],
+              "description": "Número total de usuários criados, segmentado por tenant"
+            },
+            {
+              "id": 34,
+              "name": "user_activated_total",
+              "labels": [
+                {
+                  "id": 35,
+                  "label_name": "tenant_id"
+                }
+              ],
+              "description": "Número total de usuários ativados, segmentado por tenant"
+            },
+            {
+              "id": 36,
+              "name": "user_deactivated_total",
+              "labels": [
+                {
+                  "id": 37,
+                  "label_name": "tenant_id"
+                }
+              ],
+              "description": "Número total de usuários desativados, segmentado por tenant"
+            },
+            {
+              "id": 38,
+              "name": "task_created_total",
+              "labels": [
+                {
+                  "id": 39,
+                  "label_name": "tenant_id"
+                },
+                {
+                  "id": 40,
+                  "label_name": "priority"
+                }
+              ],
+              "description": "Número total de tarefas criadas, segmentado por tenant e prioridade"
+            },
+            {
+              "id": 41,
+              "name": "task_status_changed_total",
+              "labels": [
+                {
+                  "id": 42,
+                  "label_name": "tenant_id"
+                },
+                {
+                  "id": 43,
+                  "label_name": "from_status"
+                },
+                {
+                  "id": 44,
+                  "label_name": "to_status"
+                }
+              ],
+              "description": "Número total de transições de status de tarefa, segmentado por tenant e transição"
+            },
+            {
+              "id": 45,
+              "name": "task_completed_total",
+              "labels": [
+                {
+                  "id": 46,
+                  "label_name": "tenant_id"
+                }
+              ],
+              "description": "Número total de tarefas concluídas, segmentado por tenant"
+            },
+            {
+              "id": 47,
+              "name": "tenant_provisioned_total",
+              "labels": [],
+              "description": "Número total de tenants provisionados na plataforma"
+            },
+            {
+              "id": 48,
+              "name": "tenant_activated_total",
+              "labels": [],
+              "description": "Número total de tenants ativados"
+            },
+            {
+              "id": 49,
+              "name": "tenant_deactivated_total",
+              "labels": [],
+              "description": "Número total de tenants desativados"
+            },
+            {
+              "id": 50,
+              "name": "email_sent_total",
+              "labels": [
+                {
+                  "id": 51,
+                  "label_name": "email_type"
+                },
+                {
+                  "id": 52,
+                  "label_name": "result"
+                }
+              ],
+              "description": "Número total de e-mails enviados, segmentado por tipo (recuperação de senha) e resultado (sucesso/falha)"
+            },
+            {
+              "id": 53,
+              "name": "api_requests_total",
+              "labels": [
+                {
+                  "id": 54,
+                  "label_name": "endpoint"
+                },
+                {
+                  "id": 55,
+                  "label_name": "method"
+                },
+                {
+                  "id": 56,
+                  "label_name": "status_code"
+                }
+              ],
+              "description": "Número total de requisições de API, segmentado por endpoint, método HTTP e código de status"
+            },
+            {
+              "id": 57,
+              "name": "database_queries_total",
+              "labels": [
+                {
+                  "id": 58,
+                  "label_name": "operation"
+                },
+                {
+                  "id": 59,
+                  "label_name": "table"
+                }
+              ],
+              "description": "Número total de consultas ao banco de dados, segmentado por tipo de operação (SELECT, INSERT, UPDATE, DELETE) e tabela"
+            }
+          ],
+          "histograms": [
+            {
+              "id": 60,
+              "name": "auth_login_duration_ms",
+              "labels": [
+                {
+                  "id": 61,
+                  "label_name": "tenant_id"
+                }
+              ],
+              "buckets": [
+                {
+                  "id": 62,
+                  "bucket": 10
+                },
+                {
+                  "id": 63,
+                  "bucket": 50
+                },
+                {
+                  "id": 64,
+                  "bucket": 100
+                },
+                {
+                  "id": 65,
+                  "bucket": 500
+                },
+                {
+                  "id": 66,
+                  "bucket": 1000
+                },
+                {
+                  "id": 67,
+                  "bucket": 5000
+                }
+              ],
+              "description": "Distribuição de latência do fluxo de autenticação (login), segmentada por tenant, em milissegundos"
+            },
+            {
+              "id": 68,
+              "name": "task_creation_duration_ms",
+              "labels": [
+                {
+                  "id": 69,
+                  "label_name": "tenant_id"
+                }
+              ],
+              "buckets": [
+                {
+                  "id": 70,
+                  "bucket": 10
+                },
+                {
+                  "id": 71,
+                  "bucket": 50
+                },
+                {
+                  "id": 72,
+                  "bucket": 100
+                },
+                {
+                  "id": 73,
+                  "bucket": 500
+                },
+                {
+                  "id": 74,
+                  "bucket": 1000
+                }
+              ],
+              "description": "Distribuição de latência da criação de tarefa, segmentada por tenant, em milissegundos"
+            },
+            {
+              "id": 75,
+              "name": "api_request_duration_ms",
+              "labels": [
+                {
+                  "id": 76,
+                  "label_name": "endpoint"
+                },
+                {
+                  "id": 77,
+                  "label_name": "method"
+                }
+              ],
+              "buckets": [
+                {
+                  "id": 78,
+                  "bucket": 10
+                },
+                {
+                  "id": 79,
+                  "bucket": 50
+                },
+                {
+                  "id": 80,
+                  "bucket": 100
+                },
+                {
+                  "id": 81,
+                  "bucket": 500
+                },
+                {
+                  "id": 82,
+                  "bucket": 1000
+                },
+                {
+                  "id": 83,
+                  "bucket": 5000
+                }
+              ],
+              "description": "Distribuição de latência de requisições de API, segmentada por endpoint e método HTTP, em milissegundos"
+            },
+            {
+              "id": 84,
+              "name": "database_query_duration_ms",
+              "labels": [
+                {
+                  "id": 85,
+                  "label_name": "operation"
+                },
+                {
+                  "id": 86,
+                  "label_name": "table"
+                }
+              ],
+              "buckets": [
+                {
+                  "id": 87,
+                  "bucket": 1
+                },
+                {
+                  "id": 88,
+                  "bucket": 5
+                },
+                {
+                  "id": 89,
+                  "bucket": 10
+                },
+                {
+                  "id": 90,
+                  "bucket": 50
+                },
+                {
+                  "id": 91,
+                  "bucket": 100
+                },
+                {
+                  "id": 92,
+                  "bucket": 500
+                }
+              ],
+              "description": "Distribuição de latência de consultas ao banco de dados, segmentada por tipo de operação e tabela, em milissegundos"
+            },
+            {
+              "id": 93,
+              "name": "email_delivery_duration_ms",
+              "labels": [
+                {
+                  "id": 94,
+                  "label_name": "email_type"
+                }
+              ],
+              "buckets": [
+                {
+                  "id": 95,
+                  "bucket": 100
+                },
+                {
+                  "id": 96,
+                  "bucket": 500
+                },
+                {
+                  "id": 97,
+                  "bucket": 1000
+                },
+                {
+                  "id": 98,
+                  "bucket": 5000
+                },
+                {
+                  "id": 99,
+                  "bucket": 10000
+                }
+              ],
+              "description": "Distribuição de latência de entrega de e-mail, segmentada por tipo de e-mail, em milissegundos"
+            }
+          ]
+        }
+      },
+      "exporter": {
+        "primary": {
+          "id": 142,
+          "auth": "none",
+          "endpoint": "http://observability-collector:4317",
+          "protocol": "otlp",
+          "timeout_ms": 5000,
+          "retry_policy": "exponential_backoff max_retries=3 initial_delay=100ms max_delay=5000ms"
+        },
+        "fallback_pull": {
+          "id": 143,
+          "port": 9090,
+          "endpoint": "/metrics",
+          "protocol": "prometheus",
+          "scrape_interval_seconds": 15
+        }
+      },
+      "ports_consumed": {
+        "id": 144,
+        "names": [
+          {
+            "id": 145,
+            "name": "otlp_grpc_receiver"
+          },
+          {
+            "id": 146,
+            "name": "prometheus_metrics_exporter"
+          },
+          {
+            "id": 147,
+            "name": "jaeger_trace_receiver"
+          }
+        ],
+        "convention": "Portas padrão OTEL: 4317 (OTLP gRPC), 4318 (OTLP HTTP), 9090 (Prometheus), 14250 (Jaeger gRPC)",
+        "description": "Portas utilizadas pela camada de observabilidade para coleta e exposição de telemetria"
+      }
+    },
+    "pendencies": [
+      {
+        "id": 203,
+        "section": "definition",
+        "description": "Especificação de backend de armazenamento de telemetria não foi fornecida. É necessário definir qual sistema será utilizado para armazenar logs (Elasticsearch, Loki, CloudWatch), métricas (Prometheus, InfluxDB, Datadog) e rastreamentos (Jaeger, Zipkin, Datadog). Isso afeta configuração de exporter, políticas de retenção e queries de observabilidade.",
+        "resolutionOptions": [
+          {
+            "id": 204,
+            "text": "Usar stack open-source: Elasticsearch para logs, Prometheus para métricas, Jaeger para rastreamentos. Requer gerenciamento próprio de infraestrutura."
+          },
+          {
+            "id": 205,
+            "text": "Usar serviço gerenciado na nuvem: CloudWatch (AWS), Azure Monitor (Azure) ou Google Cloud Logging (GCP). Reduz overhead operacional, aumenta custo."
+          },
+          {
+            "id": 206,
+            "text": "Usar plataforma SaaS de observabilidade: Datadog, New Relic, Splunk. Integração simplificada, custo elevado, vendor lock-in."
+          }
+        ],
+        "recommendedOptionId": 204
+      },
+      {
+        "id": 207,
+        "section": "definition",
+        "description": "Limiares de alerta (thresholds) para detecção de anomalias não foram completamente especificados. Foram definidos alguns (taxa de erro > 5%, latência p99 > 5000ms, múltiplas tentativas de login > 5 em 5 minutos), mas faltam limiares para outras métricas críticas: taxa de sucesso de envio de e-mail, taxa de sucesso de operações de banco de dados, taxa de utilização de CPU/memória, taxa de crescimento de tamanho de cache.",
+        "resolutionOptions": [
+          {
+            "id": 208,
+            "text": "Definir limiares conservadores (ex: taxa de erro > 5%, latência p99 > 5000ms) para minimizar falsos positivos, aceitando maior latência de detecção de problemas reais."
+          },
+          {
+            "id": 209,
+            "text": "Definir limiares agressivos (ex: taxa de erro > 1%, latência p99 > 1000ms) para detecção rápida, aceitando maior taxa de falsos positivos e alert fatigue."
+          },
+          {
+            "id": 210,
+            "text": "Usar machine learning para aprender padrões normais e detectar anomalias dinamicamente. Requer dados históricos e treinamento de modelo."
+          }
+        ],
+        "recommendedOptionId": 208
+      },
+      {
+        "id": 211,
+        "section": "definition",
+        "description": "Integração com sistema de gestão de incidentes não foi especificada. Quando um alerta é disparado, é necessário definir como incidente é criado, atribuído e rastreado. Faltam detalhes sobre: qual sistema de gestão de incidentes será utilizado (ex: PagerDuty, Opsgenie, Jira), como alerta é convertido em incidente, quem é notificado, qual é o SLA de resposta.",
+        "resolutionOptions": [
+          {
+            "id": 212,
+            "text": "Integrar com PagerDuty: alertas disparam incidentes, escalação automática, on-call rotation. Requer configuração de políticas de escalação."
+          },
+          {
+            "id": 213,
+            "text": "Integrar com Jira: alertas criam tickets, atribuição manual, rastreamento em backlog. Menos automático, maior flexibilidade."
+          },
+          {
+            "id": 214,
+            "text": "Notificação simples via e-mail/Slack: alertas são notificados, resposta manual. Menor custo, menor automação."
+          }
+        ],
+        "recommendedOptionId": 212
+      },
+      {
+        "id": 215,
+        "section": "non_functional_requirements",
+        "description": "SLA de disponibilidade da camada de observabilidade não foi completamente definido. Foi especificado que observabilidade NÃO DEVE ser ponto único de falha (timeout <= 5s), mas faltam detalhes sobre: qual é o SLA de disponibilidade do collector, qual é o SLA de disponibilidade do dashboard, qual é o SLA de disponibilidade do armazenamento de telemetria, qual é o RTO/RPO em caso de falha.",
+        "resolutionOptions": [
+          {
+            "id": 216,
+            "text": "SLA agressivo: 99.99% de disponibilidade (52 minutos de downtime/ano), RTO 5 minutos, RPO 0. Requer redundância multi-região, custo elevado."
+          },
+          {
+            "id": 217,
+            "text": "SLA moderado: 99.9% de disponibilidade (8 horas de downtime/ano), RTO 30 minutos, RPO 1 hora. Requer redundância single-region, custo moderado."
+          },
+          {
+            "id": 218,
+            "text": "SLA relaxado: 99.5% de disponibilidade (3 dias de downtime/ano), RTO 4 horas, RPO 1 dia. Requer backup simples, custo baixo."
+          }
+        ],
+        "recommendedOptionId": 217
+      },
+      {
+        "id": 219,
+        "section": "definition",
+        "description": "Configuração de alertas para eventos de segurança não foi completamente especificada. Foram mencionados eventos como 'tenant_isolation_violation_attempt' e 'suspicious_activity_detected', mas faltam detalhes sobre: quais ações específicas disparam esses eventos, qual é a severidade de cada evento, quem é notificado, qual é o SLA de resposta, qual é a ação de remediação automática (se houver).",
+        "resolutionOptions": [
+          {
+            "id": 220,
+            "text": "Definir eventos de segurança granulares com regras de alerta específicas: tentativa de acesso a dados de outro tenant dispara CRÍTICO, múltiplas tentativas de login falhadas dispara ALTO, etc."
+          },
+          {
+            "id": 221,
+            "text": "Usar sistema de detecção de intrusão (IDS) integrado: monitora padrões de tráfego, detecta ataques conhecidos, dispara alertas automaticamente."
+          },
+          {
+            "id": 222,
+            "text": "Usar SIEM (Security Information and Event Management): correlaciona eventos de múltiplas fontes, detecta padrões de ataque, gera alertas de segurança."
+          }
+        ],
+        "recommendedOptionId": 220
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 192,
+        "then": "Log estruturado com campos obrigatórios é emitido; métrica de login bem-sucedido é incrementada; rastreamento distribuído com spans de validação de credencial e criação de sessão é gerado; nenhum dado sensível (senha, token) aparece em telemetria",
+        "type": "integration",
+        "when": "O handler de autenticação processa a requisição e emite logs, métricas e rastreamentos",
+        "given": "Um usuário autenticado tenta fazer login com credenciais válidas",
+        "scenario": "Fluxo completo de login com coleta de telemetria",
+        "target_section": "definition"
+      },
+      {
+        "id": 193,
+        "then": "Regra de alerta detecta anomalia em <= 1 minuto; alerta é disparado com severidade CRÍTICA; notificação é enviada para operações; dashboard exibe indicador visual de anomalia",
+        "type": "integration",
+        "when": "Taxa de erro sobe para 8% por 5 minutos consecutivos (ex: falha em banco de dados)",
+        "given": "Sistema está operando normalmente com taxa de erro < 1%",
+        "scenario": "Detecção de anomalia: taxa de erro elevada",
+        "target_section": "rules"
+      },
+      {
+        "id": 194,
+        "then": "Dashboard exibe apenas logs, métricas e rastreamentos do tenant A; dados do tenant B não são visíveis; query de observabilidade é automaticamente escopada ao tenant A",
+        "type": "integration",
+        "when": "Usuário do tenant A tenta acessar dashboard de observabilidade",
+        "given": "Dois tenants (A e B) estão operando na plataforma",
+        "scenario": "Isolamento multi-tenant em observabilidade",
+        "target_section": "rules"
+      },
+      {
+        "id": 195,
+        "then": "E-mail é redatado como 'us***@example.com' em log; user_id é hasheado; nenhum token de autenticação ou senha aparece em log; log passa em scanning automático de PII",
+        "type": "security",
+        "when": "Log é emitido com dados do usuário",
+        "given": "Um usuário com e-mail 'usuario@example.com' cria uma tarefa",
+        "scenario": "Conformidade com política de PII em logs",
+        "target_section": "rules"
+      },
+      {
+        "id": 196,
+        "then": "Latência de ingestão <= 10ms por log; overhead de instrumentação <= 5% da latência total de operação; nenhuma perda de logs",
+        "type": "performance",
+        "when": "Logs são enviados para collector via OTLP gRPC",
+        "given": "Sistema está sob carga de 10.000 logs/segundo",
+        "scenario": "Latência de ingestão de logs sob carga",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 197,
+        "then": "Tempo de carregamento <= 3 segundos; atualização de métricas <= 30 segundos; nenhuma degradação de performance com 100 usuários simultâneos",
+        "type": "performance",
+        "when": "Dashboard carrega e exibe métricas em tempo real",
+        "given": "100 usuários simultâneos acessam dashboard de monitoramento",
+        "scenario": "Latência de renderização de dashboard",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 198,
+        "then": "Rastreamento distribuído com trace_id único é gerado; spans de handler, banco de dados e worker de e-mail são correlacionados; latência end-to-end é calculada corretamente; nenhum span é perdido",
+        "type": "integration",
+        "when": "Requisição de criação de tarefa é processada, banco de dados é consultado, e-mail é enfileirado",
+        "given": "Usuário cria uma tarefa que dispara envio de e-mail de notificação",
+        "scenario": "Rastreamento distribuído de operação multi-serviço",
+        "target_section": "definition"
+      },
+      {
+        "id": 199,
+        "then": "Logs com mais de 30 dias são excluídos; métricas com mais de 90 dias são excluídas; rastreamentos com mais de 7 dias são excluídos; dados mais recentes são preservados",
+        "type": "integration",
+        "when": "Política de retenção é aplicada",
+        "given": "Logs foram emitidos há 31 dias, métricas há 91 dias, rastreamentos há 8 dias",
+        "scenario": "Retenção de telemetria conforme política",
+        "target_section": "rules"
+      },
+      {
+        "id": 200,
+        "then": "Registro de auditoria é criado com user_id do administrador, tenant_id, ação 'user_deactivated', timestamp, dados anteriores (status ativo) e novos (status inativo); registro é persistido em índice de auditoria; registro é acessível para auditoria posterior",
+        "type": "integration",
+        "when": "Ação de desativação é executada",
+        "given": "Administrador de tenant desativa um usuário",
+        "scenario": "Trilha de auditoria de ação crítica",
+        "target_section": "definition"
+      },
+      {
+        "id": 201,
+        "then": "Log é rejeitado ou marcado como incompleto; erro é registrado; operação não é bloqueada (logging é não-bloqueante)",
+        "type": "unit",
+        "when": "Middleware de logging valida log",
+        "given": "Log é emitido sem campo obrigatório 'tenant_id'",
+        "scenario": "Validação de campos obrigatórios em log",
+        "target_section": "rules"
+      },
+      {
+        "id": 202,
+        "then": "Retry com exponential backoff é executado (max 3 tentativas); após falhas, fallback para Prometheus pull é ativado; telemetria não é perdida; operações de negócio não são bloqueadas",
+        "type": "integration",
+        "when": "Aplicação tenta exportar telemetria",
+        "given": "Collector primário (OTLP gRPC) está indisponível",
+        "scenario": "Failover de exporter de telemetria",
+        "target_section": "definition"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 180,
+        "target": "Latência de ingestão <= 10ms por log; overhead de instrumentação <= 5% da latência da operação",
+        "category": "performance",
+        "requirement": "Latência de ingestão de logs DEVE ser mínima para não impactar operações de negócio. Overhead de instrumentação de logging NÃO DEVE exceder 5% da latência total de uma operação.",
+        "verification": "Teste de carga: enviar 10.000 logs/segundo e medir latência de ingestão; medir latência de operação com e sem instrumentação"
+      },
+      {
+        "id": 181,
+        "target": "Tempo de carregamento do dashboard <= 3 segundos; atualização de métricas em tempo real <= 30 segundos",
+        "category": "performance",
+        "requirement": "Latência de renderização de dashboard DEVE ser aceitável para monitoramento em tempo real.",
+        "verification": "Teste de carga: 100 usuários simultâneos acessando dashboard; medir tempo de carregamento e latência de atualização"
+      },
+      {
+        "id": 182,
+        "target": "Detecção de anomalia <= 1 minuto após ocorrência; notificação de alerta <= 1 minuto após detecção",
+        "category": "performance",
+        "requirement": "Latência de detecção de anomalias DEVE ser suficientemente rápida para permitir resposta operacional.",
+        "verification": "Teste de detecção: injetar cenário anormal e medir tempo até alerta ser disparado"
+      },
+      {
+        "id": 183,
+        "target": "Suportar até 50 tenants, 5.000 usuários, 10.000 tarefas por tenant; taxa de ingestão de logs >= 10.000 logs/segundo; taxa de ingestão de métricas >= 1.000 métricas/segundo",
+        "category": "scalability",
+        "requirement": "Camada de observabilidade DEVE escalar com volume de telemetria esperado no primeiro ano.",
+        "verification": "Teste de carga: simular volume esperado e medir throughput de ingestão, latência, uso de recursos"
+      },
+      {
+        "id": 184,
+        "target": "Logs (30 dias): ~27GB/mês; métricas (90 dias): ~9GB/mês; rastreamentos (7 dias): ~3GB/mês (estimativas para volume esperado)",
+        "category": "scalability",
+        "requirement": "Armazenamento de telemetria DEVE escalar com retenção configurada.",
+        "verification": "Teste de crescimento: simular 1 ano de telemetria e medir espaço em disco utilizado"
+      },
+      {
+        "id": 185,
+        "target": "Disponibilidade da coleta de telemetria >= 99.5%; timeout de export <= 5 segundos para não bloquear operações",
+        "category": "availability",
+        "requirement": "Camada de observabilidade NÃO DEVE ser ponto único de falha para operações de negócio. Falha na coleta de telemetria NÃO DEVE impedir login, criação de tarefa, etc.",
+        "verification": "Teste de resiliência: desativar collector e verificar se operações de negócio continuam funcionando; medir latência adicionada pelo timeout"
+      },
+      {
+        "id": 186,
+        "target": "Disponibilidade do dashboard >= 99.9%; SLA de recuperação em caso de falha <= 5 minutos",
+        "category": "availability",
+        "requirement": "Dashboard de monitoramento DEVE estar disponível para operações acessarem em caso de incidente.",
+        "verification": "Teste de failover: simular falha do dashboard e medir tempo de recuperação"
+      },
+      {
+        "id": 187,
+        "target": "100% de conformidade com política de PII; zero incidentes de exposição de dados sensíveis em telemetria",
+        "category": "security",
+        "requirement": "Dados sensíveis NÃO DEVEM ser expostos em telemetria. Política de PII DEVE ser aplicada automaticamente.",
+        "verification": "Scanning automático de logs em tempo real; auditoria trimestral de amostra de logs; teste de segurança: injetar dados sensíveis e verificar se são redatados"
+      },
+      {
+        "id": 188,
+        "target": "Apenas usuários autenticados podem acessar dashboard; apenas administradores podem acessar trilha de auditoria completa",
+        "category": "security",
+        "requirement": "Acesso a dados de observabilidade DEVE ser controlado por autenticação e autorização.",
+        "verification": "Teste de acesso: tentar acessar dashboard sem autenticação e verificar se acesso é negado; verificar se usuários normais não podem acessar trilha de auditoria"
+      },
+      {
+        "id": 189,
+        "target": "100% das operações críticas (login, criação/edição/conclusão de tarefa, etc.) devem emitir logs, métricas e rastreamentos",
+        "category": "observability",
+        "requirement": "Cobertura de instrumentação DEVE ser completa para todas as operações críticas.",
+        "verification": "Auditoria mensal de cobertura de instrumentação; teste de cobertura: executar todas as operações críticas e verificar se telemetria é emitida"
+      },
+      {
+        "id": 190,
+        "target": "Taxa de completude de campos obrigatórios >= 99%; taxa de acurácia de métricas >= 99%; taxa de correlação de rastreamentos >= 95%",
+        "category": "observability",
+        "requirement": "Qualidade de dados de observabilidade DEVE ser alta para permitir análise confiável.",
+        "verification": "Auditoria mensal de qualidade de dados; teste de acurácia: comparar métricas com dados de negócio esperados"
+      },
+      {
+        "id": 191,
+        "target": "Custo de armazenamento de telemetria <= 5% do custo total de infraestrutura; custo de processamento de telemetria <= 10% do custo total de infraestrutura",
+        "category": "cost",
+        "requirement": "Custo de observabilidade DEVE ser otimizado sem sacrificar cobertura.",
+        "verification": "Auditoria mensal de custos; análise de ROI de observabilidade (benefício de detecção de incidentes vs. custo)"
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 8,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-10T23:04:58.679Z",
+  "updatedAt": null
+}

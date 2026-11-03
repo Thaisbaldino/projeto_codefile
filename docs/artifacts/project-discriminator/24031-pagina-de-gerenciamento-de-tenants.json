@@ -1,0 +1,146 @@
+{
+  "id": 24031,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 6,
+        "name": "Identificador único que representa uma organização ou cliente no sistema multi-tenant",
+        "value": [
+          "slug",
+          "tenant-uuid"
+        ],
+        "method": "user-input",
+        "reasoning": "O formulário apresenta campos obrigatórios de nome da organização e identificador único (slug) do tenant.\nO slug do tenant, 'empresa-xyz', é um identificador único do tenant em uma plataforma multi-tenant.",
+        "confidence": 0.8478,
+        "context_element_id": 2682
+      },
+      {
+        "id": 8,
+        "name": "Profundidade esperada da estrutura hierárquica",
+        "value": [
+          "5-levels"
+        ],
+        "method": "user-input",
+        "reasoning": "O nível de visibilidade é definido em 5 níveis fixos: Muito Baixa, Baixa, Média, Alta e Crítica.",
+        "confidence": 0.8199,
+        "context_element_id": 2712
+      },
+      {
+        "id": 9,
+        "name": "Identificador específico do canal de experiência",
+        "value": [
+          "web-browser"
+        ],
+        "method": "user-input",
+        "reasoning": "O modal de confirmação é exibido no navegador, caracterizando uma experiência de interface do navegador.",
+        "confidence": 0.7149,
+        "context_element_id": 2713
+      },
+      {
+        "id": 10,
+        "name": "Profundidade máxima esperada da hierarquia de navegação",
+        "value": [
+          "4-levels",
+          "5-levels"
+        ],
+        "method": "user-input",
+        "reasoning": "Os níveis de prioridade definidos são 4, com Baixa, Média, Alta e Urgente.\nOs níveis de visibilidade são definidos em 5 níveis fixos: Muito Baixa, Baixa, Média, Alta e Crítica.",
+        "confidence": 0.7602,
+        "context_element_id": 2725
+      },
+      {
+        "id": 11,
+        "name": "Perfil primário do usuário ou participante que interage com esta superfície",
+        "value": [
+          "system-admin"
+        ],
+        "method": "user-input",
+        "reasoning": "O administrador clica em um tenant para visualizar detalhes, caracterizando um perfil de usuário administrativo.",
+        "confidence": 0.7336,
+        "context_element_id": 2728
+      },
+      {
+        "id": 12,
+        "name": "Nome ou identificador único da API dentro do contexto do sistema",
+        "value": [
+          "activate"
+        ],
+        "method": "user-input",
+        "reasoning": "A API de ativação é chamada com o nome de evento 'activate'.",
+        "confidence": 0.7879,
+        "context_element_id": 2751
+      },
+      {
+        "id": 13,
+        "name": "Tipo específico de evento ou mensagem que está sendo comunicado",
+        "value": [
+          "success or error result of operation"
+        ],
+        "method": "user-input",
+        "reasoning": "A mensagem de sucesso ou erro é comunicada com o resultado da operação.",
+        "confidence": 0.8022,
+        "context_element_id": 2755
+      }
+    ],
+    "best_practices": [],
+    "discriminators": [
+      {
+        "id": 38,
+        "name": "Persistência de Estado",
+        "value": "persisted",
+        "method": "user-input",
+        "reasoning": "A ativação e a desativação são persistidas, com confirmação de ativação exibida para o administrador.",
+        "confidence": 0.9318,
+        "context_element_id": 4286
+      },
+      {
+        "id": 39,
+        "name": "Modo de Ativação",
+        "value": "sob demanda",
+        "method": "user-input",
+        "reasoning": "A ação de ativar um tenant inativo é executada em tempo de execução, solicitando confirmação antes da ação.",
+        "confidence": 0.7213,
+        "context_element_id": 4288
+      },
+      {
+        "id": 42,
+        "name": "Estratégia Fail Fast",
+        "value": "Fail Fast Strategy",
+        "method": "user-input",
+        "reasoning": "A tentativa de 10 falhas em seguida bloqueia o serviço por 1 hora, um comportamento de estratégia de resiliência rápida.",
+        "confidence": 0.8995,
+        "context_element_id": 4419
+      },
+      {
+        "id": 50,
+        "name": "Modo de Apresentação",
+        "value": "autônomo",
+        "method": "internal-inference",
+        "reasoning": "A interface do navegador é uma página standalone, sem layout de página modular.",
+        "confidence": 0.7618,
+        "context_element_id": 4870
+      },
+      {
+        "id": 56,
+        "name": "Nível de Granularidade",
+        "value": "nível de parâmetro",
+        "method": "user-input",
+        "reasoning": "O parâmetro OWASP argon2id com m=64MiB, t=3, p=4 é definido como nível de parâmetro.",
+        "confidence": 0.7133,
+        "context_element_id": 5098
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 4,
+  "active": true,
+  "sourceId": 23843,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:42:53.755Z",
+  "updatedAt": null
+}

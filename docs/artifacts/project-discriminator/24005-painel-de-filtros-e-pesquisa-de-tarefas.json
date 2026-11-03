@@ -1,0 +1,242 @@
+{
+  "id": 24005,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 22,
+        "name": "Validação de Entrada e Injeção",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Entrada maliciosa como '; DROP TABLE tarefas; --' é rejeitada por validação de entrada, sem execução de consulta SQL.",
+        "confidence": 0.9052,
+        "context_element_id": 2825
+      },
+      {
+        "id": 23,
+        "name": "Proteção de Dados e Vazamento",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Dados sensíveis expostos em requisições ou respostas são vazios, não vazios, e o vazamento só é notado depois que alguém o identifica.",
+        "confidence": 0.7932,
+        "context_element_id": 2826
+      }
+    ],
+    "attributes": [
+      {
+        "id": 8,
+        "name": "Domínio funcional ou técnico primário atendido pelo motor de processamento",
+        "value": [
+          "event-handling",
+          "validation"
+        ],
+        "method": "internal-inference",
+        "reasoning": "O evento filter_applied é um evento de tratamento de evento, responsável por tratar o resultado do filtro aplicado.\nO campo de filtro por criador da tarefa é validado para ser incluído, indicando que a decisão é baseada em uma validação.",
+        "confidence": 0.7325,
+        "context_element_id": 2679
+      },
+      {
+        "id": 12,
+        "name": "Principais seções ou módulos funcionais da aplicação",
+        "value": [
+          "action-buttons-section"
+        ],
+        "method": "user-input",
+        "reasoning": "A seção contém botões de ação como 'Limpar Filtros' e 'Aplicar Filtros', caracterizando uma seção de botões de ação.",
+        "confidence": 0.818,
+        "context_element_id": 2724
+      },
+      {
+        "id": 13,
+        "name": "Momento no processo de negócio ou workflow em que a interação ocorre",
+        "value": [
+          "live-monitoring"
+        ],
+        "method": "internal-inference",
+        "reasoning": "O campo de filtro por criador da tarefa é atualizado em tempo real, permitindo que gestores acompanhem tarefas criadas por colaboradores específicos.",
+        "confidence": 0.7346,
+        "context_element_id": 2729
+      },
+      {
+        "id": 14,
+        "name": "Formato principal de resposta do agente",
+        "value": [
+          "structured-reports"
+        ],
+        "method": "user-input",
+        "reasoning": "Os botões de ação 'Limpar Filtros' e 'Aplicar Filtros' são de natureza estruturada, gerando relatórios.",
+        "confidence": 0.7023,
+        "context_element_id": 2741
+      },
+      {
+        "id": 15,
+        "name": "Tipo específico de evento ou mensagem que está sendo comunicado",
+        "value": [
+          "success-filtered"
+        ],
+        "method": "user-input",
+        "reasoning": "A mensagem de feedback indica o sucesso da filtragem, ou mensagem informativa quando nenhuma tarefa é encontrada.",
+        "confidence": 0.7954,
+        "context_element_id": 2755
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 24,
+        "name": "Definir timeouts configuráveis para todas as operações críticas e monitorar orçamentos de tempo por transação/endpoint",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem tempo definido, a lista de usuários ativos exibida no filtro de responsável fica exposta a falhas de rede ou atraso de leitura, causando interrupção de transações críticas.",
+        "confidence": 0.8144,
+        "context_element_id": 2863
+      },
+      {
+        "id": 25,
+        "name": "Implementar estratégias de cache em múltiplas camadas e replicação de dados críticos para melhorar o desempenho",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Cache de 1 minuto é o limite mínimo para a atualização rápida, e sem ele, a integração fica parada por tempo indefinido.",
+        "confidence": 0.787,
+        "context_element_id": 2869
+      },
+      {
+        "id": 28,
+        "name": "Estabelecer um sistema de rastreabilidade abrangente com logs detalhados de todas as ações de usuários e mudanças do sistema",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem rastrear o que foi feito, ninguém sabe se o erro veio do sistema ou do usuário, e a responsabilidade fica indefinida.",
+        "confidence": 0.8338,
+        "context_element_id": 2925
+      },
+      {
+        "id": 30,
+        "name": "Implementar validação rigorosa de entradas com sanitização, whitelists de caracteres permitidos e prevenção contra ataques de injeção",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Entradas maliciosas são testadas com payloads maliciosos, e a análise estática e testes de penetração com payloads são feitos para detectar vulnerabilidades.",
+        "confidence": 0.9597,
+        "context_element_id": 2936
+      },
+      {
+        "id": 31,
+        "name": "Garantir confidencialidade com controles de acesso granulares baseados na classificação dos dados e no princípio need-to-know",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Requisições e respostas vazias são vazias, não vazias, e o vazamento de dados não é notado até que alguém o identifique.",
+        "confidence": 0.7699,
+        "context_element_id": 2939
+      },
+      {
+        "id": 32,
+        "name": "Implemente operações idempotentes que podem ser executadas múltiplas vezes sem efeitos colaterais",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Executar a mesma operação repetidamente sem alterar o resultado produziria inconsistência de dados e precisaria de reavaliação manual.",
+        "confidence": 0.9365,
+        "context_element_id": 2968
+      },
+      {
+        "id": 34,
+        "name": "Implemente funcionalidade de cancelamento para operações de longa duração com feedback visual de progresso e a capacidade de interromper com segurança",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem feedback visual, o usuário não sabe se o processo está parado ou se o botão foi interrompido.",
+        "confidence": 0.8517,
+        "context_element_id": 3041
+      },
+      {
+        "id": 35,
+        "name": "Mantenha um modelo de sistema com indicadores de progresso, status das operações e informações de estado visíveis para transparência operacional",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem atualização visual, o usuário não consegue saber se o estado está sendo processado ou se já está pronto.\nO badge visual exibe o número de filtros ativos, caracterizando uma progresso visual de indicador.",
+        "confidence": 0.7159,
+        "context_element_id": 3047
+      },
+      {
+        "id": 36,
+        "name": "Use padrões e componentes consistentes por meio de design systems e bibliotecas compartilhadas para garantir a uniformidade da experiência",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Cada visualização é uma instância separada, e mudar uma só faz com que a outra se perda de vista.",
+        "confidence": 0.8717,
+        "context_element_id": 3056
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 2,
+        "name": "Especialização Funcional",
+        "value": "índice de busca",
+        "method": "internal-inference",
+        "reasoning": "A seção contém o campo de pesquisa textual para busca, caracterizando um index de busca.",
+        "confidence": 0.8471,
+        "context_element_id": 1327
+      },
+      {
+        "id": 3,
+        "name": "Camada de Cache",
+        "value": "true",
+        "method": "internal-inference",
+        "reasoning": "Carregar a lista de usuários a cada abertura do painel é uma operação de acesso direto ao banco de dados, sem cache.",
+        "confidence": 0.9554,
+        "context_element_id": 1361
+      },
+      {
+        "id": 40,
+        "name": "Tipo de Gatilho",
+        "value": "baseado em eventos",
+        "method": "user-input",
+        "reasoning": "O evento filter_applied é disparado em resposta a um evento de filtro aplicado, caracterizando um evento baseado em trâmite.",
+        "confidence": 0.7692,
+        "context_element_id": 4242
+      },
+      {
+        "id": 45,
+        "name": "Testes de Segurança",
+        "value": "segurança básica",
+        "method": "user-input",
+        "reasoning": "A validação de entrada é feita no frontend e backend, com zero vulnerabilidade de injeção detectada em testes de segurança, caracterizando testes de segurança básicos.",
+        "confidence": 0.7745,
+        "context_element_id": 4538
+      },
+      {
+        "id": 48,
+        "name": "Layout de Navegação",
+        "value": "navegação mista",
+        "method": "internal-inference",
+        "reasoning": "O painel de filtros é acessado por um usuário autenticado, combinando navegação lateral e top navigation.",
+        "confidence": 0.7174,
+        "context_element_id": 4907
+      },
+      {
+        "id": 49,
+        "name": "Modo de Seleção",
+        "value": "selecionado pelo usuário",
+        "method": "user-input",
+        "reasoning": "O filtro de status é definido pelo usuário selecionando uma das opções a_fazer, em_andamento ou concluido.",
+        "confidence": 0.8282,
+        "context_element_id": 5095
+      },
+      {
+        "id": 50,
+        "name": "Natureza do Toolkit",
+        "value": "referência de configuração",
+        "method": "user-input",
+        "reasoning": "A inicialização da superfície é baseada em configuração de localização, um recurso de referência de configuração.",
+        "confidence": 0.7322,
+        "context_element_id": 5133
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 4,
+  "active": true,
+  "sourceId": 23829,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}

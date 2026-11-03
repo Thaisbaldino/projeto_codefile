@@ -1,0 +1,116 @@
+{
+  "id": 24002,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 26,
+        "name": "Validação de Entrada e Injeção",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Um payload de injeção SQL no campo de título é executado quando o formulário é submetido, e o sistema aceita o título como texto literal.",
+        "confidence": 0.8379,
+        "context_element_id": 2825
+      }
+    ],
+    "attributes": [
+      {
+        "id": 22,
+        "name": "Destino dos dados processados pelo worker",
+        "value": [
+          "reporting"
+        ],
+        "method": "internal-inference",
+        "reasoning": "O título da tarefa é destinado a reportagem, com destino de destino legível.",
+        "confidence": 0.7594,
+        "context_element_id": 2788
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 27,
+        "name": "Configurar filas de prioridade para processar eventos críticos primeiro, estabelecendo políticas de priorização baseadas em SLA",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Tarefas com data limite vencida são tratadas antes de outras, garantindo que a prioridade seja respeitada mesmo com tempo de execução real.",
+        "confidence": 0.8101,
+        "context_element_id": 2861
+      },
+      {
+        "id": 28,
+        "name": "Configurar o escalonamento de recursos com políticas FIFO, de prioridade ou baseadas em deadline conforme a criticidade das operações",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Tarefas com prioridade 'alta' ou 'urgente' são destacadas visualmente em tempo real, sem aguardar a execução.\nPrioridade é definida no momento da criação, e a ordem é configurada com base nessa prioridade, sem que a prioridade mudasse depois.",
+        "confidence": 0.7562,
+        "context_element_id": 2870
+      },
+      {
+        "id": 32,
+        "name": "Implemente operações idempotentes que podem ser executadas múltiplas vezes sem efeitos colaterais",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Repetição de tarefas já concluídas em um sistema sem controle de estado resulta em dados divergentes e necessita de manual de reconta para equilibrar.",
+        "confidence": 0.8052,
+        "context_element_id": 2968
+      },
+      {
+        "id": 35,
+        "name": "Mantenha um modelo de tarefas do usuário com rastreamento do contexto atual, histórico de ações e sugestões de próximos passos com base no fluxo de trabalho",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "A Tabela de Tarefas é um entidade central para organização de atividades, rastreabilidade de progresso, destaque de demandas críticas e atrasadas, e conformidade com requisitos de auditabilidade e LGPD, caracterizando um domínio funcional de processamento de tarefas.",
+        "confidence": 0.8081,
+        "context_element_id": 3045
+      },
+      {
+        "id": 36,
+        "name": "Configure controles de privacidade rigorosos incluindo minimização de dados, anonimização automática, controles de acesso granulares e auditoria do uso de informações pessoais sensíveis",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem controle de acesso e retenção, dados pessoais vazariam sem que ninguém soubesse quem ou o que.",
+        "confidence": 0.8466,
+        "context_element_id": 3075
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 4,
+        "name": "Padrão de Interação",
+        "value": "focado em consulta",
+        "method": "internal-inference",
+        "reasoning": "A consulta de listagem de tarefas é focada em uma consulta de listagem de tarefas, caracterizando um padrão de interação focado em consultas.",
+        "confidence": 0.7221,
+        "context_element_id": 1476
+      },
+      {
+        "id": 7,
+        "name": "Estrutura de Dados de Registro",
+        "value": "schema flexível",
+        "method": "user-input",
+        "reasoning": "O status é armazenado como tipo ENUM do PostgreSQL, mantendo a tabela de referência para metadados, indicando que o schema é flexível.",
+        "confidence": 0.854,
+        "context_element_id": 1510
+      },
+      {
+        "id": 48,
+        "name": "Prioridade de Otimização",
+        "value": "otimizado para velocidade",
+        "method": "user-input",
+        "reasoning": "O índice não-único composto sobre (tenant_id, data_limite) é otimizado para otimizar filtros de tarefas por prazo e identificação de tarefas atrasadas, indicando um foco em otimização de velocidade.",
+        "confidence": 0.7285,
+        "context_element_id": 4627
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 6,
+  "active": true,
+  "sourceId": 23742,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}

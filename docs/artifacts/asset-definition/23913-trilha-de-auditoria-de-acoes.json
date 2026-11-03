@@ -1,0 +1,656 @@
+{
+  "id": 23913,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 30,
+          "name": "Evento de Autenticação",
+          "format": "JSON com credenciais ou tokens",
+          "origin": "POST /api/auth/login, POST /api/auth/logout, POST /api/auth/password-recovery, POST /api/auth/password-recovery/reset",
+          "trigger": "Ação de usuário (login, logout, recuperação de senha)"
+        },
+        {
+          "id": 31,
+          "name": "Evento de Gerenciamento de Usuário",
+          "format": "JSON com dados de usuário",
+          "origin": "POST /api/users, PUT /api/users/:id, PUT /api/users/:id/activate, PUT /api/users/:id/deactivate",
+          "trigger": "Ação de administrador de tenant (cadastro, edição, ativação, desativação)"
+        },
+        {
+          "id": 32,
+          "name": "Evento de Gerenciamento de Tenant",
+          "format": "JSON com dados de tenant",
+          "origin": "POST /api/tenants, PUT /api/tenants/:id/activate, PUT /api/tenants/:id/deactivate",
+          "trigger": "Ação de administrador interno da plataforma (provisionamento, ativação, desativação)"
+        },
+        {
+          "id": 33,
+          "name": "Evento de Operação em Tarefa",
+          "format": "JSON com dados de tarefa",
+          "origin": "POST /api/tasks, PUT /api/tasks/:id, PUT /api/tasks/:id/complete",
+          "trigger": "Ação de usuário (criação, edição, conclusão de tarefa)"
+        },
+        {
+          "id": 34,
+          "name": "Contexto de Requisição HTTP",
+          "format": "Metadados de requisição HTTP",
+          "origin": "Middleware de captura de contexto (IP, User-Agent, timestamp)",
+          "trigger": "Toda requisição HTTP processada pelo sistema"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 42,
+          "name": "Registro de Auditoria Persistido",
+          "format": "Registro estruturado com id, tenant_id, event_type, executor_id, resource_type, resource_id, operation, status, timestamp, severity, data_before, data_after, fields_changed, ip_address, user_agent, correlation_id",
+          "destination": "Tabela audit_log no banco de dados relacional"
+        },
+        {
+          "id": 43,
+          "name": "Alerta de Segurança",
+          "format": "Alerta estruturado com tipo, severidade, descrição, tenant afetado, usuário envolvido, timestamp, ação recomendada",
+          "destination": "Sistema de alertas (notificação em tempo real para administradores)"
+        },
+        {
+          "id": 44,
+          "name": "Evento de Conformidade",
+          "format": "Evento estruturado com metadados completos para análise posterior",
+          "destination": "Fila de eventos para processamento assíncrono (detecção de anomalias, geração de relatórios)"
+        },
+        {
+          "id": 45,
+          "name": "Resposta de Consulta de Auditoria",
+          "format": "JSON com lista paginada de registros de auditoria filtrados, total de registros, informações de paginação",
+          "destination": "API GET /api/audit-logs (para consumo por interfaces administrativas)"
+        }
+      ],
+      "processing": [
+        {
+          "id": 35,
+          "step": "Captura de Evento",
+          "description": "Interceptar evento de operação crítica em ponto de instrumentação (API endpoint, repositório ou banco de dados), extraindo tipo de evento, executor, recurso afetado e contexto de requisição (IP, User-Agent, timestamp)."
+        },
+        {
+          "id": 36,
+          "step": "Enriquecimento de Dados",
+          "description": "Enriquecer evento com metadados adicionais: identificação do tenant, snapshot de dados antes/depois (para operações de update/delete), lista de campos alterados, nível de severidade baseado em tipo de evento e resultado da operação."
+        },
+        {
+          "id": 37,
+          "step": "Validação de Conformidade",
+          "description": "Validar se evento respeita políticas de conformidade LGPD: verificar se dados pessoais estão sendo tratados corretamente, se isolamento de tenant está sendo respeitado, se criptografia está sendo aplicada quando necessário."
+        },
+        {
+          "id": 38,
+          "step": "Detecção de Anomalias",
+          "description": "Analisar evento contra padrões de comportamento normal: detectar tentativas de força bruta, enumeração de usuários, acesso não autorizado, modificações suspeitas de dados, violações de rate limit."
+        },
+        {
+          "id": 39,
+          "step": "Persistência em Auditoria",
+          "description": "Persistir registro de auditoria completo na tabela audit_log com todos os metadados, snapshots de dados, resultado da operação e timestamp do servidor para garantir imutabilidade e rastreabilidade."
+        },
+        {
+          "id": 40,
+          "step": "Emissão de Alerta",
+          "description": "Avaliar se evento dispara alguma regra de alerta configurada (múltiplas tentativas de login falhadas, desativação em massa, acesso não autorizado); gerar alerta crítico ou de warning quando condição é atendida."
+        },
+        {
+          "id": 41,
+          "step": "Disponibilização para Consulta",
+          "description": "Disponibilizar registro de auditoria para consulta via endpoints de API, permitindo que administradores de tenant e administradores internos acessem histórico filtrado por tenant, tipo de evento, executor, período, resultado e severidade."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 46,
+        "category": "invariant",
+        "description": "Todo evento de operação crítica (autenticação, gerenciamento de usuário, gerenciamento de tenant, operação em tarefa) DEVE ser registrado na trilha de auditoria com timestamp do servidor, identificação do executor, tenant afetado, tipo de operação, resultado (sucesso/falha/bloqueio) e contexto de requisição (IP, User-Agent).",
+        "enforcement": "code",
+        "verification": "Validar que cada operação crítica gera exatamente um registro na tabela audit_log com todos os campos obrigatórios preenchidos; auditar logs para confirmar cobertura de 100% das operações críticas."
+      },
+      {
+        "id": 47,
+        "category": "invariant",
+        "description": "Registros de auditoria são IMUTÁVEIS após criação; nenhuma operação de update, delete ou modificação é permitida em registros existentes na tabela audit_log.",
+        "enforcement": "db_constraint",
+        "verification": "Implementar trigger de banco de dados que rejeita qualquer tentativa de UPDATE ou DELETE na tabela audit_log; testar que operações de modificação retornam erro de constraint violation."
+      },
+      {
+        "id": 48,
+        "category": "invariant",
+        "description": "Registros de auditoria de um tenant DEVEM estar isolados e acessíveis exclusivamente por administradores daquele tenant ou por administradores internos da plataforma; nenhum outro tenant pode acessar ou visualizar registros de auditoria de outro tenant.",
+        "enforcement": "code",
+        "verification": "Validar que consultas de auditoria filtram automaticamente por tenant_id do usuário autenticado; testar que usuário de tenant A não consegue acessar registros de auditoria do tenant B mesmo manipulando parâmetros de requisição."
+      },
+      {
+        "id": 49,
+        "category": "invariant",
+        "description": "Snapshots de dados antes e depois (data_before, data_after) DEVEM ser armazenados em formato JSON estruturado e NUNCA conter dados sensíveis em texto simples (senhas, tokens, chaves criptográficas); dados sensíveis devem ser redacionados ou omitidos.",
+        "enforcement": "code",
+        "verification": "Validar que snapshots de dados não contêm campos sensíveis (password_hash, refresh_token_hash, password_reset_token_hash); implementar redação automática de campos sensíveis antes de persistência."
+      },
+      {
+        "id": 50,
+        "category": "compliance",
+        "description": "Registros de auditoria DEVEM ser retidos por no mínimo 7 anos (2555 dias) conforme requisitos de conformidade LGPD e regulamentações fiscais brasileiras; registros com mais de 7 anos podem ser deletados automaticamente.",
+        "enforcement": "infra",
+        "verification": "Implementar job de retenção agendado que deleta registros com mais de 2555 dias; validar que registros dentro do período de retenção não são deletados; auditar logs de deleção para conformidade."
+      },
+      {
+        "id": 51,
+        "category": "observability",
+        "description": "Eventos de auditoria DEVEM incluir correlation_id para rastrear operações relacionadas em fluxos complexos (ex.: login seguido de criação de tarefa); correlation_id DEVE ser propagado através de todas as chamadas de serviço relacionadas.",
+        "enforcement": "code",
+        "verification": "Validar que eventos relacionados compartilham o mesmo correlation_id; testar rastreamento de fluxo completo de operação complexa através de múltiplos eventos."
+      },
+      {
+        "id": 52,
+        "category": "observability",
+        "description": "Registros de auditoria DEVEM incluir nível de severidade (info, warning, critical) baseado em tipo de evento e resultado da operação; eventos críticos (falhas de autenticação, violações de conformidade, acesso não autorizado) DEVEM ser marcados como 'critical'.",
+        "enforcement": "code",
+        "verification": "Validar que eventos críticos são marcados com severity='critical'; testar que alertas são gerados apenas para eventos com severity apropriada."
+      },
+      {
+        "id": 53,
+        "category": "rate_limit",
+        "description": "Tentativas de login falhadas DEVEM ser rastreadas por e-mail e IP; após 5 tentativas falhadas em 15 minutos, login DEVE ser bloqueado temporariamente por 15 minutos; evento de rate_limit_exceeded DEVE ser registrado em auditoria.",
+        "enforcement": "code",
+        "verification": "Testar que 5 tentativas falhadas disparam bloqueio; validar que 6ª tentativa retorna erro 429 com retry_after_seconds; confirmar que evento de rate_limit_exceeded é registrado em auditoria."
+      },
+      {
+        "id": 54,
+        "category": "authorization",
+        "description": "Acesso a registros de auditoria via GET /api/audit-logs DEVE ser restrito a administradores de tenant (seu próprio tenant) e administradores internos da plataforma (todos os tenants); usuários comuns, gestores e colaboradores NÃO podem acessar nenhum registro de auditoria.",
+        "enforcement": "code",
+        "verification": "Testar que colaborador não consegue acessar GET /api/audit-logs (retorna 403 Forbidden); testar que administrador de tenant consegue acessar apenas registros de seu tenant; testar que administrador interno consegue acessar registros de todos os tenants."
+      },
+      {
+        "id": 55,
+        "category": "validation",
+        "description": "Campos obrigatórios em registro de auditoria (id, tenant_id, event_type, resource_type, operation, status, timestamp, severity) DEVEM ser sempre preenchidos; nenhum registro pode ser persistido com campos obrigatórios vazios ou null.",
+        "enforcement": "db_constraint",
+        "verification": "Implementar NOT NULL constraints em banco de dados para campos obrigatórios; testar que tentativa de inserir registro com campo obrigatório vazio retorna erro de constraint violation."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "A Trilha de Auditoria de Ações é um componente de governança e conformidade que registra, armazena e disponibiliza um histórico completo e imutável de todas as operações críticas realizadas na plataforma, incluindo autenticação, gerenciamento de usuários, provisionamento de tenants, criação e modificação de tarefas. Implementa captura automática de eventos de auditoria em pontos-chave do sistema (login, logout, cadastro de usuário, edição de perfil, ativação/desativação, criação/edição/conclusão de tarefa, provisionamento/ativação/desativação de tenant), armazenando metadados completos (identificação do executor, timestamp, endereço IP, tenant afetado, dados anteriores e novos). Fornece interface de consulta para administradores internos e de tenant acessarem registros de auditoria filtrados por usuário, tenant, tipo de evento, intervalo de datas e resultado da operação, garantindo rastreabilidade total para conformidade com LGPD, detecção de anomalias, investigação de incidentes de segurança e auditoria regulatória. Opera como camada transversal que intercepta operações em todas as camadas (API, repositórios, banco de dados) sem modificar a lógica de negócio, emitindo eventos estruturados para armazenamento persistente e análise."
+    },
+    "definition": {
+      "policies": [
+        {
+          "id": 2,
+          "name": "Registro Obrigatório de Eventos Críticos",
+          "scope": "Todas as operações críticas (autenticação, gerenciamento de usuário, gerenciamento de tenant, operação em tarefa)",
+          "enforcement": "code",
+          "audit_action": "log"
+        },
+        {
+          "id": 3,
+          "name": "Imutabilidade de Registros de Auditoria",
+          "scope": "Tabela audit_log após criação de registro",
+          "enforcement": "db_constraint",
+          "audit_action": "block"
+        },
+        {
+          "id": 4,
+          "name": "Isolamento de Auditoria por Tenant",
+          "scope": "Acesso a registros de auditoria filtrado por tenant do usuário autenticado",
+          "enforcement": "code",
+          "audit_action": "log"
+        },
+        {
+          "id": 5,
+          "name": "Redação de Dados Sensíveis em Snapshots",
+          "scope": "Campos password_hash, refresh_token_hash, password_reset_token_hash em data_before e data_after",
+          "enforcement": "code",
+          "audit_action": "log"
+        },
+        {
+          "id": 6,
+          "name": "Retenção de Registros de Auditoria",
+          "scope": "Armazenamento de registros por 7 anos (2555 dias) conforme LGPD e regulamentações fiscais brasileiras",
+          "enforcement": "infra",
+          "audit_action": "log"
+        },
+        {
+          "id": 7,
+          "name": "Propagação de Correlation ID",
+          "scope": "Rastreamento de operações relacionadas em fluxos complexos através de correlation_id",
+          "enforcement": "code",
+          "audit_action": "log"
+        },
+        {
+          "id": 8,
+          "name": "Classificação de Severidade de Eventos",
+          "scope": "Atribuição de nível de severidade (info, warning, critical) baseado em tipo de evento e resultado",
+          "enforcement": "code",
+          "audit_action": "log"
+        },
+        {
+          "id": 9,
+          "name": "Rate Limiting em Autenticação",
+          "scope": "Bloqueio de login após 5 tentativas falhadas em 15 minutos por e-mail e IP",
+          "enforcement": "code",
+          "audit_action": "alert"
+        },
+        {
+          "id": 10,
+          "name": "Autorização para Acesso a Auditoria",
+          "scope": "Restrição de acesso a registros de auditoria a administradores de tenant (seu próprio tenant) e administradores internos da plataforma",
+          "enforcement": "code",
+          "audit_action": "block"
+        },
+        {
+          "id": 11,
+          "name": "Validação de Campos Obrigatórios",
+          "scope": "Preenchimento obrigatório de id, tenant_id, event_type, resource_type, operation, status, timestamp, severity em registros de auditoria",
+          "enforcement": "db_constraint",
+          "audit_action": "block"
+        }
+      ],
+      "audit_emitters": [
+        {
+          "id": 12,
+          "event_name": "user_created",
+          "destination": "audit_log table",
+          "payload_shape": "{ user_id: uuid, tenant_id: uuid, email: string, nome_completo: string, criador_id: uuid, timestamp: timestamp, ip_address: string }"
+        },
+        {
+          "id": 13,
+          "event_name": "user_updated",
+          "destination": "audit_log table",
+          "payload_shape": "{ user_id: uuid, tenant_id: uuid, email: string, nome_completo: string, editor_id: uuid, fields_changed: string[], data_before: object, data_after: object, timestamp: timestamp, ip_address: string }"
+        },
+        {
+          "id": 14,
+          "event_name": "user_activated",
+          "destination": "audit_log table",
+          "payload_shape": "{ user_id: uuid, tenant_id: uuid, email: string, executor_id: uuid, timestamp: timestamp, ip_address: string }"
+        },
+        {
+          "id": 15,
+          "event_name": "user_deactivated",
+          "destination": "audit_log table",
+          "payload_shape": "{ user_id: uuid, tenant_id: uuid, email: string, executor_id: uuid, timestamp: timestamp, ip_address: string }"
+        },
+        {
+          "id": 16,
+          "event_name": "authentication_successful",
+          "destination": "audit_log table",
+          "payload_shape": "{ user_id: uuid, tenant_id: uuid, email: string, timestamp: timestamp, ip_address: string, user_agent: string }"
+        },
+        {
+          "id": 17,
+          "event_name": "authentication_failed",
+          "destination": "audit_log table",
+          "payload_shape": "{ email: string, tenant_id: uuid, reason: enum[invalid_credentials|user_inactive|tenant_inactive|rate_limited], timestamp: timestamp, ip_address: string, user_agent: string }"
+        },
+        {
+          "id": 18,
+          "event_name": "password_recovery_requested",
+          "destination": "audit_log table",
+          "payload_shape": "{ email: string, tenant_id: uuid, timestamp: timestamp, ip_address: string }"
+        },
+        {
+          "id": 19,
+          "event_name": "password_reset_completed",
+          "destination": "audit_log table",
+          "payload_shape": "{ user_id: uuid, tenant_id: uuid, email: string, timestamp: timestamp, ip_address: string }"
+        },
+        {
+          "id": 20,
+          "event_name": "session_revoked",
+          "destination": "audit_log table",
+          "payload_shape": "{ user_id: uuid, tenant_id: uuid, email: string, reason: enum[logout|user_deactivated|tenant_deactivated|token_expired|password_reset], timestamp: timestamp }"
+        },
+        {
+          "id": 21,
+          "event_name": "task_created",
+          "destination": "audit_log table",
+          "payload_shape": "{ task_id: uuid, tenant_id: uuid, titulo: string, criador_id: uuid, responsavel_id: uuid, prioridade: enum[baixa|media|alta|urgente], status: enum[a_fazer|em_andamento|concluido], data_limite: date, timestamp: timestamp, ip_address: string }"
+        },
+        {
+          "id": 22,
+          "event_name": "task_updated",
+          "destination": "audit_log table",
+          "payload_shape": "{ task_id: uuid, tenant_id: uuid, editor_id: uuid, fields_changed: string[], data_before: object, data_after: object, timestamp: timestamp, ip_address: string }"
+        },
+        {
+          "id": 23,
+          "event_name": "task_status_changed",
+          "destination": "audit_log table",
+          "payload_shape": "{ task_id: uuid, tenant_id: uuid, executor_id: uuid, status_anterior: enum[a_fazer|em_andamento|concluido], status_novo: enum[a_fazer|em_andamento|concluido], timestamp: timestamp, ip_address: string }"
+        },
+        {
+          "id": 24,
+          "event_name": "task_completed",
+          "destination": "audit_log table",
+          "payload_shape": "{ task_id: uuid, tenant_id: uuid, executor_id: uuid, timestamp: timestamp, ip_address: string }"
+        },
+        {
+          "id": 25,
+          "event_name": "tenant_provisioned",
+          "destination": "audit_log table",
+          "payload_shape": "{ tenant_id: uuid, nome: string, slug: string, administrador_criador_id: uuid, timestamp: timestamp, ip_address: string }"
+        },
+        {
+          "id": 26,
+          "event_name": "tenant_activated",
+          "destination": "audit_log table",
+          "payload_shape": "{ tenant_id: uuid, slug: string, executor_id: uuid, timestamp: timestamp, ip_address: string }"
+        },
+        {
+          "id": 27,
+          "event_name": "tenant_deactivated",
+          "destination": "audit_log table",
+          "payload_shape": "{ tenant_id: uuid, slug: string, executor_id: uuid, timestamp: timestamp, ip_address: string }"
+        },
+        {
+          "id": 28,
+          "event_name": "rate_limit_exceeded",
+          "destination": "audit_log table",
+          "payload_shape": "{ endpoint: string, email_or_ip: string, limit_type: enum[login_attempts|password_recovery_requests|api_requests], timestamp: timestamp, ip_address: string }"
+        },
+        {
+          "id": 29,
+          "event_name": "compliance_violation_detected",
+          "destination": "audit_log table",
+          "payload_shape": "{ violation_type: enum[unauthorized_access|data_breach_attempt|rate_limit_exceeded|invalid_consent|encryption_failure], user_id: uuid, tenant_id: uuid, resource_type: enum[user|task|tenant], timestamp: timestamp, ip_address: string, details: string }"
+        }
+      ]
+    },
+    "pendencies": [
+      {
+        "id": 75,
+        "section": "definition",
+        "description": "Definição de estratégia de particionamento ou sharding para tabela audit_log para suportar crescimento contínuo de volume de eventos. Necessário validar se particionamento por tenant_id ou por data (timestamp) é mais apropriado para padrão de acesso esperado.",
+        "resolutionOptions": [
+          {
+            "id": 76,
+            "text": "Particionamento por tenant_id: cada tenant tem sua própria partição, otimizando isolamento e consultas por tenant, mas requer gerenciamento de partições dinâmicas conforme novos tenants são criados."
+          },
+          {
+            "id": 77,
+            "text": "Particionamento por timestamp (mensal): registros são particionados por mês, otimizando retenção e arquivamento, mas requer join entre partições para consultas que abrangem múltiplos meses."
+          },
+          {
+            "id": 78,
+            "text": "Particionamento composto (tenant_id + timestamp): combina benefícios de ambas as estratégias, mas aumenta complexidade de gerenciamento de partições."
+          },
+          {
+            "id": 79,
+            "text": "Sem particionamento inicial: começar com tabela única e implementar particionamento quando volume atingir 10 milhões de registros, baseado em padrão de acesso observado."
+          }
+        ],
+        "recommendedOptionId": 79
+      },
+      {
+        "id": 80,
+        "section": "definition",
+        "description": "Definição de mecanismo de alertas em tempo real para eventos críticos de auditoria. Necessário especificar: canal de notificação (e-mail, SMS, webhook, dashboard), latência máxima de entrega, escalação de alertas não respondidos, integração com sistema de tickets.",
+        "resolutionOptions": [
+          {
+            "id": 81,
+            "text": "Alertas via e-mail: notificação por e-mail para administradores relevantes com detalhes do evento; simples de implementar mas pode ter latência de minutos."
+          },
+          {
+            "id": 82,
+            "text": "Alertas via webhook: envio de evento para sistema externo de alertas (ex.: PagerDuty, Slack) em tempo real; requer integração com serviço externo."
+          },
+          {
+            "id": 83,
+            "text": "Dashboard em tempo real: exibição de alertas em dashboard administrativo com notificação no navegador; requer WebSocket ou polling para atualização em tempo real."
+          },
+          {
+            "id": 84,
+            "text": "Alertas multi-canal: combinação de e-mail, webhook e dashboard com escalação automática se alerta não for respondido em 5 minutos."
+          }
+        ],
+        "recommendedOptionId": 84
+      },
+      {
+        "id": 85,
+        "section": "definition",
+        "description": "Definição de formato e estrutura de dados para snapshots (data_before, data_after) em registros de auditoria. Necessário especificar: quais campos são incluídos, como dados sensíveis são redacionados, como estruturas aninhadas são representadas, limite de tamanho de snapshot.",
+        "resolutionOptions": [
+          {
+            "id": 86,
+            "text": "Snapshot completo em JSON: incluir todos os campos do recurso antes e depois, com redação manual de campos sensíveis; simples mas pode resultar em snapshots grandes."
+          },
+          {
+            "id": 87,
+            "text": "Snapshot apenas de campos alterados: incluir apenas campos que foram modificados em operações de update; reduz tamanho mas requer lógica de diff."
+          },
+          {
+            "id": 88,
+            "text": "Snapshot com máscara de campos sensíveis: incluir todos os campos mas mascarar automaticamente campos sensíveis (password_hash, tokens) com valor genérico como '[REDACTED]'."
+          },
+          {
+            "id": 89,
+            "text": "Snapshot sem dados sensíveis: omitir completamente campos sensíveis do snapshot; reduz tamanho e risco de exposição mas perde rastreabilidade de modificações em campos sensíveis."
+          }
+        ],
+        "recommendedOptionId": 88
+      },
+      {
+        "id": 90,
+        "section": "flow",
+        "description": "Definição de mecanismo de processamento assíncrono para captura de eventos de auditoria. Necessário especificar: tecnologia de fila (Redis, RabbitMQ, AWS SQS), política de retry, tratamento de falhas, garantia de entrega (at-least-once, exactly-once).",
+        "resolutionOptions": [
+          {
+            "id": 91,
+            "text": "Fila em memória (Redis): implementar fila de eventos em Redis com persistência em disco; simples e rápido mas requer gerenciamento de failover."
+          },
+          {
+            "id": 92,
+            "text": "Fila de mensagens (RabbitMQ): usar RabbitMQ para enfileiramento robusto com garantia de entrega; requer infraestrutura adicional mas oferece alta confiabilidade."
+          },
+          {
+            "id": 93,
+            "text": "Fila gerenciada (AWS SQS): usar serviço gerenciado de fila da AWS; elimina necessidade de gerenciar infraestrutura mas adiciona custo e latência de rede."
+          },
+          {
+            "id": 94,
+            "text": "Persistência síncrona em banco de dados: persistir evento diretamente em audit_log de forma síncrona; garante durabilidade mas pode impactar latência da operação original."
+          }
+        ],
+        "recommendedOptionId": 91
+      },
+      {
+        "id": 95,
+        "section": "non_functional_requirements",
+        "description": "Definição de SLA (Service Level Agreement) para disponibilidade e latência da trilha de auditoria. Necessário especificar: percentual de disponibilidade esperado, latência máxima aceitável para captura e consulta, RTO (Recovery Time Objective) e RPO (Recovery Point Objective) em caso de falha.",
+        "resolutionOptions": [
+          {
+            "id": 96,
+            "text": "SLA agressivo: 99.99% disponibilidade, p99 <= 100ms para captura, p99 <= 200ms para consulta, RTO <= 1 hora, RPO <= 5 minutos; requer redundância e replicação."
+          },
+          {
+            "id": 97,
+            "text": "SLA moderado: 99.9% disponibilidade, p99 <= 500ms para captura, p99 <= 1s para consulta, RTO <= 4 horas, RPO <= 1 hora; balanceia custo e confiabilidade."
+          },
+          {
+            "id": 98,
+            "text": "SLA básico: 99% disponibilidade, p99 <= 2s para captura, p99 <= 5s para consulta, RTO <= 24 horas, RPO <= 24 horas; custo mínimo mas menor confiabilidade."
+          }
+        ],
+        "recommendedOptionId": 97
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 63,
+        "then": "Evento 'authentication_successful' é registrado em audit_log com executor_id, tenant_id, timestamp, ip_address, user_agent e severity='info'",
+        "type": "integration",
+        "when": "Usuário realiza POST /api/auth/login com e-mail e senha corretos",
+        "given": "Um usuário ativo cadastrado no tenant com credenciais válidas",
+        "scenario": "Captura de evento de login bem-sucedido",
+        "target_section": "definition"
+      },
+      {
+        "id": 64,
+        "then": "Evento 'authentication_failed' é registrado em audit_log com reason='invalid_credentials', status='failure' e severity='warning'",
+        "type": "integration",
+        "when": "Usuário realiza POST /api/auth/login com senha incorreta",
+        "given": "Um usuário cadastrado no tenant com credenciais inválidas",
+        "scenario": "Captura de evento de tentativa de login falhada",
+        "target_section": "definition"
+      },
+      {
+        "id": 65,
+        "then": "Requisição retorna 429 Too Many Requests; evento 'rate_limit_exceeded' é registrado em audit_log com severity='critical'; login é bloqueado por 15 minutos",
+        "type": "integration",
+        "when": "Usuário realiza 5ª tentativa de login com senha incorreta",
+        "given": "Um usuário com 4 tentativas de login falhadas nos últimos 10 minutos",
+        "scenario": "Bloqueio de login após múltiplas tentativas falhadas",
+        "target_section": "rules"
+      },
+      {
+        "id": 66,
+        "then": "Evento 'user_created' é registrado em audit_log com executor_id (administrador), user_id (novo usuário), tenant_id, timestamp, status='success' e severity='info'",
+        "type": "integration",
+        "when": "Administrador realiza POST /api/users com dados válidos de novo usuário",
+        "given": "Um administrador de tenant autenticado",
+        "scenario": "Captura de evento de criação de usuário",
+        "target_section": "definition"
+      },
+      {
+        "id": 67,
+        "then": "Evento 'user_updated' é registrado em audit_log com data_before contendo nome anterior, data_after contendo nome novo, fields_changed=['nome_completo'], status='success'",
+        "type": "integration",
+        "when": "Administrador realiza PUT /api/users/:id alterando nome para 'João Pedro Silva'",
+        "given": "Um administrador de tenant autenticado e um usuário existente com nome 'João Silva'",
+        "scenario": "Captura de evento de edição de usuário com snapshot de dados",
+        "target_section": "definition"
+      },
+      {
+        "id": 68,
+        "then": "Resposta contém apenas registros de auditoria do Tenant A; nenhum registro do Tenant B é retornado mesmo que existam na base de dados",
+        "type": "integration",
+        "when": "Administrador do Tenant A consulta GET /api/audit-logs",
+        "given": "Dois tenants diferentes (Tenant A e Tenant B) com usuários e eventos de auditoria",
+        "scenario": "Isolamento de registros de auditoria por tenant",
+        "target_section": "rules"
+      },
+      {
+        "id": 69,
+        "then": "Requisição retorna 403 Forbidden; nenhum registro de auditoria é retornado; evento de tentativa de acesso não autorizado é registrado em audit_log com severity='critical'",
+        "type": "security",
+        "when": "Colaborador tenta acessar GET /api/audit-logs",
+        "given": "Um colaborador comum (não administrador) autenticado",
+        "scenario": "Prevenção de acesso não autorizado a registros de auditoria",
+        "target_section": "rules"
+      },
+      {
+        "id": 70,
+        "then": "Evento 'task_completed' é registrado em audit_log com executor_id, task_id, tenant_id, timestamp, status='success' e severity='info'",
+        "type": "integration",
+        "when": "Usuário realiza PUT /api/tasks/:id/complete para marcar tarefa como concluída",
+        "given": "Um usuário autenticado com uma tarefa em status 'em_andamento'",
+        "scenario": "Captura de evento de conclusão de tarefa",
+        "target_section": "definition"
+      },
+      {
+        "id": 71,
+        "then": "Evento 'tenant_provisioned' é registrado em audit_log com executor_id (administrador), tenant_id (novo tenant), timestamp, status='success' e severity='info'",
+        "type": "integration",
+        "when": "Administrador realiza POST /api/tenants com dados válidos de novo tenant",
+        "given": "Um administrador interno da plataforma autenticado",
+        "scenario": "Captura de evento de provisionamento de tenant",
+        "target_section": "definition"
+      },
+      {
+        "id": 72,
+        "then": "Resposta é retornada em <= 500ms; índices compostos (tenant_id, timestamp) e (event_type) são utilizados; resultado contém apenas registros do tenant e período especificados",
+        "type": "performance",
+        "when": "Administrador consulta GET /api/audit-logs?tenant_id=X&event_type=user_created&data_inicio=2024-01-01&data_fim=2024-01-31",
+        "given": "Tabela audit_log com 1 milhão de registros históricos",
+        "scenario": "Consulta de auditoria com múltiplos filtros em grande volume de dados",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 73,
+        "then": "Operação é rejeitada com erro de constraint violation; registro permanece inalterado; tentativa de modificação é registrada em log de segurança",
+        "type": "integration",
+        "when": "Tentativa de executar UPDATE ou DELETE no registro de auditoria",
+        "given": "Um registro de auditoria já persistido na tabela audit_log",
+        "scenario": "Imutabilidade de registros de auditoria",
+        "target_section": "rules"
+      },
+      {
+        "id": 74,
+        "then": "Snapshots data_before e data_after não contêm campo password_hash em texto; campo é redacionado ou omitido; dados sensíveis não são expostos em registros de auditoria",
+        "type": "integration",
+        "when": "Evento é capturado e persistido em audit_log",
+        "given": "Um evento de auditoria que envolve modificação de senha de usuário",
+        "scenario": "Redação de dados sensíveis em snapshots de auditoria",
+        "target_section": "rules"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 56,
+        "target": "p99 <= 50ms para enfileiramento de evento; persistência em background sem impacto na latência da operação original",
+        "category": "performance",
+        "requirement": "Captura e persistência de evento de auditoria DEVE ser concluída em tempo não-bloqueante (assíncrono) para não impactar latência da operação original; evento DEVE ser enfileirado para processamento assíncrono e persistido em background.",
+        "verification": "Medir latência de operação crítica (ex.: POST /api/tasks) com e sem captura de auditoria; confirmar que diferença é <= 50ms; validar que evento é persistido em background sem bloquear resposta ao cliente."
+      },
+      {
+        "id": 57,
+        "target": "p99 <= 500ms para consulta com filtros comuns em tabela com 10 milhões de registros",
+        "category": "performance",
+        "requirement": "Consultas de auditoria via GET /api/audit-logs DEVEM retornar resultados em tempo adequado mesmo com milhões de registros históricos; índices DEVEM ser otimizados para filtros comuns (tenant_id, timestamp, event_type, executor_id).",
+        "verification": "Executar teste de carga com 10 milhões de registros de auditoria; medir latência de consultas com diferentes combinações de filtros; validar que índices estão sendo utilizados (EXPLAIN PLAN)."
+      },
+      {
+        "id": 58,
+        "target": "Suportar até 100.000 eventos de auditoria por hora sem degradação de desempenho",
+        "category": "scalability",
+        "requirement": "Trilha de auditoria DEVE suportar crescimento contínuo de volume de eventos sem degradação de desempenho; estratégia de particionamento ou sharding DEVE ser implementada para distribuir carga de escrita.",
+        "verification": "Executar teste de carga com 100.000 eventos/hora; medir latência de persistência e consulta; validar que sistema mantém performance dentro de SLA."
+      },
+      {
+        "id": 59,
+        "target": "Disponibilidade de 99.9% para operações críticas mesmo com falhas na camada de auditoria",
+        "category": "availability",
+        "requirement": "Falha na captura de auditoria NÃO DEVE impedir execução da operação original; se enfileiramento de evento falhar, operação DEVE ser concluída normalmente e evento DEVE ser retentado assincronamente.",
+        "verification": "Simular falha na fila de auditoria; validar que operação original é concluída com sucesso; confirmar que evento é retentado e eventualmente persistido."
+      },
+      {
+        "id": 60,
+        "target": "Criptografia AES-256-GCM para dados em repouso; acesso restrito a administradores autorizados",
+        "category": "security",
+        "requirement": "Registros de auditoria DEVEM ser armazenados em local seguro com criptografia em repouso (AES-256-GCM); acesso a registros DEVE ser auditado e restrito a usuários autorizados.",
+        "verification": "Validar que tabela audit_log está criptografada; testar que acesso a registros é auditado; confirmar que usuários não autorizados não conseguem acessar dados descriptografados."
+      },
+      {
+        "id": 61,
+        "target": "Latência de alerta crítico <= 1 minuto; taxa de entrega de notificação >= 99%",
+        "category": "observability",
+        "requirement": "Alertas de segurança baseados em regras de auditoria DEVEM ser gerados em tempo real e notificados a administradores relevantes; alertas críticos DEVEM ser entregues em < 1 minuto.",
+        "verification": "Testar geração de alerta para evento crítico; medir tempo entre evento e notificação; validar que administrador recebe notificação em tempo real."
+      },
+      {
+        "id": 62,
+        "target": "Redução de 70% no custo de armazenamento através de arquivamento e retenção",
+        "category": "cost",
+        "requirement": "Armazenamento de registros de auditoria DEVE ser otimizado para custo; registros antigos (> 1 ano) DEVEM ser movidos para armazenamento de arquivo de baixo custo; registros com > 7 anos DEVEM ser deletados.",
+        "verification": "Implementar política de arquivamento; validar que registros antigos são movidos para storage de baixo custo; confirmar que registros com > 7 anos são deletados automaticamente."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 53,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T14:46:56.297Z",
+  "updatedAt": null
+}

@@ -1,0 +1,120 @@
+{
+  "id": 24018,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 16,
+        "name": "Falhas de Execução e Idempotência",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem reavaliar a operação correta, o erro de banco de dados permanece sem solução, e a reconstituição de dados financeiros fica impossível.",
+        "confidence": 0.7592,
+        "context_element_id": 2819
+      },
+      {
+        "id": 18,
+        "name": "Auditoria e Rastreabilidade",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem trilha de auditoria, a responsabilidade por um ato indevido não pode ser atribuída a um usuário específico.",
+        "confidence": 0.8471,
+        "context_element_id": 2848
+      }
+    ],
+    "attributes": [
+      {
+        "id": 9,
+        "name": "Ciclo de vida esperado do registro no contexto de negócio",
+        "value": [
+          "30-days",
+          "7-years"
+        ],
+        "method": "user-input",
+        "reasoning": "O token de refresh tem uma expiração de 30 dias.\nO token de refresh tem uma expiração de 7 dias, com renovação automática a cada requisição autenticada.",
+        "confidence": 0.8225,
+        "context_element_id": 2707
+      },
+      {
+        "id": 12,
+        "name": "SLA ou tolerância a falhas esperada",
+        "value": [
+          "99.9% uptime",
+          "p99 <= 200ms para autenticação bem-sucedida e p99 <= 150ms para erro de validação",
+          "latência p99 <= 200ms para sucesso e p99 <= 150ms para erro de validação"
+        ],
+        "method": "user-input",
+        "reasoning": "A disponibilidade do serviço de autenticação é garantida com 99.9% de uptime mensal.\nA autenticação bem-sucedida tem p99 de 200ms e a de erro de validação de 150ms, dentro do alvo de SLA.\nA autenticação é processada com latência p99 de 200ms para sucesso e 150ms para erro de validação, atendendo a um SLA de performance.",
+        "confidence": 0.8358,
+        "context_element_id": 2772
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 22,
+        "name": "Configurar tratamento seguro de erros com logging detalhado que não exponha informações sensíveis, mas permita análise forense",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Revelar detalhes técnicos ao usuário torna a responsabilidade de correção do erro passível de ser corrigida por terceiros.",
+        "confidence": 0.75,
+        "context_element_id": 2927
+      },
+      {
+        "id": 25,
+        "name": "Implementar não repúdio para ações críticas usando assinaturas digitais e timestamps criptográficos auditáveis",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem confirmação de autorização, um ator queira acessar o sistema pode fazer o que quiser, e a prova só aparece depois.",
+        "confidence": 0.8212,
+        "context_element_id": 2941
+      },
+      {
+        "id": 26,
+        "name": "Implementar defesa em profundidade (defense in depth) com múltiplas camadas de segurança independentes e controles complementares",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Uma única chave que bloqueia o acesso ao sistema é mais restritiva e melhor protege do que uma que permite acesso em cada etapa.",
+        "confidence": 0.8237,
+        "context_element_id": 2944
+      },
+      {
+        "id": 30,
+        "name": "Usar checksums e funções de hash para verificar a integridade dos dados durante a transmissão e o armazenamento",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Revelar qual campo está incorreto tornaria o sistema vulnerável a ataque de força bruta ou de força bruta parcial.",
+        "confidence": 0.8851,
+        "context_element_id": 2955
+      },
+      {
+        "id": 33,
+        "name": "Automatize tarefas operacionais repetitivas para reduzir o erro humano e melhorar a consistência",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Repetir a verificação a cada 90 dias sem sair do ciclo de 7 dias de transição evita que o registro fique preso em um estado indeciso.",
+        "confidence": 0.7965,
+        "context_element_id": 3000
+      },
+      {
+        "id": 36,
+        "name": "Implemente restrições operacionais que limitem as ações do sistema com base em critérios de segurança predefinidos, incluindo rate limits, limites de operação e políticas de acesso restritivas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O sistema exibe a mensagem de bloqueio imediatamente após 5 tentativas falhas em menos de 1 minuto, sem que o usuário saiba o motivo.",
+        "confidence": 0.8362,
+        "context_element_id": 3062
+      }
+    ],
+    "discriminators": [],
+    "business_questions": []
+  },
+  "version": 2,
+  "active": true,
+  "sourceId": 23966,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}

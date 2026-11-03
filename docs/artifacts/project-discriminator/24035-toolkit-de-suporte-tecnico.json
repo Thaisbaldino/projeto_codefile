@@ -1,0 +1,301 @@
+{
+  "id": 24035,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 21,
+        "name": "Pontos Únicos de Falha",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Falhas em componentes externos que dependem do toolkit são imediatas e completas, sem que o sistema possa recomeçar sozinho.",
+        "confidence": 0.7565,
+        "context_element_id": 2817
+      },
+      {
+        "id": 23,
+        "name": "Formato e Tradução de Dados",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem a normalização, a integração entre sistemas teria que ser refeita a cada alteração de dados, o que seria uma falha de comunicação entre sistemas.",
+        "confidence": 0.7998,
+        "context_element_id": 2834
+      }
+    ],
+    "attributes": [
+      {
+        "id": 8,
+        "name": "Principal entidade de domínio acessada por meio deste padrão",
+        "value": [
+          "Task, User, Tenant"
+        ],
+        "method": "user-input",
+        "reasoning": "Os objetos de entidade do domínio são Task, User e Tenant.",
+        "confidence": 0.7871,
+        "context_element_id": 2694
+      },
+      {
+        "id": 9,
+        "name": "Profundidade esperada da estrutura hierárquica",
+        "value": [
+          "100",
+          "variable-depth"
+        ],
+        "method": "user-input",
+        "reasoning": "O nível máximo de hierarquia é de 100.\nO nome de nível hierárquico é normalizado e trunca ao máximo, com espaços removidos antes de persistência, caracterizando uma estrutura de profundidade variável.",
+        "confidence": 0.7134,
+        "context_element_id": 2712
+      },
+      {
+        "id": 11,
+        "name": "Sistema ou serviço de destino que receberá os dados transformados",
+        "value": [
+          "internal-api"
+        ],
+        "method": "user-input",
+        "reasoning": "A transformação é realizada para transmissão na API interna.",
+        "confidence": 0.8775,
+        "context_element_id": 2762
+      },
+      {
+        "id": 12,
+        "name": "Formato principal dos dados sendo transformados",
+        "value": [
+          "JSON"
+        ],
+        "method": "user-input",
+        "reasoning": "Os objetos DTOs prontos para serialização são em formato JSON.",
+        "confidence": 0.8771,
+        "context_element_id": 2764
+      },
+      {
+        "id": 16,
+        "name": "Escopo técnico principal do toolkit reutilizável",
+        "value": [
+          "computation-support",
+          "configuration-support"
+        ],
+        "method": "user-input",
+        "reasoning": "Os utilitários do Toolkit de Suporte Técnico fornecem operações de cálculo temporal, validação de entrada e geração de tokens seguros, compondo um escopo de suporte à computação.\nO toolkit de referência é configurado com a lista de status fixos permitidos da feature_definition de 'Atualizar Status da Tarefa', um suporte à configuração.",
+        "confidence": 0.7105,
+        "context_element_id": 2803
+      },
+      {
+        "id": 17,
+        "name": "Tipo predominante de problema computacional tratado pelo toolkit",
+        "value": [
+          "scoring-ranking"
+        ],
+        "method": "user-input",
+        "reasoning": "A validação de minimumScore é feita com base em um escopo de computação de classificação e ranking.",
+        "confidence": 0.8056,
+        "context_element_id": 2804
+      },
+      {
+        "id": 18,
+        "name": "Objetivo principal do processamento de conteúdo realizado",
+        "value": [
+          "normalization"
+        ],
+        "method": "user-input",
+        "reasoning": "sanitizeTaskTitle normaliza títulos de tarefas removendo caracteres de controle e espaços excessivos antes da persistência.",
+        "confidence": 0.8816,
+        "context_element_id": 2808
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 24,
+        "name": "Configurar filas de prioridade para processar eventos críticos primeiro, estabelecendo políticas de priorização baseadas em SLA",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem prioridade, o sistema não sabe qual evento deve ser processado primeiro, e a decisão é feita por regra de negócio ou por análise manual.",
+        "confidence": 0.7546,
+        "context_element_id": 2861
+      },
+      {
+        "id": 25,
+        "name": "Definir timeouts configuráveis para todas as operações críticas e monitorar orçamentos de tempo por transação/endpoint",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Apenas 500ms é aceito, e qualquer falha além disso compromete o tempo total de autenticação.",
+        "confidence": 0.7988,
+        "context_element_id": 2863
+      },
+      {
+        "id": 29,
+        "name": "Implementar validação rigorosa de entradas com sanitização, whitelists de caracteres permitidos e prevenção contra ataques de injeção",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Caracteres de controle como espaços e pontuação são permitidos no título, e sem sanitização eles podem causar falhas de integridade.",
+        "confidence": 0.9429,
+        "context_element_id": 2936
+      },
+      {
+        "id": 30,
+        "name": "Configurar revogação automática de acesso para contas comprometidas com invalidação imediata de tokens e sessões ativas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Rejeitar sessão e token vencido em um único clique evita que o atacante se aproveite de um tempo vencido.",
+        "confidence": 0.7013,
+        "context_element_id": 2946
+      },
+      {
+        "id": 32,
+        "name": "Usar checksums e funções de hash para verificar a integridade dos dados durante a transmissão e o armazenamento",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem checagem de confiabilidade, o token armazenado em banco de dados pode ser alterado por um atacante, liberando acesso a dados sensíveis.",
+        "confidence": 0.941,
+        "context_element_id": 2955
+      },
+      {
+        "id": 33,
+        "name": "Implemente operações idempotentes que podem ser executadas múltiplas vezes sem efeitos colaterais",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Uma requisição que altera o estado externo é repetida e não produz resultado diferente, garantindo que a operação seja executada uma vez e uma vez só.",
+        "confidence": 0.9197,
+        "context_element_id": 2968
+      },
+      {
+        "id": 34,
+        "name": "Use variáveis de ambiente para configuração dinâmica com base no contexto de execução",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem essa configuração, a mesma data em diferentes regiões aparece com formato diferente, e a confiabilidade do sistema depende do que o usuário escolheu.",
+        "confidence": 0.7026,
+        "context_element_id": 2983
+      },
+      {
+        "id": 35,
+        "name": "Projete componentes testáveis de forma independente com interfaces claras e dependências explícitas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Testes isolados sem mocks exigem que a função seja pura ou com estado controlado, evitando que a falha se espalhe para dependências externas.",
+        "confidence": 0.7782,
+        "context_element_id": 2996
+      },
+      {
+        "id": 36,
+        "name": "Estabeleça validação rigorosa de entrada e saída com sanitização automática, verificação de tipos de dados, limites de intervalo e detecção de payloads maliciosos ou malformados",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Título muito longo em uma entrada de texto padrão é difícil de digitar e ler, e a barreira de 255 caracteres é o limite definido.",
+        "confidence": 0.9436,
+        "context_element_id": 3063
+      },
+      {
+        "id": 37,
+        "name": "Configure pontuação automática de confiança para todas as previsões e decisões do sistema, com limiares configuráveis que disparam alertas quando a confiança cai abaixo de níveis aceitáveis",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A confiança de um token é medida em décimo de segundo, e um valor inferior a 2^-128 torna a previsão imprática.",
+        "confidence": 0.7338,
+        "context_element_id": 3067
+      },
+      {
+        "id": 38,
+        "name": "Implemente mecanismos de explicabilidade que forneçam justificativas compreensíveis para decisões críticas de segurança, incluindo fatores de influência, grau de certeza e limitações do modelo",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem justificativa explícita, o valor escolhido é interpretado como decisão arbitrária, e a revisão posterior não pode confiar em números sem referência.",
+        "confidence": 0.8222,
+        "context_element_id": 3074
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 1,
+        "name": "Paradigma de Armazenamento da Estrutura Lógica",
+        "value": "chave-valor",
+        "method": "internal-inference",
+        "reasoning": "O armazenamento de valores calculados e transformados em strings, números, objetos Date e hashes criptográficos é caracterizado por um paradigma de estrutura lógica de key-value.",
+        "confidence": 0.7782,
+        "context_element_id": 1321
+      },
+      {
+        "id": 3,
+        "name": "Natureza Temporal",
+        "value": "snapshot pontual",
+        "method": "user-input",
+        "reasoning": "A instância de Date fornecida para currentTime é uma instância válida de Date, representando um ponto em tempo específico.",
+        "confidence": 0.8555,
+        "context_element_id": 1508
+      },
+      {
+        "id": 4,
+        "name": "Criticidade de Conformidade",
+        "value": "conformidade regulatória",
+        "method": "user-input",
+        "reasoning": "A senha é armazenada em formato seguro com argon2id, um padrão de segurança regulatório exigido.",
+        "confidence": 0.8656,
+        "context_element_id": 1513
+      },
+      {
+        "id": 5,
+        "name": "Estratégia de Mapeamento",
+        "value": "transformação customizada",
+        "method": "user-input",
+        "reasoning": "A transformação de entidades Task do banco de dados em DTOs inclui formatação de datas e valores, caracterizando um mapping customizado.",
+        "confidence": 0.766,
+        "context_element_id": 2056
+      },
+      {
+        "id": 40,
+        "name": "Transporte de Payload",
+        "value": "payload estruturado",
+        "method": "internal-inference",
+        "reasoning": "O retorno é um objeto TaskDTO formatado com datas e valores normalizados, pronta para a serialização JSON, caracterizando um payload estruturado.",
+        "confidence": 0.8856,
+        "context_element_id": 3077
+      },
+      {
+        "id": 44,
+        "name": "Suporte a Paralelismo",
+        "value": "totalmente paralelo",
+        "method": "user-input",
+        "reasoning": "A configuração argon2id_parallelism. 4 indica paralelismo completo.",
+        "confidence": 0.9505,
+        "context_element_id": 4289
+      },
+      {
+        "id": 52,
+        "name": "Escopo de Compartilhamento",
+        "value": "toolkit da plataforma",
+        "method": "user-input",
+        "reasoning": "Os utilitários do Toolkit de Suporte Técnico são compartilhados entre múltiplos componentes da plataforma, caracterizando um toolkit de escopo de plataforma.",
+        "confidence": 0.7283,
+        "context_element_id": 5134
+      },
+      {
+        "id": 55,
+        "name": "Foco de Processamento",
+        "value": "normalização",
+        "method": "user-input",
+        "reasoning": "sanitizeTaskTitle é um exemplo de processamento de normalização.",
+        "confidence": 0.9411,
+        "context_element_id": 5159
+      },
+      {
+        "id": 56,
+        "name": "Foco do Toolkit",
+        "value": "resolução de configuração",
+        "method": "user-input",
+        "reasoning": "A consulta da feature_definition de 'Definir Prioridade da Tarefa' extrai a lista exata de valores de prioridade permitidos, que são incorporadas como constantes no toolkit, caracterizando uma resolução de configuração.",
+        "confidence": 0.86,
+        "context_element_id": 5167
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 12,
+  "active": true,
+  "sourceId": 23639,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:42:53.755Z",
+  "updatedAt": null
+}

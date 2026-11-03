@@ -1,0 +1,67 @@
+{
+  "id": 23937,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [],
+    "best_practices": [
+      {
+        "id": 15,
+        "name": "Configurar tratamento seguro de erros com logging detalhado que não exponha informações sensíveis, mas permita análise forense",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Mensagens de erro revelam detalhes internos do sistema ou estrutura de permissões, o que torna a confirmação de que elas não revelam o motivo uma exigência de revisão.",
+        "confidence": 0.7075,
+        "context_element_id": 2927
+      },
+      {
+        "id": 18,
+        "name": "Incorpore asserções executáveis que possam ser verificadas automaticamente durante a execução",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Rejeitar o recurso fora do tenant_executor é a regra de negócio que se aplica em qualquer cenário, não apenas em testes.",
+        "confidence": 0.7409,
+        "context_element_id": 2995
+      },
+      {
+        "id": 21,
+        "name": "Implemente restrições operacionais que limitem as ações do sistema com base em critérios de segurança predefinidos, incluindo rate limits, limites de operação e políticas de acesso restritivas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem restrição, um administrador pode desativar o sistema inteiro, e a confirmação não é obrigatória; o sistema reage sem saber quem fez.",
+        "confidence": 0.9162,
+        "context_element_id": 3062
+      },
+      {
+        "id": 22,
+        "name": "Implemente checkpoints obrigatórios onde operadores humanos devem aprovar decisões críticas antes da execução, especialmente para ações irreversíveis ou de alto impacto",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Requisição de confirmação explícita é um ponto de controle obrigatório para operações críticas, como desativação de tenant ou exclusão de nível hierárquico com usuários vinculados.",
+        "confidence": 0.8331,
+        "context_element_id": 3064
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 26,
+        "name": "Fluxo de Aprovação",
+        "value": "sequencial em múltiplos níveis",
+        "method": "user-input",
+        "reasoning": "As operações críticas exigem múltiplos níveis de aprovação ou confirmação, caracterizando um workflow multi-nível sequencial.",
+        "confidence": 0.853,
+        "context_element_id": 4164
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 5,
+  "active": true,
+  "sourceId": 23735,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T14:58:49.768Z",
+  "updatedAt": null
+}

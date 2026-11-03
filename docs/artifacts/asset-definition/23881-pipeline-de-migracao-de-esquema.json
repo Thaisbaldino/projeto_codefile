@@ -1,0 +1,1237 @@
+{
+  "id": 23881,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 110,
+          "name": "Gatilhos Agendados",
+          "format": "cron_expression",
+          "origin": "cron_scheduler",
+          "trigger": "schedule"
+        },
+        {
+          "id": 111,
+          "name": "Eventos de Mudança de Esquema",
+          "format": "event_json",
+          "origin": "schema_change_event_stream",
+          "trigger": "event"
+        },
+        {
+          "id": 112,
+          "name": "Scripts de Migração",
+          "format": "sql_script",
+          "origin": "migration_script_repository"
+        },
+        {
+          "id": 113,
+          "name": "Políticas de Retenção",
+          "format": "policy_json",
+          "origin": "retention_policy_store"
+        },
+        {
+          "id": 114,
+          "name": "Regras de Qualidade de Dados",
+          "format": "rules_json",
+          "origin": "data_quality_rules_store"
+        },
+        {
+          "id": 115,
+          "name": "Fluxos de Dados de Origem",
+          "format": "relational_rows",
+          "origin": "source_database_tables"
+        },
+        {
+          "id": 116,
+          "name": "Cronogramas de Backup",
+          "format": "schedule_json",
+          "origin": "backup_schedule_config"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 133,
+          "name": "Datasets Transformados",
+          "format": "relational_rows",
+          "destination": "destination_database_tables"
+        },
+        {
+          "id": 134,
+          "name": "Status de Conclusão da Migração",
+          "format": "status_json",
+          "destination": "migration_status_store"
+        },
+        {
+          "id": 135,
+          "name": "Relatório de Sincronização",
+          "format": "report_json",
+          "destination": "sync_report_endpoint"
+        },
+        {
+          "id": 136,
+          "name": "Artefatos de Backup",
+          "format": "parquet",
+          "destination": "backup_storage_s3"
+        },
+        {
+          "id": 137,
+          "name": "Confirmação de Purga",
+          "format": "log_json",
+          "destination": "purge_confirmation_log"
+        },
+        {
+          "id": 138,
+          "name": "Metadados de Lineage",
+          "format": "lineage_json",
+          "destination": "data_lineage_store"
+        },
+        {
+          "id": 139,
+          "name": "Métricas de Processamento",
+          "format": "metrics_json",
+          "destination": "metrics_endpoint"
+        }
+      ],
+      "processing": [
+        {
+          "id": 117,
+          "step": "Validar Disparo e Contexto de Tenant",
+          "description": "Valida se o disparo é válido, identifica o tenant afetado, e verifica se o tenant está ativo antes de iniciar o pipeline."
+        },
+        {
+          "id": 118,
+          "step": "Extrair Dados de Origem",
+          "description": "Executa consultas de extração nas tabelas de origem (tarefas, usuários, tenants, histórico), respeitando isolamento por tenant e aplicando filtros de data/escopo."
+        },
+        {
+          "id": 119,
+          "step": "Carregar Dados em Staging",
+          "description": "Persiste dados extraídos em tabelas de staging temporárias para processamento subsequente, com suporte a rollback."
+        },
+        {
+          "id": 120,
+          "step": "Aplicar Transformações de Mapeamento",
+          "description": "Executa transformações de mapeamento entidade-para-linha, normalização de valores, conversão de tipos, e enriquecimento de dados conforme regras definidas."
+        },
+        {
+          "id": 121,
+          "step": "Validar Integridade Referencial",
+          "description": "Valida constraints de chave estrangeira, unicidade, e relacionamentos entre entidades, registrando erros de validação para relatório."
+        },
+        {
+          "id": 122,
+          "step": "Validar Qualidade de Dados",
+          "description": "Aplica regras de qualidade de dados (completude, formato, range, padrão), detectando anomalias e registrando desvios."
+        },
+        {
+          "id": 123,
+          "step": "Detectar Conflitos de Sincronização",
+          "description": "Compara estado anterior com estado novo, identificando conflitos de escrita concorrente, atualizações conflitantes, e divergências de dados."
+        },
+        {
+          "id": 124,
+          "step": "Resolver Conflitos Aplicando Estratégia",
+          "description": "Aplica estratégia de resolução de conflitos configurada (last_write_wins, merge, manual review), marcando registros resolvidos e não-resolvidos."
+        },
+        {
+          "id": 125,
+          "step": "Carregar Dados em Destino",
+          "description": "Executa operações de INSERT/UPDATE/DELETE em tabelas de destino, respeitando isolamento por tenant e mantendo transações ACID."
+        },
+        {
+          "id": 126,
+          "step": "Aplicar Políticas de Retenção",
+          "description": "Identifica registros elegíveis para purga conforme políticas de retenção (ex: histórico com mais de 90 dias), executa exclusão lógica ou física, e registra confirmação de purga."
+        },
+        {
+          "id": 127,
+          "step": "Arquivar Dados Purged",
+          "description": "Exporta registros purged para armazenamento de arquivo (ex: Parquet em S3) para conformidade com LGPD e auditoria histórica."
+        },
+        {
+          "id": 128,
+          "step": "Processar Change Data Capture",
+          "description": "Captura mudanças incrementais de dados (inserts, updates, deletes) desde o último checkpoint, gerando eventos de mudança e metadados de lineage."
+        },
+        {
+          "id": 129,
+          "step": "Compilar Relatório de Sincronização",
+          "description": "Agrega estatísticas de execução (registros processados, erros, conflitos, tempo decorrido), gera relatório estruturado de sincronização."
+        },
+        {
+          "id": 130,
+          "step": "Publicar Métricas de Processamento",
+          "description": "Emite métricas de desempenho (throughput, latência, taxa de erro) para sistema de observabilidade, permitindo monitoramento e alertas."
+        },
+        {
+          "id": 131,
+          "step": "Publicar Artefatos de Backup",
+          "description": "Publica snapshots de backup, artefatos de arquivo, e metadados de lineage para armazenamento durável e recuperação de desastres."
+        },
+        {
+          "id": 132,
+          "step": "Registrar Conclusão e Limpeza",
+          "description": "Registra conclusão do pipeline, limpa tabelas de staging, atualiza checkpoints de CDC, e transiciona para estado de aguardo."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 140,
+        "category": "invariant",
+        "description": "Isolamento de dados por tenant: todos os registros extraídos, transformados, validados e carregados devem estar vinculados ao tenant correto; nenhum registro de um tenant pode ser visível ou acessível por outro tenant em nenhuma etapa do pipeline.",
+        "enforcement": "code",
+        "verification": "Validação em tempo de execução de tenant_id em cada operação de leitura/escrita; testes de integração verificando isolamento entre tenants; auditoria de logs confirmando escopo de tenant."
+      },
+      {
+        "id": 141,
+        "category": "invariant",
+        "description": "Integridade referencial: todas as chaves estrangeiras (tenant_id, responsavel_id, criador_id, nivel_hierarquico_id) devem ser validadas antes da carga em destino; nenhum registro órfão deve ser persistido.",
+        "enforcement": "db_constraint",
+        "verification": "Constraints de chave estrangeira no banco de dados; validação de integridade referencial no estágio de validação do pipeline; relatório de erros de validação listando violações."
+      },
+      {
+        "id": 142,
+        "category": "invariant",
+        "description": "Atomicidade de transações: operações de carga em destino devem ser atômicas por tenant; falha em qualquer registro de um tenant deve reverter toda a transação daquele tenant, não afetando outros tenants.",
+        "enforcement": "db_constraint",
+        "verification": "Transações ACID isoladas por tenant; testes de rollback confirmando reversão completa em caso de erro; logs de transação mostrando commit/rollback."
+      },
+      {
+        "id": 143,
+        "category": "validation",
+        "description": "Validação de formato de dados: todos os campos de entrada devem estar em formato válido (emails em RFC 5322, datas em ISO 8601, UUIDs em formato padrão, enums em valores permitidos) antes de transformação.",
+        "enforcement": "code",
+        "verification": "Validação de schema em estágio de validação; rejeição de registros com formato inválido; relatório de erros listando campos inválidos e valores rejeitados."
+      },
+      {
+        "id": 144,
+        "category": "validation",
+        "description": "Validação de completude de dados: campos obrigatórios (titulo, responsavel_id, criador_id, prioridade, status, tenant_id) não podem ser nulos ou vazios; registros incompletos devem ser rejeitados.",
+        "enforcement": "code",
+        "verification": "Validação de NOT NULL em estágio de validação; rejeição de registros incompletos; relatório de erros listando campos obrigatórios ausentes."
+      },
+      {
+        "id": 145,
+        "category": "validation",
+        "description": "Validação de range de valores: prioridade deve estar em [baixa, media, alta, urgente]; status deve estar em [A Fazer, Em Andamento, Concluído]; datas devem ser válidas no calendário.",
+        "enforcement": "code",
+        "verification": "Validação de enum e range em estágio de validação; rejeição de valores fora do intervalo permitido; relatório de erros listando valores inválidos."
+      },
+      {
+        "id": 146,
+        "category": "authorization",
+        "description": "Autorização de disparo: apenas administradores internos da plataforma podem disparar manualmente o pipeline via API; disparos agendados e por webhook devem ser autenticados com credenciais de serviço válidas.",
+        "enforcement": "code",
+        "verification": "Validação de token de autenticação em cada disparo; logs de auditoria registrando quem disparou o pipeline; testes de segurança confirmando rejeição de disparos não autorizados."
+      },
+      {
+        "id": 147,
+        "category": "retention",
+        "description": "Retenção de histórico de status: registros de histórico_status_tarefas com mais de 90 dias devem ser elegíveis para purga conforme política de retenção; registros purged devem ser arquivados antes da exclusão.",
+        "enforcement": "infra",
+        "verification": "Política de retenção configurada no banco de dados; logs de purga registrando registros removidos; artefatos de arquivo confirmando persistência de dados purged."
+      },
+      {
+        "id": 148,
+        "category": "retention",
+        "description": "Retenção de logs de auditoria: logs de auditoria de ações de usuários devem ser retidos por no mínimo 90 dias conforme requisitos de rastreabilidade; logs expirados podem ser arquivados ou purged.",
+        "enforcement": "infra",
+        "verification": "Política de retenção de logs configurada; logs de auditoria persistindo por 90+ dias; artefatos de arquivo confirmando persistência de logs antigos."
+      },
+      {
+        "id": 149,
+        "category": "idempotency",
+        "description": "Idempotência de carga: executar o pipeline múltiplas vezes com os mesmos dados de entrada deve produzir o mesmo estado final; operações de carga devem ser idempotentes (upsert em vez de insert).",
+        "enforcement": "code",
+        "verification": "Operações de carga usando UPSERT (INSERT ... ON CONFLICT UPDATE); testes de idempotência executando pipeline múltiplas vezes e verificando estado final idêntico."
+      },
+      {
+        "id": 150,
+        "category": "rate_limit",
+        "description": "Limite de taxa de disparo: pipeline não deve ser disparado mais de uma vez a cada 5 minutos para o mesmo tenant; disparos excessivos devem ser rejeitados com erro de rate limit.",
+        "enforcement": "code",
+        "verification": "Validação de timestamp do último disparo antes de permitir novo disparo; rejeição de disparos dentro da janela de 5 minutos; logs registrando tentativas de disparo rejeitadas."
+      },
+      {
+        "id": 151,
+        "category": "observability",
+        "description": "Rastreamento de execução: cada execução do pipeline deve gerar um ID de correlação único; todas as operações devem registrar este ID em logs para rastreabilidade end-to-end.",
+        "enforcement": "code",
+        "verification": "Geração de correlation_id no início de cada execução; logs incluindo correlation_id em cada entrada; capacidade de rastrear execução completa usando correlation_id."
+      },
+      {
+        "id": 152,
+        "category": "observability",
+        "description": "Logging de erros e conflitos: todos os erros de validação, conflitos de sincronização, e falhas de carga devem ser registrados com contexto completo (tenant_id, registro afetado, tipo de erro, timestamp).",
+        "enforcement": "code",
+        "verification": "Logs estruturados capturando erros com contexto completo; relatório de erros compilado ao final da execução; alertas disparados para erros críticos."
+      },
+      {
+        "id": 153,
+        "category": "compliance",
+        "description": "Conformidade com LGPD: dados pessoais (nome, email) devem ser minimizados e protegidos; operações de purga devem garantir exclusão completa de dados pessoais conforme direito ao esquecimento.",
+        "enforcement": "code",
+        "verification": "Validação de que dados pessoais são purged completamente; artefatos de arquivo não contendo dados pessoais em texto claro; testes de conformidade LGPD."
+      },
+      {
+        "id": 154,
+        "category": "compliance",
+        "description": "Auditabilidade de mudanças: todas as operações de transformação, validação, carga e purga devem ser registradas em log de auditoria com identificação do executor (sistema ou usuário), timestamp, e dados afetados.",
+        "enforcement": "code",
+        "verification": "Logs de auditoria estruturados capturando todas as operações; relatório de auditoria compilado ao final da execução; capacidade de rastrear quem fez o quê e quando."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "O Pipeline de Migração de Esquema é um componente de orquestração de ciclo de vida de dados responsável por automatizar e coordenar todas as etapas de transformação, migração e sincronização de dados estruturados entre diferentes estados e representações dentro da plataforma multi-tenant. Executa operações de extração de dados de fontes (tabelas de tarefas, usuários, tenants, histórico de status), transformação conforme regras de mapeamento e normalização, validação de qualidade e integridade referencial, sincronização de conflitos em cenários de replicação, e carga em destinos persistidos. Orquestra fluxos de migração de esquema (alterações estruturais em tabelas), operações de seed (população inicial de dados), pipelines ETL/ELT (extração-transformação-carga), e processamento de Change Data Capture (CDC) para sincronização incremental. Garante isolamento multi-tenant em todas as operações, conformidade com políticas de retenção de dados e LGPD, rastreabilidade completa via logs de processamento, e desempenho adequado sob carga de até 50 tenants e 10.000 tarefas por tenant."
+    },
+    "definition": {
+      "params": [
+        {
+          "id": 60,
+          "name": "batch_size",
+          "value": "1000"
+        },
+        {
+          "id": 61,
+          "name": "max_retries",
+          "value": "3"
+        },
+        {
+          "id": 62,
+          "name": "retry_delay_seconds",
+          "value": "5"
+        },
+        {
+          "id": 63,
+          "name": "timeout_seconds",
+          "value": "3600"
+        },
+        {
+          "id": 64,
+          "name": "isolation_level",
+          "value": "serializable"
+        },
+        {
+          "id": 65,
+          "name": "retention_days_default",
+          "value": "90"
+        },
+        {
+          "id": 66,
+          "name": "enable_cdc",
+          "value": "true"
+        },
+        {
+          "id": 67,
+          "name": "conflict_resolution_strategy",
+          "value": "last_write_wins"
+        },
+        {
+          "id": 68,
+          "name": "enable_data_lineage_tracking",
+          "value": "true"
+        },
+        {
+          "id": 69,
+          "name": "archive_format",
+          "value": "parquet"
+        }
+      ],
+      "stages": [
+        {
+          "id": 2,
+          "kind": "extract",
+          "name": "Extração de Dados",
+          "inputs": [
+            {
+              "id": 3,
+              "name": "Tabela de Tarefas",
+              "source": "tarefas"
+            },
+            {
+              "id": 4,
+              "name": "Tabela de Usuários",
+              "source": "usuarios"
+            },
+            {
+              "id": 5,
+              "name": "Tabela de Tenants",
+              "source": "tenants"
+            },
+            {
+              "id": 6,
+              "name": "Tabela de Histórico de Status",
+              "source": "historico_status_tarefas"
+            },
+            {
+              "id": 7,
+              "name": "Tabela de Níveis Hierárquicos",
+              "source": "niveis_hierarquicos"
+            }
+          ],
+          "outputs": [
+            {
+              "id": 8,
+              "name": "Registros Extraídos de Tarefas",
+              "destination": "staging_tarefas"
+            },
+            {
+              "id": 9,
+              "name": "Registros Extraídos de Usuários",
+              "destination": "staging_usuarios"
+            },
+            {
+              "id": 10,
+              "name": "Registros Extraídos de Tenants",
+              "destination": "staging_tenants"
+            },
+            {
+              "id": 11,
+              "name": "Registros Extraídos de Histórico",
+              "destination": "staging_historico"
+            }
+          ]
+        },
+        {
+          "id": 12,
+          "kind": "transform",
+          "name": "Transformação e Normalização",
+          "inputs": [
+            {
+              "id": 13,
+              "name": "Registros Extraídos de Tarefas",
+              "source": "staging_tarefas"
+            },
+            {
+              "id": 14,
+              "name": "Registros Extraídos de Usuários",
+              "source": "staging_usuarios"
+            },
+            {
+              "id": 15,
+              "name": "Registros Extraídos de Tenants",
+              "source": "staging_tenants"
+            },
+            {
+              "id": 16,
+              "name": "Registros Extraídos de Histórico",
+              "source": "staging_historico"
+            }
+          ],
+          "outputs": [
+            {
+              "id": 17,
+              "name": "Tarefas Transformadas",
+              "destination": "transformed_tarefas"
+            },
+            {
+              "id": 18,
+              "name": "Usuários Transformados",
+              "destination": "transformed_usuarios"
+            },
+            {
+              "id": 19,
+              "name": "Tenants Transformados",
+              "destination": "transformed_tenants"
+            },
+            {
+              "id": 20,
+              "name": "Histórico Transformado",
+              "destination": "transformed_historico"
+            }
+          ]
+        },
+        {
+          "id": 21,
+          "kind": "validate",
+          "name": "Validação e Qualidade de Dados",
+          "inputs": [
+            {
+              "id": 22,
+              "name": "Tarefas Transformadas",
+              "source": "transformed_tarefas"
+            },
+            {
+              "id": 23,
+              "name": "Usuários Transformados",
+              "source": "transformed_usuarios"
+            },
+            {
+              "id": 24,
+              "name": "Tenants Transformados",
+              "source": "transformed_tenants"
+            },
+            {
+              "id": 25,
+              "name": "Histórico Transformado",
+              "source": "transformed_historico"
+            }
+          ],
+          "outputs": [
+            {
+              "id": 26,
+              "name": "Dados Validados",
+              "destination": "validated_data"
+            },
+            {
+              "id": 27,
+              "name": "Relatório de Erros de Validação",
+              "destination": "validation_errors"
+            }
+          ]
+        },
+        {
+          "id": 28,
+          "kind": "filter",
+          "name": "Resolução de Conflitos de Sincronização",
+          "inputs": [
+            {
+              "id": 29,
+              "name": "Dados Validados",
+              "source": "validated_data"
+            },
+            {
+              "id": 30,
+              "name": "Estado Anterior de Dados",
+              "source": "previous_state"
+            }
+          ],
+          "outputs": [
+            {
+              "id": 31,
+              "name": "Dados Sem Conflito",
+              "destination": "conflict_free_data"
+            },
+            {
+              "id": 32,
+              "name": "Conflitos Detectados",
+              "destination": "detected_conflicts"
+            }
+          ]
+        },
+        {
+          "id": 33,
+          "kind": "load",
+          "name": "Carga em Destino",
+          "inputs": [
+            {
+              "id": 34,
+              "name": "Dados Sem Conflito",
+              "source": "conflict_free_data"
+            }
+          ],
+          "outputs": [
+            {
+              "id": 35,
+              "name": "Dados Persistidos",
+              "destination": "tarefas, usuarios, tenants, historico_status_tarefas"
+            },
+            {
+              "id": 36,
+              "name": "Status de Conclusão da Migração",
+              "destination": "migration_status"
+            }
+          ]
+        },
+        {
+          "id": 37,
+          "kind": "filter",
+          "name": "Aplicação de Políticas de Retenção",
+          "inputs": [
+            {
+              "id": 38,
+              "name": "Dados Persistidos",
+              "source": "tarefas, usuarios, tenants, historico_status_tarefas"
+            },
+            {
+              "id": 39,
+              "name": "Políticas de Retenção",
+              "source": "retention_policies"
+            }
+          ],
+          "outputs": [
+            {
+              "id": 40,
+              "name": "Confirmação de Purga",
+              "destination": "purge_confirmation"
+            },
+            {
+              "id": 41,
+              "name": "Registros Arquivados",
+              "destination": "archive_storage"
+            }
+          ]
+        },
+        {
+          "id": 42,
+          "kind": "enrich",
+          "name": "Processamento de Change Data Capture",
+          "inputs": [
+            {
+              "id": 43,
+              "name": "Fluxo de Mudanças de Dados",
+              "source": "data_change_stream"
+            }
+          ],
+          "outputs": [
+            {
+              "id": 44,
+              "name": "Eventos de Mudança Capturados",
+              "destination": "cdc_events"
+            },
+            {
+              "id": 45,
+              "name": "Metadados de Lineage",
+              "destination": "data_lineage"
+            }
+          ]
+        },
+        {
+          "id": 46,
+          "kind": "publish",
+          "name": "Publicação de Resultados e Métricas",
+          "inputs": [
+            {
+              "id": 47,
+              "name": "Status de Conclusão da Migração",
+              "source": "migration_status"
+            },
+            {
+              "id": 48,
+              "name": "Relatório de Erros de Validação",
+              "source": "validation_errors"
+            },
+            {
+              "id": 49,
+              "name": "Metadados de Lineage",
+              "source": "data_lineage"
+            },
+            {
+              "id": 50,
+              "name": "Conflitos Detectados",
+              "source": "detected_conflicts"
+            }
+          ],
+          "outputs": [
+            {
+              "id": 51,
+              "name": "Relatório de Sincronização",
+              "destination": "sync_report_endpoint"
+            },
+            {
+              "id": 52,
+              "name": "Métricas de Processamento",
+              "destination": "metrics_endpoint"
+            },
+            {
+              "id": 53,
+              "name": "Artefatos de Backup",
+              "destination": "backup_storage"
+            }
+          ]
+        }
+      ],
+      "triggers": [
+        {
+          "id": 54,
+          "kind": "schedule",
+          "source": "cron_scheduler",
+          "schedule": "0 2 * * *"
+        },
+        {
+          "id": 55,
+          "kind": "event",
+          "source": "schema_change_event"
+        },
+        {
+          "id": 56,
+          "kind": "event",
+          "source": "data_sync_request_event"
+        },
+        {
+          "id": 57,
+          "kind": "manual",
+          "source": "admin_trigger"
+        },
+        {
+          "id": 58,
+          "kind": "api",
+          "source": "migration_api_endpoint"
+        },
+        {
+          "id": 59,
+          "kind": "webhook",
+          "source": "external_system_webhook"
+        }
+      ],
+      "state_machine": {
+        "states": [
+          {
+            "id": 70,
+            "name": "Aguardando Disparo",
+            "description": "Pipeline aguardando um evento de disparo (agendado, manual, webhook ou API)."
+          },
+          {
+            "id": 71,
+            "name": "Extração em Andamento",
+            "description": "Estágio de extração de dados das tabelas de origem em execução."
+          },
+          {
+            "id": 72,
+            "name": "Transformação em Andamento",
+            "description": "Estágio de transformação e normalização de dados em execução."
+          },
+          {
+            "id": 73,
+            "name": "Validação em Andamento",
+            "description": "Estágio de validação de qualidade e integridade referencial em execução."
+          },
+          {
+            "id": 74,
+            "name": "Resolução de Conflitos em Andamento",
+            "description": "Estágio de detecção e resolução de conflitos de sincronização em execução."
+          },
+          {
+            "id": 75,
+            "name": "Carga em Andamento",
+            "description": "Estágio de carga de dados transformados e validados em destino em execução."
+          },
+          {
+            "id": 76,
+            "name": "Retenção em Andamento",
+            "description": "Estágio de aplicação de políticas de retenção e purga de dados obsoletos em execução."
+          },
+          {
+            "id": 77,
+            "name": "CDC em Andamento",
+            "description": "Estágio de processamento de Change Data Capture para sincronização incremental em execução."
+          },
+          {
+            "id": 78,
+            "name": "Publicação em Andamento",
+            "description": "Estágio de publicação de resultados, métricas e artefatos em execução."
+          },
+          {
+            "id": 79,
+            "name": "Concluído com Sucesso",
+            "description": "Pipeline completou todas as etapas com sucesso, dados persistidos e métricas publicadas."
+          },
+          {
+            "id": 80,
+            "name": "Falha em Extração",
+            "description": "Pipeline falhou durante o estágio de extração de dados."
+          },
+          {
+            "id": 81,
+            "name": "Falha em Transformação",
+            "description": "Pipeline falhou durante o estágio de transformação de dados."
+          },
+          {
+            "id": 82,
+            "name": "Falha em Validação",
+            "description": "Pipeline falhou durante o estágio de validação de qualidade."
+          },
+          {
+            "id": 83,
+            "name": "Falha em Carga",
+            "description": "Pipeline falhou durante o estágio de carga em destino."
+          },
+          {
+            "id": 84,
+            "name": "Falha em Retenção",
+            "description": "Pipeline falhou durante o estágio de aplicação de políticas de retenção."
+          },
+          {
+            "id": 85,
+            "name": "Cancelado",
+            "description": "Pipeline foi cancelado manualmente durante execução."
+          }
+        ],
+        "transitions": [
+          {
+            "id": 86,
+            "to": "Extração em Andamento",
+            "from": "Aguardando Disparo",
+            "trigger": "disparo_recebido"
+          },
+          {
+            "id": 87,
+            "to": "Transformação em Andamento",
+            "from": "Extração em Andamento",
+            "trigger": "extração_concluída"
+          },
+          {
+            "id": 88,
+            "to": "Falha em Extração",
+            "from": "Extração em Andamento",
+            "trigger": "erro_extração"
+          },
+          {
+            "id": 89,
+            "to": "Validação em Andamento",
+            "from": "Transformação em Andamento",
+            "trigger": "transformação_concluída"
+          },
+          {
+            "id": 90,
+            "to": "Falha em Transformação",
+            "from": "Transformação em Andamento",
+            "trigger": "erro_transformação"
+          },
+          {
+            "id": 91,
+            "to": "Resolução de Conflitos em Andamento",
+            "from": "Validação em Andamento",
+            "trigger": "validação_concluída"
+          },
+          {
+            "id": 92,
+            "to": "Falha em Validação",
+            "from": "Validação em Andamento",
+            "trigger": "erro_validação"
+          },
+          {
+            "id": 93,
+            "to": "Carga em Andamento",
+            "from": "Resolução de Conflitos em Andamento",
+            "trigger": "conflitos_resolvidos"
+          },
+          {
+            "id": 94,
+            "to": "Retenção em Andamento",
+            "from": "Carga em Andamento",
+            "trigger": "carga_concluída"
+          },
+          {
+            "id": 95,
+            "to": "Falha em Carga",
+            "from": "Carga em Andamento",
+            "trigger": "erro_carga"
+          },
+          {
+            "id": 96,
+            "to": "CDC em Andamento",
+            "from": "Retenção em Andamento",
+            "trigger": "retenção_concluída"
+          },
+          {
+            "id": 97,
+            "to": "Falha em Retenção",
+            "from": "Retenção em Andamento",
+            "trigger": "erro_retenção"
+          },
+          {
+            "id": 98,
+            "to": "Publicação em Andamento",
+            "from": "CDC em Andamento",
+            "trigger": "cdc_concluído"
+          },
+          {
+            "id": 99,
+            "to": "Concluído com Sucesso",
+            "from": "Publicação em Andamento",
+            "trigger": "publicação_concluída"
+          },
+          {
+            "id": 100,
+            "to": "Aguardando Disparo",
+            "from": "Falha em Extração",
+            "trigger": "retry_manual"
+          },
+          {
+            "id": 101,
+            "to": "Aguardando Disparo",
+            "from": "Falha em Transformação",
+            "trigger": "retry_manual"
+          },
+          {
+            "id": 102,
+            "to": "Aguardando Disparo",
+            "from": "Falha em Validação",
+            "trigger": "retry_manual"
+          },
+          {
+            "id": 103,
+            "to": "Aguardando Disparo",
+            "from": "Falha em Carga",
+            "trigger": "retry_manual"
+          },
+          {
+            "id": 104,
+            "to": "Aguardando Disparo",
+            "from": "Falha em Retenção",
+            "trigger": "retry_manual"
+          },
+          {
+            "id": 105,
+            "to": "Aguardando Disparo",
+            "from": "Concluído com Sucesso",
+            "trigger": "próximo_ciclo"
+          },
+          {
+            "id": 106,
+            "to": "Cancelado",
+            "from": "Extração em Andamento",
+            "trigger": "cancelamento_solicitado"
+          },
+          {
+            "id": 107,
+            "to": "Cancelado",
+            "from": "Transformação em Andamento",
+            "trigger": "cancelamento_solicitado"
+          },
+          {
+            "id": 108,
+            "to": "Cancelado",
+            "from": "Validação em Andamento",
+            "trigger": "cancelamento_solicitado"
+          },
+          {
+            "id": 109,
+            "to": "Cancelado",
+            "from": "Carga em Andamento",
+            "trigger": "cancelamento_solicitado"
+          }
+        ]
+      }
+    },
+    "pendencies": [
+      {
+        "id": 183,
+        "section": "definition",
+        "description": "Definição de estratégias de resolução de conflitos: a configuração atual especifica 'last_write_wins', mas não está claro se outras estratégias (merge, manual review) devem ser suportadas. Necessário clarificar quais estratégias são obrigatórias na v1 e quais são extensíveis para versões futuras.",
+        "resolutionOptions": [
+          {
+            "id": 184,
+            "text": "Implementar apenas 'last_write_wins' na v1; documentar extensibilidade para outras estratégias em versões futuras."
+          },
+          {
+            "id": 185,
+            "text": "Implementar 'last_write_wins' e 'merge' na v1; deixar 'manual_review' para versão futura."
+          },
+          {
+            "id": 186,
+            "text": "Implementar todas as três estratégias ('last_write_wins', 'merge', 'manual_review') na v1 com configuração por tenant."
+          }
+        ],
+        "recommendedOptionId": 184
+      },
+      {
+        "id": 187,
+        "section": "definition",
+        "description": "Definição de formato de arquivo para armazenamento de dados purged: a especificação menciona 'parquet' como formato de arquivo, mas não está claro se compressão (snappy, gzip), particionamento, e retenção de arquivo devem ser configuráveis.",
+        "resolutionOptions": [
+          {
+            "id": 188,
+            "text": "Usar Parquet com compressão snappy padrão; sem particionamento; retenção de 7 anos conforme LGPD."
+          },
+          {
+            "id": 189,
+            "text": "Usar Parquet com compressão configurável (snappy, gzip, none); particionamento por tenant e data; retenção configurável por política."
+          },
+          {
+            "id": 190,
+            "text": "Usar Parquet com compressão snappy; particionamento por tenant; retenção de 7 anos com opção de exclusão manual."
+          }
+        ],
+        "recommendedOptionId": 190
+      },
+      {
+        "id": 191,
+        "section": "flow",
+        "description": "Integração com sistema de Change Data Capture (CDC): a especificação menciona 'CDC Pipeline' como caso de uso, mas não está claro qual tecnologia de CDC deve ser usada (Debezium, AWS DMS, custom), como eventos de mudança são capturados, e como checkpoints são gerenciados.",
+        "resolutionOptions": [
+          {
+            "id": 192,
+            "text": "Implementar CDC customizado usando triggers de banco de dados e tabela de changelog; checkpoints gerenciados em tabela dedicada."
+          },
+          {
+            "id": 193,
+            "text": "Integrar Debezium como solução de CDC; usar Kafka para streaming de eventos; checkpoints gerenciados por Kafka."
+          },
+          {
+            "id": 194,
+            "text": "Usar AWS DMS (Database Migration Service) para CDC; eventos publicados em SQS; checkpoints gerenciados por DMS."
+          }
+        ],
+        "recommendedOptionId": 192
+      },
+      {
+        "id": 195,
+        "section": "non_functional_requirements",
+        "description": "Definição de SLA de disponibilidade do pipeline: a especificação menciona '99,5% de disponibilidade mensal', mas não está claro se isso inclui manutenção planejada, como falhas são contabilizadas, e qual é o RTO/RPO esperado.",
+        "resolutionOptions": [
+          {
+            "id": 196,
+            "text": "99,5% de disponibilidade mensal excluindo manutenção planejada; RTO <= 15 minutos; RPO <= 1 hora; falhas contabilizadas como tempo de indisponibilidade."
+          },
+          {
+            "id": 197,
+            "text": "99,9% de disponibilidade mensal incluindo manutenção planejada; RTO <= 5 minutos; RPO <= 15 minutos; falhas contabilizadas por impacto em tenants."
+          },
+          {
+            "id": 198,
+            "text": "99,5% de disponibilidade mensal excluindo manutenção planejada; RTO <= 30 minutos; RPO <= 4 horas; falhas contabilizadas como tempo de indisponibilidade."
+          }
+        ],
+        "recommendedOptionId": 196
+      },
+      {
+        "id": 199,
+        "section": "global",
+        "description": "Definição de mecanismo de notificação de conclusão do pipeline: a especificação menciona publicação de relatório de sincronização e métricas, mas não está claro se notificações devem ser enviadas via email, webhook, ou dashboard.",
+        "resolutionOptions": [
+          {
+            "id": 200,
+            "text": "Publicar relatório em endpoint REST; consumidor é responsável por polling; sem notificações proativas."
+          },
+          {
+            "id": 201,
+            "text": "Publicar relatório em endpoint REST; enviar notificação via webhook para URL configurada por tenant; suporte a email opcional."
+          },
+          {
+            "id": 202,
+            "text": "Publicar relatório em endpoint REST; enviar notificação via email para administrador do tenant; webhook opcional para integrações customizadas."
+          }
+        ],
+        "recommendedOptionId": 201
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 171,
+        "then": "Todos os 1.000 registros de tarefas são extraídos, transformados, validados, carregados com sucesso; relatório de sincronização mostra 1.000 registros processados, 0 erros, 0 conflitos; tempo total <= 5 minutos",
+        "type": "integration",
+        "when": "O pipeline de migração é disparado manualmente via API com contexto do tenant",
+        "given": "Um tenant com 1.000 tarefas, 50 usuários, 5 níveis hierárquicos, e 500 registros de histórico de status",
+        "scenario": "Migração completa de dados de um tenant com 1.000 tarefas",
+        "target_section": "flow"
+      },
+      {
+        "id": 172,
+        "then": "Conflito é detectado; versão mais recente (last_write) é aplicada; conflito é registrado em logs; relatório mostra 1 conflito resolvido",
+        "type": "integration",
+        "when": "Pipeline processa mudanças de ambos os sistemas com estratégia last_write_wins",
+        "given": "Dois sistemas atualizando o mesmo registro de tarefa simultaneamente; estado anterior é conhecido",
+        "scenario": "Detecção e resolução de conflitos de sincronização",
+        "target_section": "flow"
+      },
+      {
+        "id": 173,
+        "then": "100 registros antigos são purged; 50 registros recentes são preservados; 100 registros são arquivados em Parquet; confirmação de purga é registrada",
+        "type": "integration",
+        "when": "Pipeline executa estágio de retenção com política de 90 dias",
+        "given": "100 registros de histórico_status_tarefas com mais de 90 dias; 50 registros com menos de 90 dias",
+        "scenario": "Aplicação de política de retenção de histórico",
+        "target_section": "flow"
+      },
+      {
+        "id": 174,
+        "then": "Dados de tenant A não são carregados em contexto de tenant B; dados de tenant B não são carregados em contexto de tenant A; isolamento é mantido; cada tenant tem seus dados corretos",
+        "type": "integration",
+        "when": "Pipeline processa ambos os tenants em paralelo",
+        "given": "Dois tenants (A e B) com dados sobrepostos em staging; tenant A com 500 tarefas, tenant B com 300 tarefas",
+        "scenario": "Isolamento de dados entre tenants durante migração",
+        "target_section": "flow"
+      },
+      {
+        "id": 175,
+        "then": "10 registros são rejeitados; erro de validação é registrado para cada registro; relatório mostra 10 erros de integridade referencial; carga é abortada",
+        "type": "integration",
+        "when": "Pipeline executa estágio de validação de integridade referencial",
+        "given": "Staging contém 10 registros de tarefas com responsavel_id apontando para usuários inexistentes",
+        "scenario": "Validação de integridade referencial com chaves estrangeiras inválidas",
+        "target_section": "rules"
+      },
+      {
+        "id": 176,
+        "then": "8 registros são rejeitados; erro de validação é registrado para cada campo ausente; relatório mostra 8 erros de completude; carga é abortada",
+        "type": "integration",
+        "when": "Pipeline executa estágio de validação de completude",
+        "given": "Staging contém 5 registros de tarefas com campo titulo vazio; 3 registros com responsavel_id nulo",
+        "scenario": "Validação de completude de dados com campos obrigatórios ausentes",
+        "target_section": "rules"
+      },
+      {
+        "id": 177,
+        "then": "3 registros são rejeitados; erro de validação é registrado para cada email inválido; relatório mostra 3 erros de formato; carga é abortada",
+        "type": "integration",
+        "when": "Pipeline executa estágio de validação de formato",
+        "given": "Staging contém 3 registros de usuários com emails em formato inválido (ex: 'usuario@', '@dominio.com', 'usuario sem arroba')",
+        "scenario": "Validação de formato de dados com emails inválidos",
+        "target_section": "rules"
+      },
+      {
+        "id": 178,
+        "then": "Disparo é rejeitado com erro de autorização; tentativa é registrada em logs de auditoria; nenhum dado de tenant B é acessado",
+        "type": "security",
+        "when": "Pipeline valida autorização e contexto de tenant",
+        "given": "Usuário autenticado como administrador do tenant A tenta disparar migração com contexto de tenant B",
+        "scenario": "Tentativa de acesso cruzado entre tenants durante migração",
+        "target_section": "rules"
+      },
+      {
+        "id": 179,
+        "then": "Throughput >= 1.000 registros/segundo; tempo total <= 30 minutos; p95 latência <= 30 minutos; nenhuma perda de dados",
+        "type": "performance",
+        "when": "Pipeline executa extração, transformação e carga de todos os dados",
+        "given": "Pipeline configurado com batch_size=1000; tenant com 10.000 tarefas; 5.000 usuários; 500 registros de histórico",
+        "scenario": "Throughput de processamento sob carga máxima",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 180,
+        "then": "Tempo de validação <= 5 minutos; todas as 50 regras são aplicadas; relatório de qualidade é compilado",
+        "type": "performance",
+        "when": "Pipeline executa estágio de validação de qualidade",
+        "given": "Pipeline com 10.000 registros em staging; 50 regras de qualidade de dados aplicadas",
+        "scenario": "Latência de validação de qualidade de dados",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 181,
+        "then": "Primeira execução falha com erro registrado; retry automático sucede; dados são carregados com sucesso; relatório final mostra sucesso após retry",
+        "type": "e2e",
+        "when": "Pipeline é disparado no horário agendado; primeira execução falha; retry automático é acionado após 5 segundos",
+        "given": "Pipeline agendado para executar diariamente às 2h da manhã; primeira tentativa falha com erro transiente; segunda tentativa sucede",
+        "scenario": "Ciclo completo de migração agendada com retry automático",
+        "target_section": "flow"
+      },
+      {
+        "id": 182,
+        "then": "100 registros são purged completamente; dados pessoais não são recuperáveis; artefatos de arquivo não contêm dados pessoais em texto claro; conformidade LGPD é confirmada",
+        "type": "e2e",
+        "when": "Pipeline executa estágio de retenção e purga",
+        "given": "100 registros de usuários com dados pessoais (nome, email) marcados para purga; política de retenção de 90 dias expirada",
+        "scenario": "Conformidade com LGPD durante purga de dados pessoais",
+        "target_section": "flow"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 155,
+        "target": "mínimo 1.000 registros/segundo por tenant durante estágios de extração, transformação e carga",
+        "category": "performance",
+        "requirement": "Throughput de processamento de dados",
+        "verification": "Testes de carga com 10.000 tarefas por tenant; medição de throughput em registros/segundo; confirmação de atingimento de meta em relatório de desempenho."
+      },
+      {
+        "id": 156,
+        "target": "p95 <= 30 minutos para tenant com 10.000 tarefas; p99 <= 60 minutos",
+        "category": "performance",
+        "requirement": "Latência de execução do pipeline",
+        "verification": "Testes de desempenho medindo tempo total de execução; análise de percentis de latência; identificação de gargalos em cada estágio."
+      },
+      {
+        "id": 157,
+        "target": "p95 <= 5 minutos para validação de 10.000 registros",
+        "category": "performance",
+        "requirement": "Latência de estágio de validação",
+        "verification": "Testes de desempenho isolando estágio de validação; medição de tempo de validação; confirmação de atingimento de meta."
+      },
+      {
+        "id": 158,
+        "target": "suportar processamento paralelo de múltiplos tenants simultaneamente sem degradação de desempenho individual",
+        "category": "scalability",
+        "requirement": "Escalabilidade horizontal de processamento",
+        "verification": "Testes de carga com múltiplos tenants em paralelo; confirmação de isolamento de desempenho entre tenants; análise de utilização de recursos."
+      },
+      {
+        "id": 159,
+        "target": "suportar crescimento de até 50 tenants, 5.000 usuários por tenant, 10.000 tarefas por tenant sem reestruturação significativa",
+        "category": "scalability",
+        "requirement": "Escalabilidade de volume de dados",
+        "verification": "Testes de carga com volumes máximos estimados; análise de índices e planos de execução; confirmação de desempenho adequado."
+      },
+      {
+        "id": 160,
+        "target": "todas as comunicações entre componentes do pipeline devem usar TLS 1.2+",
+        "category": "security",
+        "requirement": "Criptografia de dados em trânsito",
+        "verification": "Análise de configuração de TLS; testes de segurança confirmando rejeição de conexões não-criptografadas; auditoria de certificados."
+      },
+      {
+        "id": 161,
+        "target": "dados sensíveis (senhas, tokens) devem ser criptografados em repouso usando AES-256",
+        "category": "security",
+        "requirement": "Criptografia de dados em repouso",
+        "verification": "Análise de configuração de criptografia; testes de segurança confirmando impossibilidade de leitura de dados criptografados; auditoria de chaves."
+      },
+      {
+        "id": 162,
+        "target": "dados de diferentes tenants devem estar fisicamente isolados ou logicamente separados com controle de acesso rigoroso",
+        "category": "security",
+        "requirement": "Isolamento de tenant em armazenamento",
+        "verification": "Testes de segurança tentando acessar dados de outro tenant; confirmação de rejeição; auditoria de controle de acesso."
+      },
+      {
+        "id": 163,
+        "target": "99,5% de disponibilidade mensal; RTO <= 15 minutos em caso de falha",
+        "category": "availability",
+        "requirement": "Disponibilidade do pipeline",
+        "verification": "Monitoramento contínuo de disponibilidade; testes de failover confirmando RTO; análise de incidentes de indisponibilidade."
+      },
+      {
+        "id": 164,
+        "target": "pipeline deve suportar retry automático até 3 vezes com backoff exponencial em caso de falha transiente",
+        "category": "availability",
+        "requirement": "Recuperação de falhas",
+        "verification": "Testes de falha transiente confirmando retry automático; análise de logs mostrando tentativas de retry; confirmação de sucesso após retry."
+      },
+      {
+        "id": 165,
+        "target": "RPO <= 1 hora; capacidade de recuperar dados até 30 dias no passado",
+        "category": "availability",
+        "requirement": "Backup e recuperação de dados",
+        "verification": "Testes de recuperação de backup; confirmação de RPO <= 1 hora; análise de retenção de backups."
+      },
+      {
+        "id": 166,
+        "target": "100% das operações críticas (extração, transformação, validação, carga, purga) devem ser registradas em logs estruturados",
+        "category": "observability",
+        "requirement": "Cobertura de logging",
+        "verification": "Análise de cobertura de logging; confirmação de logs para todas as operações críticas; testes de rastreabilidade."
+      },
+      {
+        "id": 167,
+        "target": "coleta de métricas de throughput, latência, taxa de erro, e utilização de recursos em tempo real",
+        "category": "observability",
+        "requirement": "Métricas de desempenho",
+        "verification": "Confirmação de coleta de métricas; análise de dashboards de métricas; alertas disparados para anomalias."
+      },
+      {
+        "id": 168,
+        "target": "suporte a rastreamento distribuído (distributed tracing) para correlacionar operações entre componentes",
+        "category": "observability",
+        "requirement": "Rastreamento distribuído",
+        "verification": "Confirmação de propagação de correlation_id; análise de traces distribuídos; capacidade de rastrear requisição end-to-end."
+      },
+      {
+        "id": 169,
+        "target": "compressão de dados em arquivo (Parquet) reduzindo tamanho em 70% comparado a formato relacional",
+        "category": "cost",
+        "requirement": "Otimização de custo de armazenamento",
+        "verification": "Análise de tamanho de artefatos de arquivo; confirmação de taxa de compressão; análise de custo de armazenamento."
+      },
+      {
+        "id": 170,
+        "target": "utilização eficiente de recursos (CPU, memória) com batch_size otimizado para minimizar overhead",
+        "category": "cost",
+        "requirement": "Otimização de custo de processamento",
+        "verification": "Análise de utilização de recursos; confirmação de batch_size otimizado; análise de custo de processamento."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 49,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T08:42:03.760Z",
+  "updatedAt": null
+}

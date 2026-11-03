@@ -1,0 +1,119 @@
+{
+  "id": 23780,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 6,
+        "name": "Inconsistência de Estado e Sincronização",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem a regra de consistência e isolamento, a decisão de quem é quem em um grupo é baseada em memória e não em dados, e isso varia de um sistema para outro.",
+        "confidence": 0.7402,
+        "context_element_id": 2831
+      },
+      {
+        "id": 7,
+        "name": "Acessibilidade",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem testes de acessibilidade, a exclusão de um usuário com deficiência é silenciosa e só aparece depois de um erro.",
+        "confidence": 0.7253,
+        "context_element_id": 2852
+      }
+    ],
+    "attributes": [
+      {
+        "id": 3,
+        "name": "Cadência de atualização esperada dos dados ou do estado visível na superfície",
+        "value": [
+          "periodic",
+          "near-real-time"
+        ],
+        "method": "user-input",
+        "reasoning": "A atualização periódica do cálculo de atraso na interface é realizada a cada 5 minutos, sem necessidade de recarregar a página manualmente.\nA tarefa cujo prazo vence à meia-noite é automaticamente destacada como atrasada sem necessidade de recarregar a página, indicando cadência de atualização próxima ao tempo.",
+        "confidence": 0.8231,
+        "context_element_id": 2730
+      },
+      {
+        "id": 4,
+        "name": "Foco principal das ferramentas entre resolução de configuração e manipulação de referência técnica",
+        "value": [
+          "mixed-support"
+        ],
+        "method": "internal-inference",
+        "reasoning": "A configuração de visualização de destaque é feita tanto por tenant quanto por usuário, um suporte misto.",
+        "confidence": 0.7075,
+        "context_element_id": 2809
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 9,
+        "name": "Implementar respostas de segurança automáticas com isolamento de sistemas comprometidos e aplicação de contramedidas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem isolamento, um ataque em um sistema comprometido se espalha para o resto da infraestrutura, e a recuperação só chega depois que o ataque já está em andamento.",
+        "confidence": 0.872,
+        "context_element_id": 2950
+      },
+      {
+        "id": 10,
+        "name": "Automatize tarefas operacionais repetitivas para reduzir o erro humano e melhorar a consistência",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Manter a mesma taxa de atualização sem recarregar a página é a chave para evitar que o cálculo de atraso se perca entre as tentativas.",
+        "confidence": 0.9774,
+        "context_element_id": 3000
+      },
+      {
+        "id": 11,
+        "name": "Projete experiências inclusivas considerando diferentes habilidades, contextos de uso e tecnologias assistivas desde o início do desenvolvimento",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Cada pessoa tem um jeito de usar diferente, e a interface precisa ser adaptável para todos.",
+        "confidence": 0.7194,
+        "context_element_id": 3054
+      },
+      {
+        "id": 12,
+        "name": "Use padrões e componentes consistentes por meio de design systems e bibliotecas compartilhadas para garantir a uniformidade da experiência",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem configuração por tenant ou usuário, a aparência é uniforme para todos os tenants, mantendo a experiência do sistema.",
+        "confidence": 0.9038,
+        "context_element_id": 3056
+      },
+      {
+        "id": 13,
+        "name": "Garanta a perceptibilidade implementando alternativas textuais para conteúdo não textual, legendas para vídeos e contraste de cor adequado",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem cores distintas, a diferença entre tarefas críticas e atrasadas se confunde, e a equipe não consegue identificá-las.",
+        "confidence": 0.8539,
+        "context_element_id": 3058
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 18,
+        "name": "Modo de Processamento",
+        "value": "agendado",
+        "method": "internal-inference",
+        "reasoning": "A identificação automática das tarefas em atraso é feita em tempo agendado, caracterizando um modo de processamento agendado.",
+        "confidence": 0.7532,
+        "context_element_id": 4577
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 2,
+  "active": true,
+  "sourceId": 23622,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T05:13:28.628Z",
+  "updatedAt": null
+}

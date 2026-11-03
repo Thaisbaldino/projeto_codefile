@@ -1,0 +1,480 @@
+{
+  "id": 23845,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 13,
+          "name": "Requisição de Envio de E-mail",
+          "format": "{ userId: uuid, email: string, templateId: string, variables: object, priority: enum[normal|high] }",
+          "origin": "Handler de Recuperação de Senha (ASSET-025) ou futuro Worker de Notificações",
+          "trigger": "Acionado quando usuário solicita recuperação de senha ou quando evento de notificação é disparado"
+        },
+        {
+          "id": 14,
+          "name": "Credenciais de Autenticação",
+          "format": "API_KEY: string (chave de autenticação do provedor)",
+          "origin": "Variáveis de ambiente / Gerenciador de Secrets",
+          "trigger": null
+        },
+        {
+          "id": 15,
+          "name": "Webhook de Confirmação do Provedor",
+          "format": "{ message_id: string, status: enum[delivered|bounced|failed], timestamp: ISO8601, error_code?: string, error_message?: string }",
+          "origin": "Provedor de E-mail Externo",
+          "trigger": "Provedor envia webhook quando status de entrega muda"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 24,
+          "name": "Resultado de Envio",
+          "format": "{ success: boolean, message_id: string, status: enum[accepted|rejected|queued], error?: { code: string, message: string } }",
+          "destination": "Handler de Recuperação de Senha ou Worker de Notificações (chamador)"
+        },
+        {
+          "id": 25,
+          "name": "Evento de Auditoria",
+          "format": "{ action: 'email_sent', user_id: uuid, email: string, message_id: string, template_id: string, status: string, timestamp: ISO8601, provider: string }",
+          "destination": "Trilha de Auditoria (ASSET-053)"
+        },
+        {
+          "id": 26,
+          "name": "Métrica de Observabilidade",
+          "format": "{ metric: 'email_send_latency_ms' | 'email_send_success_rate' | 'provider_circuit_breaker_state', value: number, tags: { provider, template_id, status } }",
+          "destination": "Sistema de Observabilidade"
+        }
+      ],
+      "processing": [
+        {
+          "id": 16,
+          "step": "Validar Entrada",
+          "description": "Valida que email está em formato válido, templateId existe, variables contém dados obrigatórios, e userId é uuid válido. Rejeita requisição se validação falhar."
+        },
+        {
+          "id": 17,
+          "step": "Verificar Circuit Breaker",
+          "description": "Consulta estado do circuit breaker. Se aberto, retorna erro imediatamente sem tentar contato com provedor. Se half-open, permite tentativa única para recuperação."
+        },
+        {
+          "id": 18,
+          "step": "Construir Requisição Externa",
+          "description": "Monta corpo de requisição conforme contrato do provedor, incluindo template_id, destinatário, variáveis de template, prioridade, e headers de autenticação (Authorization: Bearer API_KEY)."
+        },
+        {
+          "id": 19,
+          "step": "Executar Requisição com Retry",
+          "description": "Envia requisição HTTP POST ao endpoint do provedor com timeout de 10 segundos. Em caso de falha transitória (5xx, timeout), executa retry com backoff exponencial (1s, 2s, 4s) até 3 tentativas. Falhas permanentes (4xx) não são retentadas."
+        },
+        {
+          "id": 20,
+          "step": "Processar Resposta",
+          "description": "Valida resposta do provedor (status 200-299), extrai message_id e status de aceitação. Se resposta inválida ou erro, atualiza contador de falhas do circuit breaker."
+        },
+        {
+          "id": 21,
+          "step": "Registrar Rastreamento",
+          "description": "Persiste registro de envio em auditoria com message_id, email, template, timestamp, status de aceitação, e identificação do usuário solicitante para conformidade com LGPD e rastreabilidade."
+        },
+        {
+          "id": 22,
+          "step": "Retornar Resultado",
+          "description": "Retorna ao chamador resultado de sucesso (message_id, status) ou erro (código, mensagem descritiva) conforme envelope padrão da API."
+        },
+        {
+          "id": 23,
+          "step": "Processar Webhook de Confirmação",
+          "description": "Ao receber webhook do provedor, valida assinatura HMAC, mapeia message_id para envio local, registra status final (entregue/bounce/falha) em auditoria, e atualiza rastreamento de entrega."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 27,
+        "category": "authorization",
+        "description": "Apenas Handlers e Workers internos da plataforma podem invocar operações do conector de e-mail. Requisições externas ou de clientes não autenticados são rejeitadas com erro FORBIDDEN.",
+        "enforcement": "code",
+        "verification": "Validar que chamador é componente interno (Handler ou Worker) através de contexto de execução ou token de serviço antes de processar requisição de envio."
+      },
+      {
+        "id": 28,
+        "category": "validation",
+        "description": "Endereço de e-mail deve estar em formato válido (RFC 5322 simplificado: local@domain.tld) antes de ser enviado ao provedor. Rejeita formatos inválidos com erro INVALID_INPUT.",
+        "enforcement": "code",
+        "verification": "Aplicar regex ou biblioteca de validação de e-mail (ex: email-validator) na entrada; rejeitar se não passar na validação."
+      },
+      {
+        "id": 29,
+        "category": "validation",
+        "description": "Template ID deve existir e estar configurado no provedor de e-mail. Requisições com template_id inválido são rejeitadas com erro INVALID_INPUT antes de contatar o provedor.",
+        "enforcement": "code",
+        "verification": "Manter cache local de templates válidos sincronizado com provedor; validar template_id contra cache antes de envio."
+      },
+      {
+        "id": 30,
+        "category": "idempotency",
+        "description": "Requisições de envio de e-mail devem ser idempotentes: se a mesma requisição (mesmo userId, email, templateId, variables) for reenviada dentro de 5 minutos, retorna resultado anterior sem reenviar ao provedor.",
+        "enforcement": "code",
+        "verification": "Implementar cache de requisições recentes (5 minutos TTL) com chave = hash(userId, email, templateId, variables); verificar cache antes de envio; retornar resultado em cache se hit."
+      },
+      {
+        "id": 31,
+        "category": "rate_limit",
+        "description": "Conector respeita limite de taxa do provedor (100 requisições por minuto). Requisições excedentes são enfileiradas ou rejeitadas com erro RATE_LIMITED e retry_after_seconds em details.",
+        "enforcement": "code",
+        "verification": "Implementar token bucket ou sliding window counter; rastrear requisições por minuto; rejeitar com 429 se limite excedido; incluir Retry-After header em resposta."
+      },
+      {
+        "id": 32,
+        "category": "compliance",
+        "description": "Todos os envios de e-mail devem ser registrados em auditoria com identificação do usuário, email, template, timestamp, e status, em conformidade com requisitos de rastreabilidade e LGPD (artigo 5º — transparência).",
+        "enforcement": "code",
+        "verification": "Registrar entrada de auditoria em cada operação de envio (sucesso ou falha) antes de retornar ao chamador; verificar que registro contém todos os campos obrigatórios."
+      },
+      {
+        "id": 33,
+        "category": "observability",
+        "description": "Latência de envio de e-mail (tempo total da requisição ao provedor) deve ser rastreada e exposta como métrica (email_send_latency_ms) com tags de template_id e status para análise de desempenho.",
+        "enforcement": "code",
+        "verification": "Instrumentar operação de envio com timestamp de início e fim; calcular latência; emitir métrica com tags; verificar que métrica é coletada em cada invocação."
+      },
+      {
+        "id": 34,
+        "category": "invariant",
+        "description": "Circuit breaker deve estar aberto após 5 falhas consecutivas de envio ao provedor, bloqueando novas requisições por 60 segundos (half-open) para permitir recuperação do provedor.",
+        "enforcement": "code",
+        "verification": "Implementar circuit breaker com estados (closed, open, half-open); contar falhas consecutivas; transicionar para open após 5 falhas; aguardar 60 segundos antes de tentar half-open; registrar transições em logs."
+      },
+      {
+        "id": 35,
+        "category": "validation",
+        "description": "Resposta do provedor deve conter message_id válido (string não-vazia) e status de aceitação (accepted|queued|rejected). Respostas malformadas são tratadas como erro do provedor.",
+        "enforcement": "code",
+        "verification": "Validar estrutura de resposta JSON; verificar presença e tipo de message_id e status; rejeitar resposta se campos obrigatórios ausentes ou tipos incorretos."
+      },
+      {
+        "id": 36,
+        "category": "compliance",
+        "description": "Webhook de confirmação de entrega do provedor deve ser validado com assinatura HMAC antes de processar, prevenindo spoofing de confirmações falsas.",
+        "enforcement": "code",
+        "verification": "Extrair assinatura HMAC do header do webhook; recalcular HMAC com payload e chave secreta do provedor; comparar assinaturas; rejeitar webhook se assinatura inválida."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "O Conector de Provedor de E-mail é um adaptador especializado que integra a plataforma com serviços externos de envio de mensagens transacionais, abstraindo os detalhes específicos do provedor (credenciais, protocolos, formatos de requisição/resposta). Encapsula a lógica de autenticação com o provedor, tradução de dados entre modelos internos e contratos externos, tratamento de erros específicos do provedor, validação de respostas, e processamento de webhooks de confirmação de entrega. Implementa mecanismos de retry com backoff exponencial, circuit breaker para falhas cascata, rate limiting respeitando limites do provedor, e rastreabilidade completa de operações de envio em logs de auditoria. Serve como ponto único de integração para o fluxo de recuperação de senha e futuras notificações aos usuários, garantindo que mudanças no provedor de e-mail não impactem a lógica de negócio da plataforma."
+    },
+    "definition": {
+      "auth": {
+        "id": 3,
+        "kind": "api_key",
+        "secret_ref": "EMAIL_PROVIDER_API_KEY"
+      },
+      "params": [
+        {
+          "id": 4,
+          "name": "max_retries",
+          "value": "3"
+        },
+        {
+          "id": 5,
+          "name": "retry_backoff_base_ms",
+          "value": "1000"
+        },
+        {
+          "id": 6,
+          "name": "request_timeout_seconds",
+          "value": "10"
+        },
+        {
+          "id": 7,
+          "name": "circuit_breaker_failure_threshold",
+          "value": "5"
+        },
+        {
+          "id": 8,
+          "name": "rate_limit_requests_per_minute",
+          "value": "100"
+        }
+      ],
+      "provider": {
+        "id": 2,
+        "name": "Provedor de E-mail Transacional",
+        "base_url": "https://api.email-provider.com",
+        "sdk_version": "2.1.0"
+      },
+      "operations": [
+        {
+          "id": 9,
+          "name": "Enviar E-mail de Recuperação de Senha",
+          "mapping": "Mapeia userId para identificador externo, constrói corpo de requisição com template_id, destinatário, variáveis de template (recovery_link, token_expiry_hours), headers de autenticação (Authorization: Bearer API_KEY), e aguarda resposta com message_id e status de aceitação.",
+          "local_signature": "sendPasswordRecoveryEmail(userId: uuid, email: string, recoveryToken: string, recoveryLink: string) -> Promise<SendResult>",
+          "external_endpoint": "POST /v1/send"
+        },
+        {
+          "id": 10,
+          "name": "Processar Webhook de Confirmação de Entrega",
+          "mapping": "Recebe payload do provedor contendo message_id, status (delivered|bounced|failed), timestamp, e detalhes de erro. Valida assinatura HMAC do webhook, mapeia message_id para envio local, registra resultado em auditoria, e atualiza estado de rastreamento de envio.",
+          "local_signature": "handleDeliveryWebhook(webhookPayload: object) -> Promise<void>",
+          "external_endpoint": "POST /webhooks/delivery (inbound)"
+        },
+        {
+          "id": 11,
+          "name": "Validar Configuração de Provedor",
+          "mapping": "Executa health check contra endpoint do provedor, validando conectividade, autenticação, e disponibilidade do serviço. Retorna status operacional e latência de resposta.",
+          "local_signature": "validateProviderConfiguration() -> Promise<HealthCheckResult>",
+          "external_endpoint": "GET /v1/health"
+        }
+      ],
+      "circuit_breaker": {
+        "id": 12,
+        "fallback": "Registra falha em auditoria, retorna erro ao chamador indicando indisponibilidade temporária do provedor de e-mail, e aguarda período de recuperação antes de tentar novamente.",
+        "open_after": 5,
+        "half_open_after": 60
+      }
+    },
+    "pendencies": [
+      {
+        "id": 54,
+        "section": "definition",
+        "description": "Provedor de e-mail específico não foi definido nos inputs. A configuração atual (base_url, sdk_version) é genérica e precisa ser substituída pelos dados reais do provedor escolhido (ex: SendGrid, AWS SES, Mailgun, Brevo).",
+        "resolutionOptions": [
+          {
+            "id": 55,
+            "text": "Usar SendGrid como provedor: base_url='https://api.sendgrid.com', sdk_version='3.10.0', auth kind='bearer' com SendGrid API Key"
+          },
+          {
+            "id": 56,
+            "text": "Usar AWS SES como provedor: base_url='https://email.region.amazonaws.com', sdk_version='boto3 1.26.0', auth kind='aws_sigv4' com AWS credentials"
+          },
+          {
+            "id": 57,
+            "text": "Usar Mailgun como provedor: base_url='https://api.mailgun.net', sdk_version='1.3.0', auth kind='basic' com Mailgun API Key"
+          },
+          {
+            "id": 58,
+            "text": "Usar Brevo (ex-Sendinblue) como provedor: base_url='https://api.brevo.com', sdk_version='2.0.0', auth kind='api_key' com Brevo API Key"
+          }
+        ],
+        "recommendedOptionId": 55
+      },
+      {
+        "id": 59,
+        "section": "definition",
+        "description": "Template ID para e-mail de recuperação de senha não foi especificado. Precisa ser definido o identificador do template no provedor escolhido e validado que template contém variáveis esperadas (recovery_link, token_expiry_hours).",
+        "resolutionOptions": [
+          {
+            "id": 60,
+            "text": "Definir template_id='password_recovery_v1' e validar que provedor possui template com variáveis {{recovery_link}} e {{token_expiry_hours}}"
+          },
+          {
+            "id": 61,
+            "text": "Criar template no provedor durante fase de setup e registrar template_id em configuração de conector"
+          }
+        ],
+        "recommendedOptionId": 60
+      },
+      {
+        "id": 62,
+        "section": "flow",
+        "description": "Mecanismo de enfileiramento de requisições excedentes (quando rate limit é atingido) não foi detalhado. Precisa ser definido se requisições serão enfileiradas em fila (ex: Redis, RabbitMQ) ou rejeitadas imediatamente com erro RATE_LIMITED.",
+        "resolutionOptions": [
+          {
+            "id": 63,
+            "text": "Implementar fila de prioridade (ex: Redis com estrutura de sorted set) para enfileirar requisições excedentes; processar fila com worker background respeitando rate limit"
+          },
+          {
+            "id": 64,
+            "text": "Rejeitar requisições excedentes imediatamente com erro 429 RATE_LIMITED e retry_after_seconds; deixar chamador responsável por retry"
+          }
+        ],
+        "recommendedOptionId": 63
+      },
+      {
+        "id": 65,
+        "section": "rules",
+        "description": "Política de retenção de logs de auditoria de envio de e-mail não foi especificada. Precisa ser definido por quanto tempo registros de envio devem ser mantidos (ex: 90 dias, 1 ano) conforme requisitos de conformidade e LGPD.",
+        "resolutionOptions": [
+          {
+            "id": 66,
+            "text": "Reter logs de auditoria de envio por 90 dias (conforme requisito de rastreabilidade mínimo); arquivar após 90 dias em storage de longo prazo"
+          },
+          {
+            "id": 67,
+            "text": "Reter logs de auditoria de envio por 1 ano (conforme requisito de LGPD artigo 5º); implementar política de exclusão automática após 1 ano"
+          }
+        ],
+        "recommendedOptionId": 66
+      },
+      {
+        "id": 68,
+        "section": "non_functional_requirements",
+        "description": "Limite de requisições por minuto (100 req/min) foi definido como limite do provedor, mas precisa ser validado contra contrato real com provedor escolhido. Diferentes provedores têm diferentes limites.",
+        "resolutionOptions": [
+          {
+            "id": 69,
+            "text": "Validar limite de taxa com provedor escolhido; ajustar rate_limit_requests_per_minute em params se necessário"
+          },
+          {
+            "id": 70,
+            "text": "Implementar mecanismo de descoberta dinâmica de limite de taxa a partir de headers de resposta do provedor (ex: X-RateLimit-Limit)"
+          }
+        ],
+        "recommendedOptionId": 69
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 44,
+        "then": "Requisição é rejeitada com erro INVALID_INPUT e mensagem descritiva; nenhuma requisição é enviada ao provedor",
+        "type": "unit",
+        "when": "Conector valida entrada antes de contatar provedor",
+        "given": "Conector recebe requisição de envio com email em formato inválido (ex: 'usuario@' ou 'usuario.com')",
+        "scenario": "Validação de formato de e-mail",
+        "target_section": "definition"
+      },
+      {
+        "id": 45,
+        "then": "Segunda requisição retorna resultado da primeira (message_id e status em cache) sem reenviar ao provedor",
+        "type": "unit",
+        "when": "Mesma requisição é reenviada dentro de 5 minutos",
+        "given": "Conector recebe requisição de envio com userId=123, email=user@example.com, templateId=pwd_recovery",
+        "scenario": "Idempotência de requisição de envio",
+        "target_section": "definition"
+      },
+      {
+        "id": 46,
+        "then": "Conector retorna sucesso com message_id; entrada de auditoria é registrada; métrica de latência é emitida",
+        "type": "integration",
+        "when": "Conector envia requisição ao provedor e recebe resposta 200 com message_id",
+        "given": "Handler de Recuperação de Senha invoca conector com dados válidos (userId, email, recoveryToken, recoveryLink)",
+        "scenario": "Envio bem-sucedido de e-mail de recuperação de senha",
+        "target_section": "flow"
+      },
+      {
+        "id": 47,
+        "then": "Conector retorna sucesso com message_id da segunda tentativa; auditoria registra ambas as tentativas; latência total inclui tempo de retry",
+        "type": "integration",
+        "when": "Conector aguarda 1 segundo e retenta; provedor retorna sucesso na segunda tentativa",
+        "given": "Conector tenta enviar e-mail; provedor retorna erro 503 (Service Unavailable) na primeira tentativa",
+        "scenario": "Retry com backoff exponencial em falha transitória",
+        "target_section": "flow"
+      },
+      {
+        "id": 48,
+        "then": "Circuit breaker está aberto; sexta requisição é rejeitada imediatamente com erro sem contatar provedor; estado open é registrado em logs",
+        "type": "integration",
+        "when": "Sexta requisição é submetida ao conector",
+        "given": "Conector tenta enviar 5 e-mails consecutivos; provedor retorna erro 500 em todas as tentativas",
+        "scenario": "Circuit breaker abre após 5 falhas consecutivas",
+        "target_section": "definition"
+      },
+      {
+        "id": 49,
+        "then": "Circuit breaker transiciona para half-open; requisição é enviada ao provedor como teste; se sucesso, circuit breaker fecha; se falha, reabre",
+        "type": "integration",
+        "when": "Nova requisição de envio é submetida",
+        "given": "Circuit breaker está aberto após 5 falhas; 60 segundos se passaram",
+        "scenario": "Circuit breaker recupera após 60 segundos (half-open)",
+        "target_section": "definition"
+      },
+      {
+        "id": 50,
+        "then": "Se assinatura válida, webhook é processado e status é registrado; se inválida, webhook é rejeitado e erro é registrado em auditoria",
+        "type": "security",
+        "when": "Conector recebe webhook e valida assinatura",
+        "given": "Provedor envia webhook de confirmação de entrega com payload e assinatura HMAC",
+        "scenario": "Validação de assinatura HMAC de webhook",
+        "target_section": "flow"
+      },
+      {
+        "id": 51,
+        "then": "API_KEY não aparece em logs; apenas indicador de que autenticação foi aplicada é registrado (ex: 'auth: api_key')",
+        "type": "security",
+        "when": "Requisição é registrada em logs",
+        "given": "Conector envia requisição ao provedor com API_KEY em header Authorization",
+        "scenario": "Credenciais de API não são expostas em logs",
+        "target_section": "definition"
+      },
+      {
+        "id": 52,
+        "then": "Percentil 95 das latências é <= 5 segundos; nenhuma requisição excede 10 segundos",
+        "type": "performance",
+        "when": "Latência de cada requisição é medida",
+        "given": "Conector processa 100 requisições de envio em sequência",
+        "scenario": "Latência de envio dentro de SLA (p95 <= 5s)",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 53,
+        "then": "Resposta segue envelope padrão: { data: { message_id, status }, meta: { timestamp, request_id } } em sucesso; { error: { code, message }, meta: { timestamp, request_id } } em erro",
+        "type": "contract",
+        "when": "Resposta é retornada ao chamador",
+        "given": "Conector processa requisição de envio (sucesso ou erro)",
+        "scenario": "Resposta do conector segue envelope padrão da API",
+        "target_section": "definition"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 37,
+        "target": "p95 <= 5s",
+        "category": "performance",
+        "requirement": "Latência de envio de e-mail (tempo total da requisição ao provedor, incluindo retry) deve ser inferior a 5 segundos em 95% dos casos (p95).",
+        "verification": "Coletar métrica email_send_latency_ms em cada operação; calcular percentil 95 em janela de 5 minutos; alertar se p95 > 5s."
+      },
+      {
+        "id": 38,
+        "target": "success_rate >= 99%",
+        "category": "availability",
+        "requirement": "Conector deve manter taxa de sucesso de envio >= 99% em condições normais de operação (sem falhas do provedor). Falhas do provedor externo não devem impactar disponibilidade da plataforma (circuit breaker garante degradação graciosa).",
+        "verification": "Calcular success_rate = (envios_aceitos / envios_tentados) em janela de 1 hora; alertar se < 99%; verificar que circuit breaker está ativo quando provedor indisponível."
+      },
+      {
+        "id": 39,
+        "target": "100% de credenciais em secrets manager",
+        "category": "security",
+        "requirement": "Credenciais de autenticação com provedor (API_KEY) devem ser armazenadas em gerenciador de secrets (ex: AWS Secrets Manager, HashiCorp Vault) e nunca em código-fonte ou variáveis de ambiente não criptografadas.",
+        "verification": "Auditar código-fonte e variáveis de ambiente para presença de API_KEY; verificar que conector carrega credenciais apenas de secrets manager; testar que acesso a secrets é auditado."
+      },
+      {
+        "id": 40,
+        "target": "100% HTTPS com TLS 1.2+",
+        "category": "security",
+        "requirement": "Todas as comunicações com provedor de e-mail devem usar HTTPS com validação de certificado TLS 1.2+. Requisições HTTP não-criptografadas são rejeitadas.",
+        "verification": "Configurar cliente HTTP para rejeitar conexões não-HTTPS; validar certificado do provedor; testar que requisição HTTP é rejeitada; verificar versão TLS em handshake."
+      },
+      {
+        "id": 41,
+        "target": "100% de operações auditadas com request_id",
+        "category": "observability",
+        "requirement": "Todas as operações de envio de e-mail devem ser registradas em auditoria com contexto completo (userId, email, templateId, status, timestamp, message_id). Logs devem ser estruturados (JSON) e incluir request_id para rastreamento distribuído.",
+        "verification": "Verificar que cada operação de envio gera entrada de auditoria; validar que entrada contém todos os campos obrigatórios; verificar que request_id está presente em logs e correlaciona com requisição original."
+      },
+      {
+        "id": 42,
+        "target": "100 req/min sem perda",
+        "category": "scalability",
+        "requirement": "Conector deve suportar até 100 requisições de envio por minuto (limite do provedor) sem degradação de latência ou perda de requisições. Requisições excedentes devem ser enfileiradas ou rejeitadas com erro RATE_LIMITED.",
+        "verification": "Executar teste de carga com 100 req/min durante 5 minutos; verificar que 100% das requisições são processadas (aceitas ou rejeitadas com erro apropriado); verificar que latência não degrada."
+      },
+      {
+        "id": 43,
+        "target": "max 3 retries por requisição",
+        "category": "cost",
+        "requirement": "Conector deve minimizar requisições ao provedor através de retry inteligente (backoff exponencial) e idempotência, reduzindo custos de envio. Máximo de 3 tentativas por requisição original.",
+        "verification": "Configurar retry com backoff exponencial (1s, 2s, 4s); verificar que máximo de 3 tentativas é respeitado; medir taxa de sucesso na primeira tentativa vs. com retries."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 42,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T07:35:21.369Z",
+  "updatedAt": null
+}

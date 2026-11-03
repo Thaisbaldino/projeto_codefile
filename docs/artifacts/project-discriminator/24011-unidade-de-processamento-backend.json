@@ -1,0 +1,257 @@
+{
+  "id": 24011,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 30,
+        "name": "Esgotamento de Recursos",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Uma conexão vazia sob carga alta pode consumir recursos que poderiam ser usados por outras requisições, e a queda de uma só não é notada.",
+        "confidence": 0.7869,
+        "context_element_id": 2812
+      },
+      {
+        "id": 32,
+        "name": "Observabilidade e Detecção",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem alertas configurados para anomalias, a equipe só descobre problemas quando já impactam o usuário, e a correção demora.",
+        "confidence": 0.9052,
+        "context_element_id": 2814
+      },
+      {
+        "id": 33,
+        "name": "Falhas de Execução e Idempotência",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Conflito de estado como duplicação de e-mail é uma falha de execução que pode causar inconsistência permanente.",
+        "confidence": 0.8567,
+        "context_element_id": 2819
+      },
+      {
+        "id": 35,
+        "name": "Duplicação e Baixo Reúso",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Repetição de dados em múltiplas operações sem identificar a origem torna difícil a correção de erros e dificulta a manutenção de configurações.",
+        "confidence": 0.7731,
+        "context_element_id": 2840
+      },
+      {
+        "id": 37,
+        "name": "Retenção e Políticas",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem retenção definida, dados pessoais expostos por negligência ou vazamento não têm prazo para serem apagados, e a LGPD não tem como exigir que o dado seja apagado.",
+        "confidence": 0.8759,
+        "context_element_id": 2849
+      }
+    ],
+    "attributes": [],
+    "best_practices": [
+      {
+        "id": 38,
+        "name": "Implementar rate limiting com throttling configurável por endpoint e amostragem de requisições em cenários de alta carga",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Apenas 5 tentativas falhadas em 15 minutos são suficientes para bloquear novas tentativas, sem que o usuário seja exposto a tentativas repetidas.",
+        "confidence": 0.7362,
+        "context_element_id": 2860
+      },
+      {
+        "id": 39,
+        "name": "Definir timeouts configuráveis para todas as operações críticas e monitorar orçamentos de tempo por transação/endpoint",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O tempo de espera do circuit breaker é configurável com 60 segundos.\nO tempo de espera padrão de 10 segundos para uma consulta é configurável, garantindo que a operação seja executada sem depender de um limite fixo.",
+        "confidence": 0.8583,
+        "context_element_id": 2863
+      },
+      {
+        "id": 40,
+        "name": "Implementar retry automático com exponential backoff, jitter e circuit breaker para prevenir falhas em cascata",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Cada falha consecutiva é tratada como um erro separado, e a tentativa de recuperação é feita com backoff exponencial, evitando que o sistema se encontre parado por um erro que poderia ser corrigido em poucos tentativas.",
+        "confidence": 0.8877,
+        "context_element_id": 2895
+      },
+      {
+        "id": 43,
+        "name": "Estabelecer um sistema de rastreabilidade abrangente com logs detalhados de todas as ações de usuários e mudanças do sistema",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem rastreabilidade completa, a auditoria de incidentes depende de memória ou de recuperação manual, o que não é confiável em tempo de produção.",
+        "confidence": 0.7283,
+        "context_element_id": 2925
+      },
+      {
+        "id": 46,
+        "name": "Configurar segurança específica para APIs e web services com rate limiting, validação de schema e autenticação por endpoint",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem autenticação e autorização, qualquer requisição pode acessar o sistema, e a auditoria de logs não identifica quem fez o que.",
+        "confidence": 0.794,
+        "context_element_id": 2945
+      },
+      {
+        "id": 47,
+        "name": "Configurar revogação automática de acesso para contas comprometidas com invalidação imediata de tokens e sessões ativas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A sessão do tenant é revogada imediatamente após a desativação, e a plataforma não permite mais uso do token após essa operação.",
+        "confidence": 0.9509,
+        "context_element_id": 2946
+      },
+      {
+        "id": 49,
+        "name": "Usar checksums e funções de hash para verificar a integridade dos dados durante a transmissão e o armazenamento",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem hash, o token é reconstruído pelo atacante, e a senha é revelada sem que o usuário saiba.",
+        "confidence": 0.8548,
+        "context_element_id": 2955
+      },
+      {
+        "id": 50,
+        "name": "Implemente event sourcing com um log de eventos imutável para dados críticos de auditoria e reconstrução de estado",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O registro de auditoria é o único registro que captura o que foi alterado e o que aconteceu, sem depender de quem fez a alteração.",
+        "confidence": 0.7256,
+        "context_element_id": 2966
+      },
+      {
+        "id": 51,
+        "name": "Implemente operações idempotentes que podem ser executadas múltiplas vezes sem efeitos colaterais",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A implementação de deduplicação baseada em request_id garante que múltiplas requisições idênticas com mesmo request_id retornem mesmo resultado sem duplicação de dados.\nRepetição de requisição sem identificação fica difícil de identificar, e a retenção de estado explica o que acontece quando o sistema é reprocessado.",
+        "confidence": 0.7355,
+        "context_element_id": 2968
+      },
+      {
+        "id": 54,
+        "name": "Mantenha um modelo de tarefas do usuário com rastreamento do contexto atual, histórico de ações e sugestões de próximos passos com base no fluxo de trabalho",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem histórico de conclusão, o status da tarefa não se torna conhecido após a submissão do usuário, e a revisão de status é feita sem base de referência.",
+        "confidence": 0.7438,
+        "context_element_id": 3045
+      },
+      {
+        "id": 55,
+        "name": "Estabeleça validação rigorosa de entrada e saída com sanitização automática, verificação de tipos de dados, limites de intervalo e detecção de payloads maliciosos ou malformados",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Caracteres de controle como backslash ou espaço em branco são aceitos em certos campos, e sem essa sanificação o sistema aceita entrada malfeita.",
+        "confidence": 0.9487,
+        "context_element_id": 3063
+      },
+      {
+        "id": 56,
+        "name": "Configure controles de privacidade rigorosos incluindo minimização de dados, anonimização automática, controles de acesso granulares e auditoria do uso de informações pessoais sensíveis",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem auditoria de código, o teste de conformidade LGPD não é feito em tempo real, e a violação só é descoberta depois de ter ocorrido.",
+        "confidence": 0.814,
+        "context_element_id": 3075
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 2,
+        "name": "Propósito Operacional",
+        "value": "operacional",
+        "method": "user-input",
+        "reasoning": "A instância única com backup diário é destinada a operações diários.",
+        "confidence": 0.7431,
+        "context_element_id": 1284
+      },
+      {
+        "id": 3,
+        "name": "Padrão de Carga de Trabalho",
+        "value": "OLTP",
+        "method": "internal-inference",
+        "reasoning": "A deduplicação em banco de dados com TTL de 24 horas é característica de um trabalho de OLTP.",
+        "confidence": 0.8873,
+        "context_element_id": 1285
+      },
+      {
+        "id": 17,
+        "name": "Canal de Integração",
+        "value": "HTTP-REST",
+        "method": "internal-inference",
+        "reasoning": "A resposta é serializada para JSON, um formato de transmissão REST.",
+        "confidence": 0.7932,
+        "context_element_id": 2060
+      },
+      {
+        "id": 65,
+        "name": "Armazenamento de Resultados",
+        "value": "registro de banco de dados",
+        "method": "user-input",
+        "reasoning": "A deduplicação é armazenada em um banco de dados com TTL de 24 horas, caracterizando armazenamento de registro.",
+        "confidence": 0.7554,
+        "context_element_id": 4328
+      },
+      {
+        "id": 66,
+        "name": "Tipo de Gatilho",
+        "value": "agendado",
+        "method": "user-input",
+        "reasoning": "A execução da tarefa é programada para ocorrer em um horário pré-determinado, indicando que a execução é feita a partir de um cronograma.",
+        "confidence": 0.7732,
+        "context_element_id": 4364
+      },
+      {
+        "id": 70,
+        "name": "Estratégia de Cache",
+        "value": "sem cache",
+        "method": "internal-inference",
+        "reasoning": "Sem cache em nível de aplicação, a otimização de queries é feita diretamente no banco de dados, sem cache em nível de aplicação.",
+        "confidence": 0.7953,
+        "context_element_id": 4496
+      },
+      {
+        "id": 73,
+        "name": "Alinhamento com o Negócio",
+        "value": "negócio principal",
+        "method": "internal-inference",
+        "reasoning": "A execução de lógica de negócio, invocação de regras de negócio e transação em banco de dados são atividades de domínio de negócio central.",
+        "confidence": 0.7474,
+        "context_element_id": 4575
+      },
+      {
+        "id": 74,
+        "name": "Temporalidade dos Dados",
+        "value": "histórico",
+        "method": "internal-inference",
+        "reasoning": "A função isDateOverdue() do Toolkit retorna true quando a data limite é anterior à data de referência, indicando que a data vencida é uma entidade histórica.",
+        "confidence": 0.8067,
+        "context_element_id": 4580
+      },
+      {
+        "id": 76,
+        "name": "Modo de Gatilho",
+        "value": "agendado",
+        "method": "user-input",
+        "reasoning": "O agendamento de processamento de e-mail é executado periodicamente a cada 5 segundos, caracterizando execução programada.",
+        "confidence": 0.7789,
+        "context_element_id": 4614
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 6,
+  "active": true,
+  "sourceId": 23778,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}

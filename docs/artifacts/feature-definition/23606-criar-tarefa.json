@@ -1,0 +1,337 @@
+{
+  "id": 23606,
+  "projectId": 4118,
+  "type": "feature_definition",
+  "content": {
+    "pendencies": [
+      {
+        "id": 36,
+        "section": "functional",
+        "description": "Quais são os níveis de prioridade disponíveis para seleção no momento da criação da tarefa? O brief menciona exemplos como baixa, média, alta e urgente, mas os valores exatos e sua ordenação precisam ser confirmados.",
+        "resolutionOptions": [
+          {
+            "id": 37,
+            "text": "Adotar quatro níveis fixos em ordem crescente: Baixa, Média, Alta e Urgente."
+          },
+          {
+            "id": 38,
+            "text": "Adotar três níveis fixos em ordem crescente: Baixa, Média e Alta."
+          },
+          {
+            "id": 39,
+            "text": "Adotar cinco níveis fixos em ordem crescente: Muito Baixa, Baixa, Média, Alta e Crítica."
+          }
+        ],
+        "recommendedOptionId": 37
+      },
+      {
+        "id": 40,
+        "section": "functional",
+        "description": "Quais são os status fixos disponíveis para seleção como status inicial da tarefa no momento da criação? O brief menciona exemplos como 'A Fazer', 'Em Andamento' e 'Concluído', mas é necessário confirmar se todos os status são selecionáveis na criação ou apenas um subconjunto deles (por exemplo, apenas 'A Fazer').",
+        "resolutionOptions": [
+          {
+            "id": 41,
+            "text": "O status inicial é sempre 'A Fazer' e não pode ser alterado no momento da criação; o campo é preenchido automaticamente pelo sistema."
+          },
+          {
+            "id": 42,
+            "text": "O usuário pode selecionar qualquer um dos status fixos disponíveis no sistema como status inicial da tarefa no momento da criação."
+          },
+          {
+            "id": 43,
+            "text": "O usuário pode selecionar apenas entre 'A Fazer' e 'Em Andamento' como status inicial; 'Concluído' não é permitido na criação."
+          }
+        ],
+        "recommendedOptionId": 41
+      },
+      {
+        "id": 44,
+        "section": "functional",
+        "description": "O campo de data limite para conclusão da tarefa é obrigatório ou opcional no momento da criação? Uma tarefa pode ser criada sem prazo definido?",
+        "resolutionOptions": [
+          {
+            "id": 45,
+            "text": "A data limite é opcional; a tarefa pode ser criada sem prazo definido."
+          },
+          {
+            "id": 46,
+            "text": "A data limite é obrigatória; toda tarefa deve ter um prazo de conclusão definido no momento da criação."
+          }
+        ],
+        "recommendedOptionId": 45
+      },
+      {
+        "id": 47,
+        "section": "functional",
+        "description": "O campo de descrição da tarefa é obrigatório ou opcional no momento da criação? Uma tarefa pode ser criada apenas com título, responsável, prioridade e status?",
+        "resolutionOptions": [
+          {
+            "id": 48,
+            "text": "A descrição é opcional; a tarefa pode ser criada sem descrição preenchida."
+          },
+          {
+            "id": 49,
+            "text": "A descrição é obrigatória; toda tarefa deve ter uma descrição detalhada no momento da criação."
+          }
+        ],
+        "recommendedOptionId": 48
+      },
+      {
+        "id": 50,
+        "section": "functional",
+        "description": "Existe um limite máximo de caracteres para o título e para a descrição da tarefa? Se sim, quais são esses limites?",
+        "resolutionOptions": [
+          {
+            "id": 51,
+            "text": "Definir limite de 150 caracteres para o título e 2.000 caracteres para a descrição."
+          },
+          {
+            "id": 52,
+            "text": "Definir limite de 255 caracteres para o título e 5.000 caracteres para a descrição."
+          },
+          {
+            "id": 53,
+            "text": "Não definir limite máximo de caracteres para título e descrição nesta versão, deixando a restrição para a camada de banco de dados."
+          }
+        ],
+        "recommendedOptionId": 51
+      },
+      {
+        "id": 54,
+        "section": "functional",
+        "description": "Após a criação bem-sucedida da tarefa, qual deve ser o comportamento de navegação do sistema? O usuário é redirecionado para a visualização da tarefa recém-criada, retorna à lista de tarefas ou permanece no formulário em branco para criar outra tarefa?",
+        "resolutionOptions": [
+          {
+            "id": 55,
+            "text": "Redirecionar o usuário para a visualização detalhada da tarefa recém-criada após a confirmação de sucesso."
+          },
+          {
+            "id": 56,
+            "text": "Retornar o usuário à lista de tarefas após a confirmação de sucesso, com a nova tarefa visível na listagem."
+          },
+          {
+            "id": 57,
+            "text": "Manter o usuário no formulário em branco após a confirmação de sucesso, permitindo a criação imediata de outra tarefa."
+          }
+        ],
+        "recommendedOptionId": 55
+      },
+      {
+        "id": 58,
+        "section": "functional",
+        "description": "O campo de responsável é obrigatório no momento da criação da tarefa? Uma tarefa pode ser criada sem responsável atribuído (tarefa não atribuída)?",
+        "resolutionOptions": [
+          {
+            "id": 59,
+            "text": "O responsável é obrigatório; toda tarefa deve ter um responsável definido no momento da criação."
+          },
+          {
+            "id": 60,
+            "text": "O responsável é opcional; a tarefa pode ser criada sem responsável atribuído e atribuída posteriormente."
+          }
+        ],
+        "recommendedOptionId": 59
+      },
+      {
+        "id": 61,
+        "section": "non-functional",
+        "description": "Existe algum limite máximo de tarefas que podem ser criadas por tenant (além da estimativa operacional de 10.000 tarefas mencionada no brief)? O sistema deve bloquear ou alertar o usuário ao se aproximar desse limite?",
+        "resolutionOptions": [
+          {
+            "id": 62,
+            "text": "Não há limite máximo de tarefas por tenant nesta versão; o sistema aceita criações até o limite operacional estimado de 10.000 tarefas, sem bloqueio automático."
+          },
+          {
+            "id": 63,
+            "text": "Implementar limite configurável de tarefas por tenant, bloqueando novas criações ao atingir o teto definido e exibindo mensagem informativa ao usuário."
+          }
+        ],
+        "recommendedOptionId": 62
+      }
+    ],
+    "functional_requirements": [
+      {
+        "group": {
+          "id": 1,
+          "name": "Formulário de Criação de Tarefa",
+          "items": [
+            {
+              "id": 2,
+              "description": "Exibir formulário dedicado para que o usuário registre uma nova tarefa na plataforma."
+            },
+            {
+              "id": 3,
+              "description": "Exibir campo obrigatório de título da tarefa no formulário de criação, limitando a entrada a um texto descritivo e identificador da atividade."
+            },
+            {
+              "id": 4,
+              "description": "Exibir campo de descrição da tarefa no formulário de criação, permitindo ao usuário detalhar o contexto, objetivo ou instruções relacionadas à atividade."
+            },
+            {
+              "id": 5,
+              "description": "Exibir campo obrigatório de responsável pela tarefa no formulário de criação, permitindo ao usuário selecionar um colaborador ativo do tenant como responsável pela execução."
+            },
+            {
+              "id": 6,
+              "description": "Exibir campo obrigatório de prioridade da tarefa no formulário de criação, apresentando as opções disponíveis de nível de prioridade para seleção pelo usuário."
+            },
+            {
+              "id": 7,
+              "description": "Exibir campo de status inicial da tarefa no formulário de criação, apresentando os status fixos disponíveis no sistema para seleção pelo usuário."
+            },
+            {
+              "id": 8,
+              "description": "Exibir campo de data limite para conclusão da tarefa no formulário de criação, permitindo ao usuário informar o prazo esperado de entrega da atividade."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 9,
+          "name": "Validações do Formulário",
+          "items": [
+            {
+              "id": 10,
+              "description": "Validar o preenchimento de todos os campos obrigatórios antes de permitir o envio do formulário, exibindo mensagens de erro específicas por campo não preenchido ou inválido."
+            },
+            {
+              "id": 11,
+              "description": "Validar que o título da tarefa não esteja em branco e não exceda o limite máximo de caracteres definido, exibindo mensagem de erro específica em caso de violação."
+            },
+            {
+              "id": 12,
+              "description": "Validar que o responsável selecionado é um colaborador ativo pertencente ao mesmo tenant do criador da tarefa, impedindo a atribuição a usuários inativos ou de outras organizações."
+            },
+            {
+              "id": 13,
+              "description": "Validar que a prioridade selecionada corresponde a um dos valores válidos definidos pelo sistema, rejeitando entradas fora do conjunto permitido."
+            },
+            {
+              "id": 14,
+              "description": "Validar que o status inicial selecionado corresponde a um dos status fixos definidos pelo sistema, rejeitando entradas fora do conjunto permitido."
+            },
+            {
+              "id": 15,
+              "description": "Validar que a data limite informada é uma data válida e, quando aplicável, não é anterior à data atual, exibindo mensagem de erro específica em caso de violação."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 16,
+          "name": "Persistência e Confirmação",
+          "items": [
+            {
+              "id": 17,
+              "description": "Persistir a nova tarefa vinculada ao tenant do usuário criador, garantindo o isolamento de dados entre organizações e que a tarefa não seja acessível por outros tenants."
+            },
+            {
+              "id": 18,
+              "description": "Registrar automaticamente a data e hora de criação da tarefa no momento da persistência, sem necessidade de intervenção do usuário."
+            },
+            {
+              "id": 19,
+              "description": "Registrar o usuário criador da tarefa no momento da persistência, associando a autoria da tarefa ao colaborador que a registrou."
+            },
+            {
+              "id": 20,
+              "description": "Exibir mensagem de confirmação de sucesso ao usuário após a criação da tarefa ser concluída com êxito."
+            },
+            {
+              "id": 21,
+              "description": "Exibir mensagem de erro clara e descritiva ao usuário quando a criação da tarefa não puder ser concluída por falha de validação ou erro do sistema."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 22,
+          "name": "Controle de Acesso à Criação",
+          "items": [
+            {
+              "id": 23,
+              "description": "Permitir que qualquer usuário autenticado e ativo do tenant, independentemente do nível hierárquico, acesse e utilize a funcionalidade de criação de tarefas."
+            },
+            {
+              "id": 24,
+              "description": "Impedir que usuários não autenticados ou pertencentes a tenants inativos acessem ou executem a criação de tarefas na plataforma."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 25,
+          "name": "Atribuição de Responsável",
+          "items": [
+            {
+              "id": 26,
+              "description": "Listar apenas colaboradores ativos do tenant do criador como opções disponíveis para seleção do responsável pela tarefa, excluindo usuários inativos ou de outros tenants."
+            },
+            {
+              "id": 27,
+              "description": "Permitir que o criador da tarefa se atribua como responsável pela própria tarefa, sem restrição de nível hierárquico."
+            },
+            {
+              "id": 28,
+              "description": "Permitir a atribuição da tarefa a qualquer colaborador ativo do tenant, independentemente do nível hierárquico do criador ou do responsável selecionado."
+            }
+          ]
+        }
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "group": {
+          "id": 29,
+          "name": "Segurança e Conformidade",
+          "items": [
+            {
+              "id": 30,
+              "description": "Registrar em log de auditoria toda operação de criação de tarefa, incluindo identificação do usuário criador, tenant, timestamp e dados principais da tarefa criada, em conformidade com os requisitos de rastreabilidade da plataforma."
+            },
+            {
+              "id": 31,
+              "description": "Garantir que a tarefa criada em um tenant não seja visível, acessível ou interferente nos dados de nenhum outro tenant, respeitando o isolamento multi-tenant desde o momento da persistência."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 32,
+          "name": "Usabilidade e Responsividade",
+          "items": [
+            {
+              "id": 33,
+              "description": "Renderizar o formulário de criação de tarefa de forma responsiva e adaptativa, garantindo usabilidade adequada em dispositivos móveis (smartphones e tablets) e em desktops."
+            }
+          ]
+        }
+      },
+      {
+        "group": {
+          "id": 34,
+          "name": "Desempenho",
+          "items": [
+            {
+              "id": 35,
+              "description": "Concluir a operação de persistência da nova tarefa e retornar a confirmação ao usuário em tempo adequado, mesmo sob carga de até 5.000 usuários ativos e 10.000 tarefas por tenant na plataforma."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 8,
+  "sourceType": "feature",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-10T20:57:10.385Z",
+  "updatedAt": null
+}

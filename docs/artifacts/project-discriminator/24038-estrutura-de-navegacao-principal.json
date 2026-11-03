@@ -1,0 +1,267 @@
+{
+  "id": 24038,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 21,
+        "name": "Duplicação e Baixo Reúso",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Repetição de navegação sem efeitos colaterais é o que torna a integração de múltiplas requisições idempotente.",
+        "confidence": 0.7112,
+        "context_element_id": 2840
+      }
+    ],
+    "attributes": [
+      {
+        "id": 5,
+        "name": "Identificador único que representa uma organização ou cliente no sistema multi-tenant",
+        "value": [
+          "tenant-uuid"
+        ],
+        "method": "user-input",
+        "reasoning": "O identificador único de cada tenant é o UUID do tenant.",
+        "confidence": 0.9264,
+        "context_element_id": 2682
+      },
+      {
+        "id": 6,
+        "name": "Elementos de interface e funcionalidades que podem ser personalizados",
+        "value": [
+          "breadcrumb-path",
+          "sidebar-primary"
+        ],
+        "method": "user-input",
+        "reasoning": "A configuração explícita de breadcrumb em cada rota é definida por breadcrumb_path, um campo de interface.\nA interface é configurada com sidebar-primary como opção padrão, indicando que o layout é primário com sidebar.",
+        "confidence": 0.7212,
+        "context_element_id": 2683
+      },
+      {
+        "id": 7,
+        "name": "Domínio funcional ou estrutural que sofre variação",
+        "value": [
+          "integration of feature flags with navigation rules"
+        ],
+        "method": "internal-inference",
+        "reasoning": "A filtragem de nav_tree é integrada com a lógica de feature flags, o que interage com a autorização baseada em perfil.",
+        "confidence": 0.7026,
+        "context_element_id": 2686
+      },
+      {
+        "id": 9,
+        "name": "Perfil ou papel de usuário que é o principal público-alvo da página",
+        "value": [
+          "user",
+          "admin-user"
+        ],
+        "method": "user-input",
+        "reasoning": "A rota /users/:id atua como interface de perfil de usuário, com o usuário como o principal objetivo da página.\nO usuário principal da página é o administrador de usuários.",
+        "confidence": 0.8376,
+        "context_element_id": 2721
+      },
+      {
+        "id": 10,
+        "name": "Perfil primário dos usuários que utilizarão a interface",
+        "value": [
+          "admin-users"
+        ],
+        "method": "user-input",
+        "reasoning": "Os usuários que acessam a página de perfil de usuário são admin-users.",
+        "confidence": 0.7427,
+        "context_element_id": 2723
+      },
+      {
+        "id": 13,
+        "name": "Identidade visual do produto ou marca que o design system materializa",
+        "value": [
+          "branding"
+        ],
+        "method": "user-input",
+        "reasoning": "A identidade visual da plataforma é aplicada na área de branding e autenticação.",
+        "confidence": 0.9434,
+        "context_element_id": 2731
+      },
+      {
+        "id": 14,
+        "name": "Tipo específico de evento ou mensagem que está sendo comunicado",
+        "value": [
+          "navigation-events"
+        ],
+        "method": "user-input",
+        "reasoning": "Os eventos de navegação da aplicação são identificados como 'navigation-events'.",
+        "confidence": 0.7487,
+        "context_element_id": 2755
+      },
+      {
+        "id": 19,
+        "name": "Contexto de usuários ou sistemas que interagem com a camada de segurança",
+        "value": [
+          "privileged-admins"
+        ],
+        "method": "internal-inference",
+        "reasoning": "O usuário colaborador autenticado com contexto de tenant válido é redirecionado para /tasks com mensagem de acesso negado, caracterizando acesso privilegiado.",
+        "confidence": 0.7371,
+        "context_element_id": 2799
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 24,
+        "name": "Implementar identificação única de atores com sistemas de identidade centralizados e gerenciamento unificado de credenciais",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Uma chave errada em um formulário de login ou recuperação de senha é o que mais causa impacto na aplicação.",
+        "confidence": 0.8413,
+        "context_element_id": 2928
+      },
+      {
+        "id": 26,
+        "name": "Alterar todas as configurações padrão do sistema, incluindo senhas, portas, protocolos e parâmetros de segurança",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem notificação, o usuário quebra a senha e não consegue recuperar a sessão, o que torna a falha inacessível e sem rastreio.",
+        "confidence": 0.7052,
+        "context_element_id": 2935
+      },
+      {
+        "id": 27,
+        "name": "Configurar revogação automática de acesso para contas comprometidas com invalidação imediata de tokens e sessões ativas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem ação imediata, o acesso revogado se espalha e a equipe não consegue identificar quem fez o erro.",
+        "confidence": 0.9683,
+        "context_element_id": 2946
+      },
+      {
+        "id": 28,
+        "name": "Implemente operações idempotentes que podem ser executadas múltiplas vezes sem efeitos colaterais",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Repetição de navegação para a mesma rota sem efeitos colaterais ou mudanças de estado não intencionais é o que garante a idempotência.",
+        "confidence": 0.8768,
+        "context_element_id": 2968
+      },
+      {
+        "id": 29,
+        "name": "Externalize as configurações em arquivos de configuração para permitir mudanças sem recompilação",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem recompilar, a configuração é alterada diretamente no sistema, sem quebrar a navegação já em andamento.",
+        "confidence": 0.7226,
+        "context_element_id": 2982
+      },
+      {
+        "id": 30,
+        "name": "Use feature flags e toggles para habilitar/desabilitar funcionalidades dinamicamente",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem essa característica, a visibilidade de cada item depende de uma combinação de permissões e não de uma configuração separada.",
+        "confidence": 0.9714,
+        "context_element_id": 2988
+      },
+      {
+        "id": 31,
+        "name": "Implemente Policy Enforcement Points em gateways e APIs para validar requisições contra regras de conformidade antes da execução",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem autorização, a requisição é rejeitada sem que o servidor saiba quem fez o pedido, liberando o acesso a recursos protegidos.",
+        "confidence": 0.8734,
+        "context_element_id": 3010
+      },
+      {
+        "id": 33,
+        "name": "Implemente funcionalidade de pausar e retomar para operações longas, preservando o estado da sessão e permitindo a continuação após interrupções",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A sessão é renovada automaticamente, preservando o estado do usuário em operações longas, sem quebra de sessão.",
+        "confidence": 0.9143,
+        "context_element_id": 3043
+      },
+      {
+        "id": 34,
+        "name": "Mantenha um modelo de tarefas do usuário com rastreamento do contexto atual, histórico de ações e sugestões de próximos passos com base no fluxo de trabalho",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem histórico de navegação e contexto, o sistema não sabe quem fez o que e quando, e a reação à reclamação depende de quem a fez.",
+        "confidence": 0.849,
+        "context_element_id": 3045
+      },
+      {
+        "id": 35,
+        "name": "Implemente operabilidade por meio de interfaces intuitivas com padrões consistentes, navegação clara e fluxos de trabalho otimizados",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem navegação consistente, o usuário não consegue identificar o que faz e o que espera, e a equipe não consegue acompanhar o progresso do projeto.",
+        "confidence": 0.8716,
+        "context_element_id": 3051
+      },
+      {
+        "id": 36,
+        "name": "Implemente restrições operacionais que limitem as ações do sistema com base em critérios de segurança predefinidos, incluindo rate limits, limites de operação e políticas de acesso restritivas",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem restrição, qualquer usuário acessa qualquer rota, e a barreira é o próprio sistema, não a própria aplicação.",
+        "confidence": 0.9261,
+        "context_element_id": 3062
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 45,
+        "name": "Layout de Navegação",
+        "value": "barra lateral principal",
+        "method": "user-input",
+        "reasoning": "A barra lateral é o layout principal do sidebar.",
+        "confidence": 0.9691,
+        "context_element_id": 4907
+      },
+      {
+        "id": 49,
+        "name": "Abordagem de Composição",
+        "value": "baseado em template",
+        "method": "user-input",
+        "reasoning": "Layout Templates são estruturados em templates de layout, com slots, grid e componentes de header, sidebar e footer.",
+        "confidence": 0.9447,
+        "context_element_id": 4912
+      },
+      {
+        "id": 51,
+        "name": "Suporte a Temas",
+        "value": "múltiplos temas",
+        "method": "internal-inference",
+        "reasoning": "A configuração de tema é uma opção de múltiplas configurações de tema.",
+        "confidence": 0.8449,
+        "context_element_id": 4984
+      },
+      {
+        "id": 56,
+        "name": "Modo de Seleção",
+        "value": "feature flag",
+        "method": "user-input",
+        "reasoning": "O campo 'feature_flag_key' opcional permite que cada item da estrutura nav_tree tenha suporte a feature flags, controlando sua visibilidade independentemente de permissões.",
+        "confidence": 0.8872,
+        "context_element_id": 5095
+      },
+      {
+        "id": 57,
+        "name": "Natureza do Toolkit",
+        "value": "transformação de dados",
+        "method": "internal-inference",
+        "reasoning": "Derivar o breadcrumb a partir da hierarquia de nav_tree mapeia a rota atual para o caminho na árvore, transformando dados em texto.",
+        "confidence": 0.7436,
+        "context_element_id": 5133
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 5,
+  "active": true,
+  "sourceId": 23811,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:42:53.755Z",
+  "updatedAt": null
+}

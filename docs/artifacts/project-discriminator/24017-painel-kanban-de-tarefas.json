@@ -1,0 +1,383 @@
+{
+  "id": 24017,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 27,
+        "name": "Autenticação e Controle de Acesso",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem autenticação e status ativo, qualquer usuário pode acessar o quadro, e a regra de negócio não é aplicada, liberando acesso a tarefas que não pertencem a ele.",
+        "confidence": 0.8473,
+        "context_element_id": 2824
+      }
+    ],
+    "attributes": [
+      {
+        "id": 11,
+        "name": "Identificador de configuração específico dentro do escopo",
+        "value": [
+          "task-responsavel-id, task-criador-id"
+        ],
+        "method": "user-input",
+        "reasoning": "O status da tarefa é alterado somente por quem é responsável pela tarefa ou seu criador, com identificadores separados.",
+        "confidence": 0.7056,
+        "context_element_id": 2680
+      },
+      {
+        "id": 12,
+        "name": "Domínio funcional dos dados organizados nesta estrutura",
+        "value": [
+          "tasks"
+        ],
+        "method": "internal-inference",
+        "reasoning": "A tarefa é organizada em colunas por status, dentro do domínio de tarefas.",
+        "confidence": 0.7484,
+        "context_element_id": 2691
+      },
+      {
+        "id": 14,
+        "name": "Principais propriedades ou campos que caracterizam o registro",
+        "value": [
+          "id, title, assignee, priority, status, deadline, creation-date"
+        ],
+        "method": "user-input",
+        "reasoning": "A estrutura de dados retornada pela API de listagem de tarefas (GET /tasks) é caracterizada pelos campos id, title, assignee, priority, status, deadline e creation-date.",
+        "confidence": 0.8272,
+        "context_element_id": 2708
+      },
+      {
+        "id": 15,
+        "name": "Entidade de dados primária manipulada ou exibida na página",
+        "value": [
+          "tasks"
+        ],
+        "method": "user-input",
+        "reasoning": "O cartão aberto visualiza ou edita os detalhes completos da tarefa em modal ou página de detalhe.",
+        "confidence": 0.7114,
+        "context_element_id": 2720
+      },
+      {
+        "id": 16,
+        "name": "Principais seções ou módulos funcionais da aplicação",
+        "value": [
+          "kanban"
+        ],
+        "method": "user-input",
+        "reasoning": "O sistema é composto por um quadro Kanban.",
+        "confidence": 0.7927,
+        "context_element_id": 2724
+      },
+      {
+        "id": 17,
+        "name": "Profundidade máxima esperada da hierarquia de navegação",
+        "value": [
+          "3-levels"
+        ],
+        "method": "user-input",
+        "reasoning": "O quadro Kanban possui três colunas de status: a_fazer, em_andamento e concluido.",
+        "confidence": 0.792,
+        "context_element_id": 2725
+      },
+      {
+        "id": 18,
+        "name": "Entidade, item de trabalho ou dataset primário manipulado, exibido ou rastreado pela superfície",
+        "value": [
+          "tasks",
+          "events"
+        ],
+        "method": "user-input",
+        "reasoning": "A coluna representa o status 'A Fazer' de tarefas de cartões de tarefas.\nO evento de mouse/touch com coordenadas, task_id, coluna_origem e coluna_destino é manipulado pelo usuário.",
+        "confidence": 0.7533,
+        "context_element_id": 2727
+      },
+      {
+        "id": 19,
+        "name": "Momento no processo de negócio ou workflow em que a interação ocorre",
+        "value": [
+          "final-submission"
+        ],
+        "method": "user-input",
+        "reasoning": "A coluna 'column_concluido' representa o status 'Concluído', correspondente ao status final-submission do workflow.",
+        "confidence": 0.7223,
+        "context_element_id": 2729
+      },
+      {
+        "id": 20,
+        "name": "Tipo específico de evento ou mensagem que está sendo comunicado",
+        "value": [
+          "success or error message"
+        ],
+        "method": "user-input",
+        "reasoning": "A notificação é de sucesso ou erro, com mensagem textual em português e ícone de confirmação ou erro.",
+        "confidence": 0.8346,
+        "context_element_id": 2755
+      },
+      {
+        "id": 25,
+        "name": "Operação de domínio ou caso de uso que o handler processa",
+        "value": [
+          "Carregar tarefas do tenant do usuário autenticado",
+          "update-task-status",
+          "authenticate-user",
+          "drag-drop interaction"
+        ],
+        "method": "user-input",
+        "reasoning": "O handler processa a operação de carregar tarefas do tenant do usuário autenticado.\nO handler processa a operação de atualização de status da tarefa, caracterizando um domínio de operação.\nO token JWT autentica o usuário autenticado, o que é o domínio operação processado por esse handler.\nO manipulador de eventos de arrastar e soltar cartões é um handler de interação com o usuário.",
+        "confidence": 0.7113,
+        "context_element_id": 2782
+      },
+      {
+        "id": 26,
+        "name": "Contexto ou evento que dispara a execução do workflow",
+        "value": [
+          "task-due-date breached"
+        ],
+        "method": "user-input",
+        "reasoning": "O indicador visual da tarefa atrasada é disparado quando o prazo vence, indicando que a tarefa foi atrasada.",
+        "confidence": 0.8,
+        "context_element_id": 2791
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 28,
+        "name": "Configurar filas de prioridade para processar eventos críticos primeiro, estabelecendo políticas de priorização baseadas em SLA",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Prioridade e data limite são tratados separadamente, e a barra de status é aplicada apenas a tarefas críticas e atrasadas.",
+        "confidence": 0.7072,
+        "context_element_id": 2861
+      },
+      {
+        "id": 29,
+        "name": "Configurar o escalonamento de recursos com políticas FIFO, de prioridade ou baseadas em deadline conforme a criticidade das operações",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "O identificador de tarefas críticas e atrasadas é aplicado com base na prioridade (alta, urgente ou data limite < data_atual e status !== 'Concluído').",
+        "confidence": 0.7958,
+        "context_element_id": 2870
+      },
+      {
+        "id": 30,
+        "name": "Implementar testes automáticos de integridade (health checks) executados periodicamente para validar funcionalidades críticas",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Uma falha de banco de dados que não pudesse ser reativada em tempo aceitável deixaria a visualização de tarefas parada, com falha de negócio irreparável.",
+        "confidence": 0.7993,
+        "context_element_id": 2885
+      },
+      {
+        "id": 31,
+        "name": "Implementar validação rigorosa de entradas e prevenção de condições que levem a exceções",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem rejeição, o status inválido sobrevive ao upload e se espalha por toda a cadeia de execução, sem que ninguém perceba.",
+        "confidence": 0.702,
+        "context_element_id": 2909
+      },
+      {
+        "id": 32,
+        "name": "Definir metas de disponibilidade mensuráveis com SLA/SLO e monitoramento de conformidade",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Uma falha de banco de dados que não pudesse ser reativada em tempo aceitável deixaria a visualização de tarefas parada, com falha de negócio irreparável.",
+        "confidence": 0.9822,
+        "context_element_id": 2916
+      },
+      {
+        "id": 33,
+        "name": "Implementar autorização granular com RBAC, ABAC e ACLs baseada no princípio do menor privilégio e Zero Trust",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Apenas a validação do servidor confirma a permissão, isolamento de tenant e integridade de status, sem que o usuário saia do sistema.",
+        "confidence": 0.7793,
+        "context_element_id": 2930
+      },
+      {
+        "id": 34,
+        "name": "Reduzir a superfície de ataque desabilitando serviços desnecessários, removendo funcionalidades não utilizadas e minimizando pontos de entrada",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem a opção de remover, o usuário não consegue desativar o filtro que está causando o problema, e a equipe não consegue identificar o responsável.",
+        "confidence": 0.8549,
+        "context_element_id": 2932
+      },
+      {
+        "id": 35,
+        "name": "Garantir confidencialidade com controles de acesso granulares baseados na classificação dos dados e no princípio need-to-know",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Dados pessoais expostos em logs ou requisições de rede são vazamento de dados pessoais, não uma violação de privacidade.",
+        "confidence": 0.8624,
+        "context_element_id": 2939
+      },
+      {
+        "id": 36,
+        "name": "Implementar validação de dados em múltiplas camadas com verificações de tipo, formato, faixa e regras de negócio antes da persistência",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Status persistido com sucesso é o resultado de múltiplas validações, cada uma com um critério diferente.",
+        "confidence": 0.8849,
+        "context_element_id": 2954
+      },
+      {
+        "id": 37,
+        "name": "Implementar verificação de integridade de dados em cada camada arquitetural com validações específicas para cada responsabilidade",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem validação específica em cada camada, a integração entre os dois assets sofre alterações sem que ninguém saiba.",
+        "confidence": 0.8045,
+        "context_element_id": 2960
+      },
+      {
+        "id": 38,
+        "name": "Implemente operações idempotentes que podem ser executadas múltiplas vezes sem efeitos colaterais",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "A operação de movimentar um cartão para a mesma coluna sem alterar o status é tratada como sucesso sem efeitos colaterais, caracterizando idempotência.",
+        "confidence": 0.7551,
+        "context_element_id": 2968
+      },
+      {
+        "id": 39,
+        "name": "Gere automaticamente trilhas de auditoria capturando todas as operações críticas com timestamps, identificação do usuário, dados antes/depois e contexto da operação",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem trilha de auditoria, a mudança de status de um cartão não pode ser retratada, e a responsabilidade fica em quem alterou o registro.",
+        "confidence": 0.943,
+        "context_element_id": 3012
+      },
+      {
+        "id": 40,
+        "name": "Implemente Event Sourcing para conformidade, armazenando todos os eventos de mudança de estado como uma sequência imutável com versionamento e capacidade de replay",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A trilha de auditoria registra o status anterior e novo, o usuário executor, o timestamp e o task_id, garantindo que qualquer alteração possa ser retratada.",
+        "confidence": 0.7762,
+        "context_element_id": 3017
+      },
+      {
+        "id": 41,
+        "name": "Implemente funcionalidade de cancelamento para operações de longa duração com feedback visual de progresso e a capacidade de interromper com segurança",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem feedback visual, o usuário não consegue parar a operação e a operação continua até que o sistema chegue ao limite de tempo.",
+        "confidence": 0.9073,
+        "context_element_id": 3041
+      },
+      {
+        "id": 42,
+        "name": "Mantenha um modelo de sistema com indicadores de progresso, status das operações e informações de estado visíveis para transparência operacional",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem essa informação, ninguém sabe se a tarefa já foi concluída ou não, e a decisão de encaminhar ou não é feita por apelo ao supervisor.",
+        "confidence": 0.7291,
+        "context_element_id": 3047
+      },
+      {
+        "id": 43,
+        "name": "Implemente compreensibilidade com linguagem clara, comportamento previsível da interface e assistência para prevenção de erros",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Silent failures e false positives causam corrupção gradual sem alerta, e monitoramento confiável depende de feedback imediato.",
+        "confidence": 0.7172,
+        "context_element_id": 3060
+      },
+      {
+        "id": 44,
+        "name": "Implemente checkpoints obrigatórios onde operadores humanos devem aprovar decisões críticas antes da execução, especialmente para ações irreversíveis ou de alto impacto",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem autorização, qualquer alteração de status deixa a tarefa sem registro e sem quem pode ter feito a decisão.",
+        "confidence": 0.8433,
+        "context_element_id": 3064
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 10,
+        "name": "Canal de Integração",
+        "value": "streaming de eventos",
+        "method": "user-input",
+        "reasoning": "O servidor envia eventos unidirecionais de atualização para clientes, caracterizando um modelo de comunicação de streaming de eventos.",
+        "confidence": 0.7048,
+        "context_element_id": 2060
+      },
+      {
+        "id": 48,
+        "name": "Padrão de Handler",
+        "value": "handler de comando",
+        "method": "user-input",
+        "reasoning": "O filtro é aplicado a partir de um comando de handler.",
+        "confidence": 0.7244,
+        "context_element_id": 4202
+      },
+      {
+        "id": 52,
+        "name": "Modo de Processamento",
+        "value": "item único",
+        "method": "user-input",
+        "reasoning": "Um filtro ativo é removido individualmente, enquanto todos os filtros são limpos de uma só vez.",
+        "confidence": 0.8788,
+        "context_element_id": 4243
+      },
+      {
+        "id": 62,
+        "name": "Loop de Feedback",
+        "value": "feedback visual",
+        "method": "user-input",
+        "reasoning": "A coluna de destino válida é indicada visualmente ao cartão enquanto ele é arrastado sobre o quadro.",
+        "confidence": 0.7668,
+        "context_element_id": 4749
+      },
+      {
+        "id": 64,
+        "name": "Dispositivo Alvo",
+        "value": "desktop",
+        "method": "user-input",
+        "reasoning": "O usuário inicia a operação de arrastar cartão em desktop.",
+        "confidence": 0.8359,
+        "context_element_id": 4867
+      },
+      {
+        "id": 65,
+        "name": "Tipo de Interação",
+        "value": "interativo",
+        "method": "user-input",
+        "reasoning": "O usuário clica no cartão para visualizar ou editar os detalhes, um tipo de interação ativa.",
+        "confidence": 0.9083,
+        "context_element_id": 4868
+      },
+      {
+        "id": 69,
+        "name": "Modelo de Sincronização de Estado",
+        "value": "requisição-resposta",
+        "method": "user-input",
+        "reasoning": "A manutenção da sincronização é feita apenas com base em requisições do usuário, sem tempo real.",
+        "confidence": 0.9087,
+        "context_element_id": 4952
+      },
+      {
+        "id": 72,
+        "name": "Tipo de Referência",
+        "value": "chaves compostas",
+        "method": "user-input",
+        "reasoning": "O estado de filtros compartilhado entre ASSET-020 (Painel Kanban) e ASSET-021 (Componente filho ou integrado) é definido por um conjunto de identificadores com múltiplos componentes.",
+        "confidence": 0.9418,
+        "context_element_id": 5169
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 3,
+  "active": true,
+  "sourceId": 23964,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}

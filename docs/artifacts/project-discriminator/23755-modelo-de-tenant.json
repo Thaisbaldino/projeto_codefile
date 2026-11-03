@@ -1,0 +1,143 @@
+{
+  "id": 23755,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [],
+    "attributes": [
+      {
+        "id": 12,
+        "name": "Conjunto de idiomas e configurações regionais suportados pelo sistema",
+        "value": [
+          "locale/idioma",
+          "theme",
+          "region",
+          "currency",
+          "extension",
+          "en-US",
+          "pt-BR",
+          "es-ES",
+          "fr-FR",
+          "zh-CN",
+          "en-US, pt-BR, es-ES, fr-FR, zh-CN"
+        ],
+        "method": "user-input",
+        "reasoning": "Os eixos de personalização suportados incluem locale/idioma, tema visual, região de mercado, moeda e extensões/plugins.\nOs eixos de personalização suportados incluem locale/idioma, tema visual, região de mercado, moeda e extensões/plugins.\nOs eixos de personalização suportados incluem locale/idioma, tema visual, região de mercado, moeda e extensões/plugins.\nOs eixos de personalização suportados incluem locale/idioma, tema visual, região de mercado, moeda e extensões/plugins.\nOs eixos de personalização suportados incluem locale/idioma, tema visual, região de mercado, moeda e extensões/plugins.\nOs sistemas suportam múltiplas línguas e regiões, especificadas em um conjunto separado.\nOs sistemas suportam múltiplas línguas e regiões, especificadas em um conjunto separado.\nOs sistemas suportam múltiplas línguas e regiões, especificadas em um conjunto separado.\nOs sistemas suportam múltiplas línguas e regiões, especificadas em um conjunto separado.\nOs sistemas suportam múltiplas línguas e regiões, especificadas em um conjunto separado.\nO sistema suporta múltiplas línguas e regiões, incluindo inglês, português, espanhol, francês e chinês.",
+        "confidence": 0.7488,
+        "context_element_id": 2684
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 25,
+        "name": "Implementar defesa em profundidade (defense in depth) com múltiplas camadas de segurança independentes e controles complementares",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Repositório e middleware funcionam juntos, e falha em um deles expõe o sistema inteiro, não apenas o que estava tentando escapar.",
+        "confidence": 0.8275,
+        "context_element_id": 2944
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 2,
+        "name": "Paradigma de Abstração de Acesso",
+        "value": "repositório",
+        "method": "user-input",
+        "reasoning": "A validação em repositório é feita por meio de querys automaticamente escopadas ao tenant da sessão, sem que o código de aplicação tenha que pensar em isolamento.",
+        "confidence": 0.8048,
+        "context_element_id": 1358
+      },
+      {
+        "id": 3,
+        "name": "Camada de Cache",
+        "value": "yes",
+        "method": "user-input",
+        "reasoning": "A estratégia de cache para configurações de tenant (níveis hierárquicos, permissões, status) inclui TTL, invalidação e fallback se o cache falhar, caracterizando um cache implementado.",
+        "confidence": 0.9644,
+        "context_element_id": 1361
+      },
+      {
+        "id": 4,
+        "name": "Estratégia de Aplicação de Regras",
+        "value": "detectivo",
+        "method": "user-input",
+        "reasoning": "O mecanismo de detecção e prevenção de tentativas de acesso cruzado entre tenants é implementado em middleware, repositório ou ambos, caracterizando uma estratégia de detecção.",
+        "confidence": 0.9091,
+        "context_element_id": 1434
+      },
+      {
+        "id": 8,
+        "name": "Estrutura de Dados de Registro",
+        "value": "evolução de schema",
+        "method": "user-input",
+        "reasoning": "O banco de dados compartilhado é projetado para suportar múltiplos schemas por tenant, com isolamento por schema.",
+        "confidence": 0.8725,
+        "context_element_id": 1510
+      },
+      {
+        "id": 42,
+        "name": "Estratégia de Modelo",
+        "value": "roteamento entre múltiplos modelos",
+        "method": "user-input",
+        "reasoning": "A plataforma roda requisições para os dados corretos de forma isolada, com múltiplos modelos de roteamento.",
+        "confidence": 0.8783,
+        "context_element_id": 4623
+      },
+      {
+        "id": 43,
+        "name": "Personalização de Prompts",
+        "value": "personalizado pelo usuário",
+        "method": "user-input",
+        "reasoning": "Os eixos de personalização suportados incluem locale/idioma, tema visual, região de mercado, moeda e extensões/plugins, caracterizando personalização de usuário.",
+        "confidence": 0.863,
+        "context_element_id": 4628
+      },
+      {
+        "id": 44,
+        "name": "Hospedagem do Modelo",
+        "value": "APIs externas",
+        "method": "user-input",
+        "reasoning": "A estratégia de isolamento de dados é definida externamente, em vez de ser implementada internamente.",
+        "confidence": 0.8432,
+        "context_element_id": 4748
+      },
+      {
+        "id": 47,
+        "name": "Suporte a Hierarquia",
+        "value": "multi-tenant",
+        "method": "internal-inference",
+        "reasoning": "O sistema é multi-tenant, com colaborador, gestor e administrador definidos por tenant.",
+        "confidence": 0.7902,
+        "context_element_id": 5056
+      },
+      {
+        "id": 49,
+        "name": "Modo de Regionalização",
+        "value": "configuração manual",
+        "method": "user-input",
+        "reasoning": "A personalização é configurada manualmente, em vez de ser baseada em preferências do usuário ou configuração geográfica.",
+        "confidence": 0.865,
+        "context_element_id": 5058
+      },
+      {
+        "id": 50,
+        "name": "Consciência de Locale",
+        "value": "ciente de locale",
+        "method": "user-input",
+        "reasoning": "A adição de suporte a locale/idioma e moeda é feita para atender a requisitos de internacionalização, caracterizando locale-aware.",
+        "confidence": 0.7556,
+        "context_element_id": 5160
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 5,
+  "active": true,
+  "sourceId": 23667,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T03:48:24.194Z",
+  "updatedAt": null
+}

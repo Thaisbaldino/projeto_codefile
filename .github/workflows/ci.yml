@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  qualidade:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: chronos
+          POSTGRES_PASSWORD: chronos
+          POSTGRES_DB: chronos
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U chronos"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://chronos:chronos@localhost:5432/chronos?schema=public
+      REDIS_URL: redis://localhost:6379
+      EMAIL_API_KEY: chave-de-ci
+      EMAIL_REMETENTE: nao-responda@chronos.local
+      APP_URL_BASE: http://localhost:5173
+      LOG_LEVEL: warn
+      SEED_ADMIN_EMAIL: admin@chronos.local
+      SEED_ADMIN_PASSWORD: Chronos@2026
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Gerar par de chaves RS256
+        run: |
+          openssl genpkey -algorithm RSA -out jwt-private.pem -pkeyopt rsa_keygen_bits:2048
+          openssl rsa -pubout -in jwt-private.pem -out jwt-public.pem
+          {
+            echo "JWT_PRIVATE_KEY<<EOF"
+            cat jwt-private.pem
+            echo "EOF"
+            echo "JWT_PUBLIC_KEY<<EOF"
+            cat jwt-public.pem
+            echo "EOF"
+          } >> "$GITHUB_ENV"
+
+      - run: pnpm --filter @chronos/api prisma:generate
+
+      - name: Testes unitários
+        run: pnpm --filter @chronos/api test
+
+      - name: Tipos do frontend
+        run: pnpm --filter @chronos/web type-check
+
+      - name: Build
+        run: pnpm build
+
+      - name: Migrar e semear
+        run: |
+          pnpm --filter @chronos/api prisma:deploy
+          pnpm --filter @chronos/api seed
+          pnpm --filter @chronos/api exec tsx prisma/seed-e2e.ts
+
+      - name: Testes de integração
+        run: pnpm --filter @chronos/api test:integracao
+
+      - name: Subir API e frontend
+        run: |
+          pnpm --filter @chronos/api exec node dist/src/main.js &
+          pnpm --filter @chronos/web exec vite preview --port 5173 &
+          npx --yes wait-on http://localhost:3000/health http://localhost:5173 --timeout 60000
+
+      - name: Instalar navegador do Playwright
+        run: pnpm --filter @chronos/web exec playwright install --with-deps chromium
+
+      - name: Testes end-to-end
+        run: pnpm --filter @chronos/web exec playwright test --project=desktop
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: apps/web/test-results/
+          retention-days: 7

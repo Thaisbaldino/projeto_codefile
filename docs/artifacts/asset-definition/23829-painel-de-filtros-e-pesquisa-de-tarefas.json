@@ -1,0 +1,609 @@
+{
+  "id": 23829,
+  "projectId": 4118,
+  "type": "asset_definition",
+  "content": {
+    "flow": {
+      "inputs": [
+        {
+          "id": 18,
+          "name": "Lista de tarefas do tenant",
+          "format": "JSON array de objetos tarefa com id, titulo, descricao, responsavel_id, prioridade, status, data_limite",
+          "origin": "Repositório de Tarefas (asset 47)",
+          "trigger": "Carregamento inicial da página ou atualização de filtros"
+        },
+        {
+          "id": 19,
+          "name": "Lista de usuários ativos do tenant",
+          "format": "JSON array de objetos usuário com id, nome_completo, status",
+          "origin": "Repositório de Usuários (asset 48)",
+          "trigger": "Inicialização do painel ou seleção do filtro de responsável"
+        },
+        {
+          "id": 20,
+          "name": "Contexto de autenticação do usuário",
+          "format": "JWT token contendo tenant_id, user_id, perfil",
+          "origin": "Camada de Autenticação (asset 25)",
+          "trigger": "Requisição de filtro ou pesquisa"
+        },
+        {
+          "id": 21,
+          "name": "Configuração de localização (locale)",
+          "format": "String código de localização (ex: pt-BR)",
+          "origin": "Aplicação Web (asset 1)",
+          "trigger": "Inicialização da superfície"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 32,
+          "name": "Tarefas filtradas para visualização em lista",
+          "format": "JSON array de objetos tarefa filtrados com todos os atributos necessários para renderização",
+          "destination": "Visualização em Lista de Tarefas (feature 16)"
+        },
+        {
+          "id": 33,
+          "name": "Tarefas filtradas para visualização em Kanban",
+          "format": "JSON array de objetos tarefa filtrados, organizado por status para renderização em colunas",
+          "destination": "Visualização em Kanban de Tarefas (feature 17)"
+        },
+        {
+          "id": 34,
+          "name": "Evento de filtro aplicado",
+          "format": "Evento filter_applied contendo critérios aplicados e contagem de resultados",
+          "destination": "Sistema de Eventos da Aplicação Web (asset 1)"
+        },
+        {
+          "id": 35,
+          "name": "Mensagem de feedback ao usuário",
+          "format": "String localizada indicando sucesso da filtragem ou mensagem informativa quando nenhuma tarefa é encontrada",
+          "destination": "Componente de Notificação da Aplicação Web (asset 1)"
+        }
+      ],
+      "processing": [
+        {
+          "id": 22,
+          "step": "Validar entrada de pesquisa textual",
+          "description": "Validar que o texto digitado no campo de pesquisa não excede 255 caracteres e contém apenas caracteres permitidos (alfanuméricos, espaços, hífens, acentos)."
+        },
+        {
+          "id": 23,
+          "step": "Aplicar debounce na pesquisa",
+          "description": "Aguardar 300ms após o último caractere digitado antes de executar a busca, evitando requisições excessivas ao servidor."
+        },
+        {
+          "id": 24,
+          "step": "Validar seleções de filtro",
+          "description": "Validar que os valores selecionados nos dropdowns de status, responsável e prioridade correspondem aos valores válidos definidos pelo sistema."
+        },
+        {
+          "id": 25,
+          "step": "Validar intervalo de data limite",
+          "description": "Quando o filtro de data limite é 'custom_range', validar que data_start é anterior a data_end e ambas são datas válidas."
+        },
+        {
+          "id": 26,
+          "step": "Construir objeto de filtro combinado",
+          "description": "Consolidar todos os critérios ativos (pesquisa, status, responsável, prioridade, data limite) em um único objeto de filtro para envio ao servidor."
+        },
+        {
+          "id": 27,
+          "step": "Enviar requisição de filtro ao backend",
+          "description": "Transmitir o objeto de filtro combinado ao endpoint de listagem de tarefas, incluindo tenant_id no contexto de autenticação."
+        },
+        {
+          "id": 28,
+          "step": "Receber e processar resultado filtrado",
+          "description": "Receber a lista de tarefas filtrada do servidor, validar integridade dos dados e preparar para renderização nas visualizações de lista e Kanban."
+        },
+        {
+          "id": 29,
+          "step": "Atualizar indicador de filtros ativos",
+          "description": "Calcular e exibir o número de filtros ativos, renderizando badge visual e permitindo acesso aos controles de limpeza."
+        },
+        {
+          "id": 30,
+          "step": "Renderizar painel de filtros com estado atualizado",
+          "description": "Atualizar a interface do painel para refletir os filtros aplicados, valores selecionados e indicadores visuais de estado."
+        },
+        {
+          "id": 31,
+          "step": "Sincronizar visualizações de lista e Kanban",
+          "description": "Garantir que as mesmas tarefas filtradas são exibidas tanto na visualização em lista quanto no quadro Kanban, mantendo consistência entre as duas visualizações."
+        }
+      ]
+    },
+    "rules": [
+      {
+        "id": 36,
+        "category": "validation",
+        "description": "O campo de pesquisa textual deve aceitar apenas caracteres alfanuméricos, espaços, hífens e acentos (áéíóúàâêôãõç), rejeitando caracteres especiais perigosos como <, >, &, \", ' para prevenir injeção de código.",
+        "enforcement": "code",
+        "verification": "Validação de entrada no frontend antes de envio; validação adicional no backend antes de executar consulta SQL."
+      },
+      {
+        "id": 37,
+        "category": "validation",
+        "description": "O campo de pesquisa textual não deve exceder 255 caracteres de comprimento, exibindo mensagem de erro específica quando o limite é atingido.",
+        "enforcement": "code",
+        "verification": "Validação de max_length no frontend com feedback em tempo real; validação no backend antes de processar a busca."
+      },
+      {
+        "id": 38,
+        "category": "validation",
+        "description": "Os valores selecionados nos filtros de status, responsável e prioridade devem corresponder exatamente aos valores válidos definidos pelo sistema, rejeitando qualquer valor fora do conjunto permitido.",
+        "enforcement": "code",
+        "verification": "Validação de enum no frontend contra lista de valores permitidos; validação no backend contra tabela de enumerações antes de executar filtro."
+      },
+      {
+        "id": 39,
+        "category": "validation",
+        "description": "Quando o filtro de data limite é 'custom_range', ambos os campos de data (start e end) devem ser preenchidos e a data de início deve ser anterior ou igual à data de fim.",
+        "enforcement": "code",
+        "verification": "Validação condicional no frontend com mensagens de erro específicas; validação no backend antes de executar consulta de intervalo de datas."
+      },
+      {
+        "id": 40,
+        "category": "authorization",
+        "description": "O painel de filtros deve exibir apenas usuários ativos do tenant do usuário autenticado como opções no filtro de responsável, impedindo a seleção de usuários inativos ou de outros tenants.",
+        "enforcement": "code",
+        "verification": "Filtro de usuários ativos aplicado no backend ao carregar lista de responsáveis; validação de tenant_id no contexto de autenticação antes de retornar lista."
+      },
+      {
+        "id": 41,
+        "category": "authorization",
+        "description": "As tarefas retornadas pelos filtros devem estar sempre escopadas ao tenant do usuário autenticado, impedindo que filtros manipulados retornem tarefas de outros tenants.",
+        "enforcement": "db_constraint",
+        "verification": "Cláusula WHERE tenant_id = ? obrigatória em todas as consultas de filtro; validação de tenant_id no contexto de autenticação antes de executar query."
+      },
+      {
+        "id": 42,
+        "category": "idempotency",
+        "description": "Aplicar o mesmo conjunto de filtros múltiplas vezes deve retornar o mesmo resultado, garantindo que a operação de filtro é idempotente.",
+        "enforcement": "code",
+        "verification": "Testes de integração que aplicam filtros idênticos múltiplas vezes e verificam que os resultados são consistentes."
+      },
+      {
+        "id": 43,
+        "category": "rate_limit",
+        "description": "Requisições de pesquisa textual devem ser limitadas a no máximo 10 requisições por segundo por usuário, prevenindo abuso de recursos de busca.",
+        "enforcement": "network",
+        "verification": "Implementação de rate limiting no API gateway ou middleware de autenticação; monitoramento de requisições por user_id e tenant_id."
+      },
+      {
+        "id": 44,
+        "category": "observability",
+        "description": "Toda operação de filtro ou pesquisa deve ser registrada em log com identificação do usuário, tenant, critérios aplicados e timestamp, permitindo rastreabilidade de consultas.",
+        "enforcement": "code",
+        "verification": "Logs estruturados contendo user_id, tenant_id, filter_criteria, search_term, timestamp; verificação de logs em auditoria."
+      },
+      {
+        "id": 45,
+        "category": "compliance",
+        "description": "Os critérios de filtro não devem expor informações sensíveis de usuários (como senhas, hashes ou dados pessoais além do nome) nas requisições ou respostas, respeitando princípios de LGPD.",
+        "enforcement": "code",
+        "verification": "Revisão de payloads de requisição e resposta para garantir que apenas dados necessários são transmitidos; testes de segurança verificando ausência de dados sensíveis."
+      }
+    ],
+    "overview": {
+      "id": 1,
+      "purpose": "O Painel de Filtros e Pesquisa de Tarefas é uma superfície interativa especializada que permite aos usuários localizar, filtrar e refinar a visualização de tarefas através de critérios combinados (status, responsável, prioridade, data limite) e busca textual por título ou descrição. Compõe-se de campos de entrada para pesquisa textual, controles de seleção múltipla para filtros por atributo, indicadores visuais de filtros ativos, e mecanismos de limpeza individual ou em massa. Integra-se às visualizações de lista e Kanban, atualizando o conjunto de tarefas exibidas em tempo real conforme os critérios são aplicados ou removidos, sempre respeitando o isolamento de dados por tenant. Funciona como o ponto de entrada para refinamento de consultas, permitindo que usuários localizem rapidamente atividades específicas dentro do volume potencial de até 10.000 tarefas por tenant."
+    },
+    "definition": {
+      "emits": [
+        {
+          "id": 15,
+          "name": "filter_applied",
+          "payload_shape": "{ search_term?: string, status?: string, responsible_id?: uuid, priority?: string, due_date_filter?: string, due_date_start?: date, due_date_end?: date, active_filter_count: integer }"
+        },
+        {
+          "id": 16,
+          "name": "filter_cleared",
+          "payload_shape": "{ cleared_filter?: string, all_cleared: boolean }"
+        },
+        {
+          "id": 17,
+          "name": "search_executed",
+          "payload_shape": "{ search_term: string, results_count: integer }"
+        }
+      ],
+      "fields": [
+        {
+          "id": 2,
+          "name": "search_input",
+          "reaction": "debounce(300ms) → filter_tasks_action",
+          "data_type": "string",
+          "filled_by": "user_input",
+          "aria_label": "Campo de pesquisa textual de tarefas",
+          "input_type": "text",
+          "validation": "max_length: 255; pattern: ^[\\w\\s\\-áéíóúàâêôãõç]*$",
+          "is_required": false,
+          "placeholder": "Pesquisar por título ou descrição",
+          "help_text_key": "help.search_tasks_input"
+        },
+        {
+          "id": 3,
+          "name": "filter_status",
+          "reaction": "onChange → filter_tasks_action",
+          "data_type": "enum[a_fazer|em_andamento|concluido]",
+          "filled_by": "user_selection",
+          "aria_label": "Filtrar tarefas por status",
+          "input_type": "select",
+          "validation": "enum_value_in: [a_fazer, em_andamento, concluido]",
+          "is_required": false,
+          "help_text_key": "help.filter_status"
+        },
+        {
+          "id": 4,
+          "name": "filter_responsible",
+          "reaction": "onChange → load_active_users_for_tenant → filter_tasks_action",
+          "data_type": "uuid",
+          "filled_by": "user_selection",
+          "aria_label": "Filtrar tarefas por responsável",
+          "input_type": "select",
+          "validation": "uuid_format; user_must_be_active_in_tenant",
+          "is_required": false,
+          "help_text_key": "help.filter_responsible"
+        },
+        {
+          "id": 5,
+          "name": "filter_priority",
+          "reaction": "onChange → filter_tasks_action",
+          "data_type": "enum[baixa|media|alta|urgente]",
+          "filled_by": "user_selection",
+          "aria_label": "Filtrar tarefas por prioridade",
+          "input_type": "select",
+          "validation": "enum_value_in: [baixa, media, alta, urgente]",
+          "is_required": false,
+          "help_text_key": "help.filter_priority"
+        },
+        {
+          "id": 6,
+          "name": "filter_due_date",
+          "reaction": "onChange → filter_tasks_action",
+          "data_type": "string",
+          "filled_by": "user_selection",
+          "aria_label": "Filtrar tarefas por data limite",
+          "input_type": "select",
+          "validation": "enum_value_in: [overdue, no_deadline, next_7_days, next_30_days, custom_range]",
+          "is_required": false,
+          "help_text_key": "help.filter_due_date"
+        },
+        {
+          "id": 7,
+          "name": "filter_due_date_start",
+          "reaction": "onChange → filter_tasks_action",
+          "data_type": "date",
+          "filled_by": "user_input",
+          "aria_label": "Data inicial do intervalo de prazo",
+          "input_type": "date",
+          "validation": "date_format: YYYY-MM-DD; conditional_required_if: filter_due_date === 'custom_range'",
+          "is_required": false,
+          "help_text_key": "help.filter_due_date_start"
+        },
+        {
+          "id": 8,
+          "name": "filter_due_date_end",
+          "reaction": "onChange → filter_tasks_action",
+          "data_type": "date",
+          "filled_by": "user_input",
+          "aria_label": "Data final do intervalo de prazo",
+          "input_type": "date",
+          "validation": "date_format: YYYY-MM-DD; conditional_required_if: filter_due_date === 'custom_range'; must_be_after: filter_due_date_start",
+          "is_required": false,
+          "help_text_key": "help.filter_due_date_end"
+        },
+        {
+          "id": 9,
+          "name": "active_filters_indicator",
+          "reaction": "display_count_and_visual_badge",
+          "data_type": "integer",
+          "filled_by": "system_computed",
+          "aria_label": "Número de filtros ativos aplicados",
+          "input_type": "display",
+          "validation": "count_of_active_filters >= 0",
+          "is_required": false
+        }
+      ],
+      "panels": [
+        {
+          "id": 10,
+          "kind": "card",
+          "name": "filter_panel",
+          "slots": [
+            {
+              "id": 11,
+              "name": "search_section",
+              "description": "Seção contendo o campo de pesquisa textual para busca por título ou descrição de tarefas."
+            },
+            {
+              "id": 12,
+              "name": "filter_controls_section",
+              "description": "Seção contendo os controles de seleção para filtros por status, responsável, prioridade e data limite."
+            },
+            {
+              "id": 13,
+              "name": "active_filters_display",
+              "description": "Área que exibe visualmente os filtros ativos e oferece controles para remover filtros individuais ou limpar todos."
+            },
+            {
+              "id": 14,
+              "name": "action_buttons_section",
+              "description": "Seção contendo botões de ação como 'Limpar Filtros' e 'Aplicar Filtros'."
+            }
+          ]
+        }
+      ]
+    },
+    "pendencies": [
+      {
+        "id": 66,
+        "section": "definition",
+        "description": "Necessário definir a lista exata de valores de enum para o filtro de data limite (filter_due_date). Atualmente proposto: [overdue, no_deadline, next_7_days, next_30_days, custom_range]. Confirmar se estes valores cobrem todos os casos de uso ou se há necessidade de adicionar/remover opções.",
+        "resolutionOptions": [
+          {
+            "id": 67,
+            "text": "Manter valores propostos: overdue, no_deadline, next_7_days, next_30_days, custom_range"
+          },
+          {
+            "id": 68,
+            "text": "Adicionar 'next_14_days' entre next_7_days e next_30_days para granularidade intermediária"
+          },
+          {
+            "id": 69,
+            "text": "Simplificar para apenas: overdue, no_deadline, custom_range, removendo intervalos pré-definidos"
+          }
+        ],
+        "recommendedOptionId": 67
+      },
+      {
+        "id": 70,
+        "section": "definition",
+        "description": "Necessário confirmar se o painel de filtros deve incluir um campo de filtro por criador da tarefa, além dos filtros por responsável, status, prioridade e data limite. Atualmente não está incluído, mas pode ser útil para gestores acompanharem tarefas criadas por colaboradores específicos.",
+        "resolutionOptions": [
+          {
+            "id": 71,
+            "text": "Não incluir filtro por criador nesta versão; manter apenas responsável, status, prioridade e data limite"
+          },
+          {
+            "id": 72,
+            "text": "Incluir filtro por criador como campo adicional no painel de filtros"
+          }
+        ],
+        "recommendedOptionId": 71
+      },
+      {
+        "id": 73,
+        "section": "flow",
+        "description": "Necessário definir o comportamento exato quando nenhuma tarefa é encontrada após aplicação de filtros. Deve exibir mensagem genérica ou mensagem específica indicando qual filtro resultou em zero tarefas?",
+        "resolutionOptions": [
+          {
+            "id": 74,
+            "text": "Exibir mensagem genérica: 'Nenhuma tarefa encontrada para os filtros aplicados. Ajuste os critérios de busca.'"
+          },
+          {
+            "id": 75,
+            "text": "Exibir mensagem específica indicando qual combinação de filtros resultou em zero tarefas, com sugestão de remover filtros"
+          }
+        ],
+        "recommendedOptionId": 74
+      },
+      {
+        "id": 76,
+        "section": "non_functional_requirements",
+        "description": "Necessário confirmar o valor exato do debounce para pesquisa textual. Atualmente proposto 300ms. Valores alternativos: 200ms (mais responsivo), 500ms (menos requisições).",
+        "resolutionOptions": [
+          {
+            "id": 77,
+            "text": "Manter 300ms como proposto"
+          },
+          {
+            "id": 78,
+            "text": "Reduzir para 200ms para maior responsividade"
+          },
+          {
+            "id": 79,
+            "text": "Aumentar para 500ms para reduzir carga no servidor"
+          }
+        ],
+        "recommendedOptionId": 77
+      },
+      {
+        "id": 80,
+        "section": "non_functional_requirements",
+        "description": "Necessário definir a estratégia de cache para a lista de usuários ativos exibida no filtro de responsável. Proposto: TTL de 5 minutos. Confirmar se este valor é adequado ou se deve ser ajustado.",
+        "resolutionOptions": [
+          {
+            "id": 81,
+            "text": "Implementar cache com TTL de 5 minutos"
+          },
+          {
+            "id": 82,
+            "text": "Implementar cache com TTL de 1 minuto para maior atualização"
+          },
+          {
+            "id": 83,
+            "text": "Não implementar cache; carregar lista de usuários a cada abertura do painel"
+          }
+        ],
+        "recommendedOptionId": 81
+      }
+    ],
+    "test_scenarios": [
+      {
+        "id": 54,
+        "then": "A validação rejeita a entrada e exibe mensagem de erro específica",
+        "type": "unit",
+        "when": "O texto contém caracteres especiais perigosos como <, >, &, \"",
+        "given": "Um usuário digita texto no campo de pesquisa",
+        "scenario": "Validação de entrada de pesquisa textual",
+        "target_section": "definition"
+      },
+      {
+        "id": 55,
+        "then": "A entrada é bloqueada e mensagem de erro é exibida",
+        "type": "unit",
+        "when": "O campo atinge o limite de 255 caracteres",
+        "given": "Um usuário tenta digitar mais de 255 caracteres no campo de pesquisa",
+        "scenario": "Validação de comprimento máximo de pesquisa",
+        "target_section": "definition"
+      },
+      {
+        "id": 56,
+        "then": "A validação rejeita e exibe mensagem de erro indicando que data_start deve ser anterior a data_end",
+        "type": "unit",
+        "when": "A data de início é posterior à data de fim",
+        "given": "Um usuário seleciona 'custom_range' no filtro de data limite",
+        "scenario": "Validação de intervalo de data limite",
+        "target_section": "definition"
+      },
+      {
+        "id": 57,
+        "then": "A visualização de lista e Kanban exibem apenas tarefas com status 'Em Andamento'; indicador de filtros ativos mostra 1 filtro ativo",
+        "type": "integration",
+        "when": "O usuário seleciona status 'Em Andamento' e aplica o filtro",
+        "given": "Um usuário autenticado acessa o painel de filtros com 50 tarefas no tenant",
+        "scenario": "Aplicação de filtro simples por status",
+        "target_section": "flow"
+      },
+      {
+        "id": 58,
+        "then": "A visualização exibe apenas tarefas que satisfazem todos os três critérios simultaneamente; indicador mostra 3 filtros ativos",
+        "type": "integration",
+        "when": "O usuário seleciona status 'A Fazer', responsável 'João Silva' e prioridade 'Alta' e aplica os filtros",
+        "given": "Um usuário autenticado acessa o painel de filtros com 100 tarefas no tenant",
+        "scenario": "Aplicação de filtros combinados",
+        "target_section": "flow"
+      },
+      {
+        "id": 59,
+        "then": "Apenas uma requisição é enviada ao servidor após 300ms de inatividade; visualização é atualizada com tarefas contendo 'relatório' no título ou descrição",
+        "type": "integration",
+        "when": "O usuário digita continuamente sem pausas",
+        "given": "Um usuário autenticado digita 'relatório' no campo de pesquisa",
+        "scenario": "Pesquisa textual com debounce",
+        "target_section": "flow"
+      },
+      {
+        "id": 60,
+        "then": "O filtro de responsável é removido; filtros de status e prioridade permanecem ativos; indicador mostra 2 filtros ativos",
+        "type": "integration",
+        "when": "O usuário clica no botão de remover apenas o filtro de responsável",
+        "given": "Um usuário tem 3 filtros ativos (status, responsável, prioridade)",
+        "scenario": "Limpeza de filtros individuais",
+        "target_section": "flow"
+      },
+      {
+        "id": 61,
+        "then": "Todos os filtros são removidos; visualização retorna ao estado inicial exibindo todas as tarefas do tenant; indicador de filtros ativos desaparece",
+        "type": "integration",
+        "when": "O usuário clica no botão 'Limpar Todos os Filtros'",
+        "given": "Um usuário tem múltiplos filtros ativos",
+        "scenario": "Limpeza de todos os filtros",
+        "target_section": "flow"
+      },
+      {
+        "id": 62,
+        "then": "A validação de entrada rejeita o payload; nenhuma consulta SQL maliciosa é executada; mensagem de erro é exibida",
+        "type": "security",
+        "when": "O usuário tenta digitar payload de injeção SQL como '; DROP TABLE tarefas; --'",
+        "given": "Um usuário autenticado acessa o painel de filtros",
+        "scenario": "Prevenção de injeção SQL em pesquisa",
+        "target_section": "rules"
+      },
+      {
+        "id": 63,
+        "then": "O backend valida tenant_id contra contexto de autenticação; requisição é rejeitada; nenhuma tarefa do tenant B é retornada",
+        "type": "security",
+        "when": "A requisição é enviada com tenant_id manipulado",
+        "given": "Um usuário do tenant A tenta manipular requisição de filtro para incluir tenant_id do tenant B",
+        "scenario": "Isolamento de dados por tenant em filtros",
+        "target_section": "rules"
+      },
+      {
+        "id": 64,
+        "then": "Requisição retorna em p95 <= 500ms; visualização é atualizada sem lag perceptível",
+        "type": "performance",
+        "when": "Um usuário aplica filtro combinado (status + responsável + prioridade)",
+        "given": "Um tenant com 10.000 tarefas e 100 usuários ativos",
+        "scenario": "Desempenho de filtro em tenant com 10.000 tarefas",
+        "target_section": "non_functional_requirements"
+      },
+      {
+        "id": 65,
+        "then": "Visualização em lista e Kanban exibem apenas tarefas que contêm 'implementação' no título/descrição, têm status 'Em Andamento', responsável 'Maria' e prioridade 'Alta'; indicador mostra 4 filtros ativos; usuário consegue remover filtros individuais ou limpar todos",
+        "type": "e2e",
+        "when": "O usuário (1) digita 'implementação' na pesquisa, (2) seleciona status 'Em Andamento', (3) seleciona responsável 'Maria', (4) seleciona prioridade 'Alta'",
+        "given": "Um usuário autenticado acessa a página de tarefas com 200 tarefas no tenant",
+        "scenario": "Fluxo completo de filtro e pesquisa",
+        "target_section": "flow"
+      }
+    ],
+    "non_functional_requirements": [
+      {
+        "id": 46,
+        "target": "p95 <= 500ms para requisição de filtro; p99 <= 1000ms mesmo em tenants com 10.000 tarefas",
+        "category": "performance",
+        "requirement": "A aplicação de filtros e pesquisa deve atualizar a visualização de tarefas com tempo de resposta adequado, sem degradação perceptível na experiência do usuário.",
+        "verification": "Testes de carga com 5.000 usuários simultâneos aplicando filtros; monitoramento de latência de requisição em produção."
+      },
+      {
+        "id": 47,
+        "target": "Máximo 1 requisição a cada 300ms durante digitação contínua; redução de 80% em requisições comparado a sem debounce",
+        "category": "performance",
+        "requirement": "O debounce na pesquisa textual deve evitar requisições excessivas ao servidor, reduzindo carga desnecessária.",
+        "verification": "Testes de digitação contínua monitorando número de requisições enviadas; análise de logs de requisição."
+      },
+      {
+        "id": 48,
+        "target": "Suportar até 10.000 tarefas por tenant e até 100 usuários ativos por tenant com tempo de resposta consistente",
+        "category": "scalability",
+        "requirement": "O painel de filtros deve suportar crescimento de tarefas e usuários sem degradação de desempenho.",
+        "verification": "Testes de carga progressiva; análise de planos de execução SQL para índices adequados."
+      },
+      {
+        "id": 49,
+        "target": "100% de validação de entrada no frontend e backend; zero vulnerabilidades de injeção detectadas em testes de segurança",
+        "category": "security",
+        "requirement": "Entradas de pesquisa e filtros devem ser validadas e sanitizadas para prevenir injeção de SQL, XSS e outros ataques de injeção.",
+        "verification": "Testes de penetração com payloads maliciosos; análise estática de código; testes de injeção SQL e XSS."
+      },
+      {
+        "id": 50,
+        "target": "100% de requisições de filtro validadas contra tenant_id do usuário autenticado",
+        "category": "security",
+        "requirement": "O painel de filtros deve respeitar isolamento de dados por tenant, impedindo que usuários acessem ou filtrem tarefas de outros tenants.",
+        "verification": "Testes de segurança tentando manipular tenant_id em requisições; auditoria de logs verificando isolamento."
+      },
+      {
+        "id": 51,
+        "target": "99.9% de uptime; tempo de recuperação de falha <= 5 minutos",
+        "category": "availability",
+        "requirement": "O painel de filtros deve estar disponível com alta disponibilidade, dado que sua indisponibilidade impede que usuários localizem tarefas específicas.",
+        "verification": "Monitoramento contínuo de disponibilidade; testes de failover; SLA tracking."
+      },
+      {
+        "id": 52,
+        "target": "100% de operações de filtro registradas em log com user_id, tenant_id, critérios e timestamp; métricas de latência e taxa de erro disponíveis",
+        "category": "observability",
+        "requirement": "Operações de filtro e pesquisa devem ser rastreáveis através de logs estruturados e métricas de observabilidade.",
+        "verification": "Verificação de logs estruturados; dashboard de métricas mostrando latência, taxa de erro e volume de requisições."
+      },
+      {
+        "id": 53,
+        "target": "Índices de banco de dados otimizados para consultas de filtro; cache de lista de usuários ativos com TTL de 5 minutos",
+        "category": "cost",
+        "requirement": "O painel de filtros deve ser otimizado para minimizar consumo de recursos de computação e armazenamento.",
+        "verification": "Análise de planos de execução SQL; monitoramento de uso de CPU e memória; análise de hits de cache."
+      }
+    ]
+  },
+  "version": 1,
+  "active": true,
+  "sourceId": 21,
+  "sourceType": "project_asset",
+  "state": "in_review",
+  "createdBy": null,
+  "createdAt": "2026-08-11T06:06:43.443Z",
+  "updatedAt": null
+}

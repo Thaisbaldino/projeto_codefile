@@ -1,0 +1,137 @@
+{
+  "id": 24014,
+  "projectId": 4118,
+  "type": "project_discriminator",
+  "content": {
+    "risks": [
+      {
+        "id": 29,
+        "name": "Validação de Entrada e Injeção",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "A consulta é executada com parametrização segura, e o termo de busca é um payload SQL malicioso, o que expõe o sistema a execução de código arbitrário.",
+        "confidence": 0.8327,
+        "context_element_id": 2825
+      }
+    ],
+    "attributes": [
+      {
+        "id": 17,
+        "name": "Domínio funcional ou técnico primário atendido pelo motor de processamento",
+        "value": [
+          "task-management",
+          "validation"
+        ],
+        "method": "internal-inference",
+        "reasoning": "O domínio funcional do processador é o gerenciamento de tarefas.\nO método listarTarefasAtrasadas inclui cláusula WHERE status != 'Concluído' para excluir tarefas com status 'Concluído', caracterizando uma validação de dados.",
+        "confidence": 0.8017,
+        "context_element_id": 2679
+      },
+      {
+        "id": 25,
+        "name": "Identificador ou nome do resultado específico gerado pela computação",
+        "value": [
+          "contarTarefasAtrasadas"
+        ],
+        "method": "user-input",
+        "reasoning": "A função retorna o número de tarefas com prazo vencido em um tenant, nomeada como 'contarTarefasAtrasadas'.",
+        "confidence": 0.7532,
+        "context_element_id": 2794
+      }
+    ],
+    "best_practices": [
+      {
+        "id": 30,
+        "name": "Implementar estratégias de cache em múltiplas camadas e replicação de dados críticos para melhorar o desempenho",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Sem cache, cada consulta ao banco de dados e ao índice gera uma nova consulta, o que leva a uma resposta lenta e custosa.",
+        "confidence": 0.7607,
+        "context_element_id": 2869
+      },
+      {
+        "id": 31,
+        "name": "Implementar retry automático com exponential backoff, jitter e circuit breaker para prevenir falhas em cascata",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Repetir a tentativa sem quebra de conexão garanta que a operação seja executada mesmo com falha de rede ou banco de dados.",
+        "confidence": 0.8553,
+        "context_element_id": 2895
+      },
+      {
+        "id": 35,
+        "name": "Implementar verificação de integridade de dados em cada camada arquitetural com validações específicas para cada responsabilidade",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem verificação de quem alterou o registro, a mudança de status ou de dados não pode ser retrabalhada depois.",
+        "confidence": 0.8483,
+        "context_element_id": 2960
+      },
+      {
+        "id": 36,
+        "name": "Aplique o padrão CQRS separando as responsabilidades de leitura e escrita com modelos otimizados para cada operação",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "A consulta é usada em filtros e visualizações personalizadas, não em operações de escrita.",
+        "confidence": 0.7022,
+        "context_element_id": 2967
+      },
+      {
+        "id": 37,
+        "name": "Implemente operações idempotentes que podem ser executadas múltiplas vezes sem efeitos colaterais",
+        "value": "",
+        "method": "user-input",
+        "reasoning": "Leitura e escrita são operações idempotentes, e a validação do estado antes da modificação garante que o mesmo resultado seja repetido sem alterar o sistema.",
+        "confidence": 0.8818,
+        "context_element_id": 2968
+      },
+      {
+        "id": 40,
+        "name": "Implemente Event Sourcing para conformidade, armazenando todos os eventos de mudança de estado como uma sequência imutável com versionamento e capacidade de replay",
+        "value": "",
+        "method": "internal-inference",
+        "reasoning": "Sem registro de auditoria, a verificação de responsabilidade e responsabilidade de cada etapa depende de memória de cada operação, não de dados armazenados.",
+        "confidence": 0.7385,
+        "context_element_id": 3017
+      }
+    ],
+    "discriminators": [
+      {
+        "id": 15,
+        "name": "Granularidade da Operação",
+        "value": "múltiplos recursos",
+        "method": "internal-inference",
+        "reasoning": "A consulta retorna múltiplas entidades (tarefas) em uma única operação, caracterizando uma operação multi-resource.",
+        "confidence": 0.7255,
+        "context_element_id": 1977
+      },
+      {
+        "id": 16,
+        "name": "Estratégia de Mapeamento",
+        "value": "mapeamento direto",
+        "method": "user-input",
+        "reasoning": "A linha retornada do banco de dados é traduzida diretamente para objetos de domínio (Tarefa), sem intermediário model.",
+        "confidence": 0.8911,
+        "context_element_id": 2056
+      },
+      {
+        "id": 46,
+        "name": "Estratégia de Cache",
+        "value": "cache local",
+        "method": "user-input",
+        "reasoning": "A estratégia de cache é definida em nível de aplicação, com TTL, chave de invalidação e mecanismo de warm-up.",
+        "confidence": 0.8636,
+        "context_element_id": 4496
+      }
+    ],
+    "business_questions": []
+  },
+  "version": 6,
+  "active": true,
+  "sourceId": 23775,
+  "sourceType": "artifact",
+  "state": "approved",
+  "createdBy": null,
+  "createdAt": "2026-08-11T18:03:40.847Z",
+  "updatedAt": null
+}
