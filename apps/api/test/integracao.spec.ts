@@ -37,7 +37,7 @@ describe('Handlers da API', () => {
   });
 
   describe('POST /api/auth/login', () => {
-    it('devolve par de tokens e dados do tenant', async () => {
+    it('Devolve par de tokens e dados do tenant', async () => {
       const resposta = await request(app.getHttpServer())
         .post('/api/auth/login')
         .send({ email: EMAIL_PLATAFORMA, password: SENHA_PLATAFORMA })
